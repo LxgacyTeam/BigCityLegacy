@@ -1,0 +1,228 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>BigCityLegacy</AssemblyName>
+	<Authors>LegacyTeam</Authors>
+	<VersionPrefix>1.3.0</VersionPrefix>
+	<VersionSuffix></VersionSuffix>
+    <RootNamespace>BigCityLegacy</RootNamespace>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	<GameDir Condition="'$(GameDir)' == ''">..\prod_game</GameDir>
+    <ManagedDir>$(GameDir)\game_Data\Managed</ManagedDir>
+    <BepInExDir>$(GameDir)\BepInEx\core</BepInExDir>
+    <LegacyUIFrameworkDll Condition="'$(LegacyUIFrameworkDll)' == ''">$(OutputPath)\LegacyUIFramework.dll</LegacyUIFrameworkDll>
+    <CopyToPlugins Condition="'$(CopyToPlugins)' == ''">false</CopyToPlugins>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;0618;0649</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;0618;0649</NoWarn>
+  </PropertyGroup>
+
+  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeCompile;CoreCompile">
+	<PropertyGroup>
+		<_CleanVersion>$(VersionPrefix)</_CleanVersion>
+
+		<_FullVersion Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</_FullVersion>
+		<_FullVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</_FullVersion>
+
+		<VersionCode>
+			<![CDATA[
+        public static class VersionInfo
+        {
+            public const string ModVersion = "$(_CleanVersion)"%3B
+            public const string ModVersionName = "$(_FullVersion)"%3B
+        }
+        ]]>
+		</VersionCode>
+	</PropertyGroup>
+
+	<WriteLinesToFile File="$(IntermediateOutputPath)VersionInfo.g.cs" Lines="$(VersionCode)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+	<ItemGroup>
+		<Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
+	</ItemGroup>
+  </Target>
+
+  <Target Name="ValidateGameDir" BeforeTargets="PrepareForBuild">
+	 <Error Condition="'$(GameDir)' == '' Or !Exists('$(GameDir)')" Text="&#xD;&#xA;&gt; &gt; &gt; &gt; &gt; &gt; Invalid GameDir: '$(GameDir)' &lt; &lt; &lt; &lt; &lt; &lt; &#xD;&#xA;&#xD;&#xA;The project requires access to the game's Unity assemblies.&#xD;&#xA;Set &lt;GameDir&gt; in the .csproj file or specify it on the command line:&#xD;&#xA;dotnet build -p:GameDir=&quot;path\to\game&quot;&#xD;&#xA;&#xD;&#xA;IN CLI USE ONLY ABSOLUTE PATHS (without '..\' or etc.)" />
+  </Target>
+
+  <ItemGroup>
+    <Compile Remove="libs\LegacyUIFramework\**" />
+    <EmbeddedResource Remove="libs\LegacyUIFramework\**" />
+    <None Remove="libs\LegacyUIFramework\**" />
+	<Folder Include="libs\" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+		<_Parameter1>BuildTimestamp</_Parameter1>
+		<_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss"))</_Parameter2>
+	</AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj" />
+	  
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp" Publicize="true">
+      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass" Publicize="true">
+      <HintPath>$(ManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="com.unity.multiplayer-hlapi.Runtime">
+      <HintPath>$(ManagedDir)\com.unity.multiplayer-hlapi.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="LiteDB">
+      <HintPath>$(ManagedDir)\LiteDB.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PlayMaker">
+      <HintPath>$(ManagedDir)\PlayMaker.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Security">
+      <HintPath>$(ManagedDir)\Security.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Stores">
+      <HintPath>$(ManagedDir)\Stores.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UNETModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UNETModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>$(ManagedDir)\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityAnalyticsModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TerrainModule">
+      <HintPath>$(ManagedDir)\UnityEngine.TerrainModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.DirectorModule">
+      <HintPath>$(ManagedDir)\UnityEngine.DirectorModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.Purchasing">
+      <HintPath>$(ManagedDir)\UnityEngine.Purchasing.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.VRModule">
+      <HintPath>$(ManagedDir)\UnityEngine.VRModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.XRModule">
+      <HintPath>$(ManagedDir)\UnityEngine.XRModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="websocket-sharp">
+      <HintPath>$(ManagedDir)\websocket-sharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+	
+  <PropertyGroup>
+	  <RefBuildID1>8090615886887966021827425818345352</RefBuildID1>
+	  <RefBuildID2>7722939280972991337528526344401772</RefBuildID2>
+	  <RefBuildID3>6995049418510130001989244166001570</RefBuildID3>
+	  <RefBuildID4>6272545974901108344881373009172734</RefBuildID4>
+	  <RefBuildID5>6436290475841128363090419124449842</RefBuildID5>
+	  <RefBuildID6>6994850301373200383263390312037424</RefBuildID6>
+	  <RefBuildID7>6627282731930472236072401306668224</RefBuildID7>
+	  <RefBuildID8>6791119859750463425255893715788626</RefBuildID8>
+  </PropertyGroup>
+
+  <Target Name="GenerateProjectValues" BeforeTargets="BeforeCompile">
+      <WriteLinesToFile File="$(IntermediateOutputPath)ProjectValues.g.cs" Overwrite="true" Lines=" internal static class ProjectValues {&#xD;&#xA;			    internal const string RBID1 = &quot;$(RefBuildID1)&quot;%3B&#xD;&#xA;				internal const string RBID2 = &quot;$(RefBuildID3)&quot;%3B&#xD;&#xA;				internal const string RBID3 = &quot;$(RefBuildID2)&quot;%3B&#xD;&#xA;				internal const string RBID4 = &quot;$(RefBuildID4)&quot;%3B&#xD;&#xA;	            internal const string RBID5 = &quot;$(RefBuildID5)&quot;%3B&#xD;&#xA;	            internal const string RBID6 = &quot;$(RefBuildID7)&quot;%3B&#xD;&#xA;	            internal const string RBID7 = &quot;$(RefBuildID6)&quot;%3B&#xD;&#xA;	            internal const string RBID8 = &quot;$(RefBuildID8)&quot;%3B }" />
+	  <ItemGroup>
+			<Compile Include="$(IntermediateOutputPath)ProjectValues.g.cs" />
+		</ItemGroup>
+	</Target>
+
+  <Target Name="CopyPluginToGame" AfterTargets="Build" Condition="'$(CopyToPlugins)' == 'true'">
+    <MakeDir Directories="$(GameDir)\BepInEx\plugins\BigCityLegacy" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\BigCityLegacy" />
+    <Copy SourceFiles="$(LegacyUIFrameworkDll)" DestinationFolder="$(GameDir)\BepInEx\plugins\BigCityLegacy" Condition="Exists('$(LegacyUIFrameworkDll)')" />
+  </Target>
+</Project>

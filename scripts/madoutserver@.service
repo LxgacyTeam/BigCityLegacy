@@ -1,0 +1,23 @@
+# /etc/systemd/system/madoutserver@.service
+
+[Unit]
+Description=MadOut2 Server (Instance %i)
+After=network.target
+
+[Service]
+Type=simple
+
+User=root
+Group=root
+
+WorkingDirectory=/opt/MadOut2_linux
+
+ExecStart=/opt/MadOut2_linux/systemd-wrapper.sh %i
+
+ExecStop=/usr/bin/tmux send-keys -t madoutserver-%i C-c
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

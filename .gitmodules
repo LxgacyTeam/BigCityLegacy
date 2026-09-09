@@ -1,0 +1,3 @@
+[submodule "libs/LegacyUIFramework"]
+	path = libs/LegacyUIFramework
+	url = https://github.com/LxgacyTeam/LegacyUIFramework.git

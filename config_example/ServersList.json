@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "masterPort": 35000,
+  "pollIntervalMs": 1500,
+  "staleAfterMs": 6000,
+  "servers": [
+    {
+      "id": "master-self",
+      "name": "RU FreeRoam #1",
+      "connectIp": "127.0.0.1",
+      "queryIp": "127.0.0.1",
+      "port": 7800,
+      "maxPlayers": 16,
+      "lang": "ru",
+      "menuGroup": "FreeRoam",
+      "serverMode": "None",
+      "onlineProtocolVersion": 93,
+      "includeInAuto": true,
+      "showIfOffline": false,
+      "self": true
+    },
+      {
+      "id": "en-race-01",
+      "name": "EN Race #1",
+      "connectIp": "127.0.0.1",
+      "queryIp": "127.0.0.1",
+      "port": 7810,
+      "maxPlayers": 32,
+      "lang": "en",
+      "menuGroup": "Race",
+      "serverMode": "Race",
+      "onlineProtocolVersion": 93,
+      "includeInAuto": true,
+      "showIfOffline": false,
+      "self": true
+    }
+  ]
+}
