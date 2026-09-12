@@ -24,7 +24,7 @@ Earlier versions (`4.9 - 9.2`) can run in Compatibility Mode, which provides off
 ## Installation
 
 * Download the latest **original** version of the game from Steam. Modified game builds are **not supported**.
-* Install BepInEx 5 into the game folder and launch the game once.
+* Install [BepInEx 5](https://github.com/BepInEx/BepInEx) into the game folder and launch the game once.
 * Download the zip file from the [Releases](https://github.com/LxgacyTeam/BigCityLegacy/releases) section and unpack it into the game root folder.
 
 ## Building
