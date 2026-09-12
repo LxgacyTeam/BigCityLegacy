@@ -123,15 +123,18 @@ Launch the **server** in master mode with custom config files:
 game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Race -masterServer -serversList:myservers.json -eventsList:myevents.json
 ```
 
-[!info] The mod package includes `runServer.cmd` and `runServer.sh` scripts for quickly launching a server. They provide convenient parameter configuration inside the files.
+[!NOTE]
+The mod package includes `runServer.cmd` and `runServer.sh` scripts for quickly launching a server. They provide convenient parameter configuration inside the files.
 
 # Compatibility Mode
 
-[!info] The mod fully supports only game version `9.4`, which is the latest Steam version.
+[!NOTE]
+The mod fully supports only game version `9.4`, which is the latest Steam version.
 
 When launched on earlier game versions, the mod runs in Compatibility Mode and attempts to provide basic functionality without online features.
 
-[!warning] Stable operation of the game and its offline functionality in Compatibility Mode is **not guaranteed**.
+[!WARNING]
+Stable operation of the game and its offline functionality in Compatibility Mode is **not guaranteed**.
 
 Compatibility Mode and support for older game versions are planned to be improved in the future.
 
