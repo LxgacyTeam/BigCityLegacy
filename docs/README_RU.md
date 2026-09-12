@@ -49,4 +49,4 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 ## Условия и положения
 
-### Подробные условия использования проекта, а также применяемые правовые нормы см. в NOTICE_RU
+### Подробные условия использования проекта, а также применяемые правовые нормы см. в [NOTICE_RU](https://github.com/LxgacyTeam/BigCityLegacy/blob/main/docs/NOTICE_RU.md).
