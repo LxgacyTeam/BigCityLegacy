@@ -1,5 +1,9 @@
 # BigCityLegacy
 
+### [README на Русском](https://github.com/LxgacyTeam/BigCityLegacy/blob/main/docs/README_RU.md)
+
+---
+
 A BepInEx plugin for the Steam version of **MadOut2 BigCityOnline** that fully restores online and offline functionality.
 
 ### Detailed information about the mod features, server startup, and server configuration is available in the Wiki section.
