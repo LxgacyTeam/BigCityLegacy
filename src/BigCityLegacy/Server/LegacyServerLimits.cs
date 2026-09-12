@@ -6,7 +6,7 @@ internal static class LegacyServerLimits
 {
     internal const int DefaultMaxCars = 100;
     internal const int DefaultMaxNikLength = 20;
-    internal const int DefaultMaxCarsByPlayer = 0;
+    internal const int DefaultMaxCarsByPlayer = 15;
     // 0 means unlimited
 
     internal static int MaxCars { get; private set; } = DefaultMaxCars;

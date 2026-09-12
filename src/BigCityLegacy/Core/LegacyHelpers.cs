@@ -1,20 +1,16 @@
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Numerics;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
-using BepInEx.Logging;
+using BepInEx.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
-using BigCityLegacy;
+using Debug = UnityEngine.Debug;
 
-internal static class LegacyHelpers
+public static class LegacyHelpers
 {
-    internal static string GameRoot
+    public static string GameRoot
     {
         get
         {
@@ -35,12 +31,64 @@ internal static class LegacyHelpers
         }
     }
 
-    internal static string VersionLine
+    public static void OpenFolder(string folderPath)
     {
-        get { return "BigCityLegacy v" + VersionInfo.ModVersionName + " | Game ver " + Application.version; }
+        if (Application.platform == RuntimePlatform.WindowsPlayer)
+        {
+            folderPath = folderPath.Replace("/", "\\");
+        }
+
+        if (!Directory.Exists(folderPath))
+        {
+            Debug.LogError($"[OpenFolder] Path not exists: {folderPath}");
+            return;
+        }
+
+        try
+        {
+            OpenFolderNatively(folderPath);
+        }
+        catch
+        {
+            try
+            {
+                Application.OpenURL("file://" + folderPath);
+            }
+            catch (Exception fallbackEx)
+            {
+                Debug.LogError($"[OpenFolder] Failed to open folder: {fallbackEx.Message}");
+            }
+        }
     }
 
-    internal static void SafeInvoke(object instance, string methodName)
+    private static void OpenFolderNatively(string folderPath)
+    {
+        if (Application.platform == RuntimePlatform.WindowsPlayer)
+        {
+            Process.Start("explorer.exe", folderPath);
+        }
+        else if (Application.platform == RuntimePlatform.OSXPlayer)
+        {
+            Process.Start("open", folderPath);
+        }
+        else if (Application.platform == RuntimePlatform.LinuxPlayer)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "xdg-open",
+                Arguments = $"\"{folderPath}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            });
+        }
+    }
+
+    internal static string VersionLine
+    {
+        get { return $"BigCityLegacy v{VersionInfo.ModVersionName} | Game ver: {Application.version}"; }
+    }
+
+    public static void SafeInvoke(object instance, string methodName)
     {
         if (instance is Type)
         {
@@ -50,7 +98,7 @@ internal static class LegacyHelpers
         SafeInvoke(instance.GetType(), instance, methodName);
     }
 
-    internal static void SafeInvoke(Type type, object instance, string methodName)
+    public static void SafeInvoke(Type type, object instance, string methodName)
     {
         try
         {
@@ -138,15 +186,6 @@ internal static class LegacyHelpers
 
         if (string.IsNullOrEmpty(text))
         {
-            ArgParcer.ArgValue argValue = ArgParcer.GetArgValue(arg);
-            if (argValue != null && argValue.isExists && !string.IsNullOrEmpty(argValue.strValue))
-            {
-                text = LegacyCommandLine.StripQuotes(argValue.strValue);
-            }
-        }
-
-        if (string.IsNullOrEmpty(text))
-        {
             string text2 = LegacyHelpers.GameRoot;
             try
             {
@@ -181,19 +220,6 @@ internal static class LegacyHelpers
             Debug.LogError($"Failed to load {path}: File not found");
             return false;
         }
-    }
-
-    public static bool HasCommandLineArg(string arg1, string arg2 = null)
-    {
-        string[] commandLineArgs = Environment.GetCommandLineArgs();
-        for (int i = 0; i < commandLineArgs.Length; i++)
-        {
-            if (commandLineArgs[i] == arg1 || commandLineArgs[i] == arg2)
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     public static bool IsGameplayRunning()
@@ -284,6 +310,26 @@ internal static class LegacyHelpers
         return csEvent.state == Net_BaseEvent.CurState.Spawn_AfterLobby ||
                csEvent.state == Net_BaseEvent.CurState.BeginRace ||
                csEvent.state == Net_BaseEvent.CurState.Race;
+    }
+
+    internal static void CheckOldPluginExist()
+    {
+        string PluginGuid = "com.alonso.madoutlegacy";
+
+        if (Chainloader.PluginInfos.ContainsKey(PluginGuid))
+        {
+            string BiePath = "BepInEx/plugins";
+            if (Application.platform == RuntimePlatform.WindowsPlayer)
+                BiePath = BiePath.Replace("/", "\\");
+
+            NativeErrorDialog.Show("BigCityLegacy Startup Error",
+                                    "Outdated MadOutLegacy plugin detected!\n" +
+                                    "Game launch blocked to prevent a version conflict.\n\n" +
+                                    $"Please delete the \'MadOutLegacy\' folder from \'{BiePath}\'.");
+
+            OpenFolder(GameRoot + "/" + BiePath);
+            Application.Quit();
+        }
     }
 
     public static int GetBuildVersion()

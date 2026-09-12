@@ -43,7 +43,7 @@ internal static class LegacyNearestPointRespawn
             return false;
         }
 
-        if (LegacyHelpers.HasCommandLineArg("-useVanillaRespawn"))
+        if (LegacyCommandLine.HasArg("-useVanillaRespawn"))
         {
             Debug.LogWarning("Respawn points are disabled. Vanilla spawn points will be used.");
             return false;

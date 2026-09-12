@@ -20,13 +20,13 @@ internal static class LegacyCompatibility
     {
         CurrentGameVersion = (Application.version ?? string.Empty).Trim();
 
-        if (HasCommandLineArg("-forceFullMode"))
+        if (LegacyCommandLine.HasArg("-forceFullMode"))
         {
             Mode = LegacyFeatureMode.Full;
             return;
         }
 
-        if (HasCommandLineArg("-forceCompatMode"))
+        if (LegacyCommandLine.HasArg("-forceCompatMode"))
         {
             Mode = LegacyFeatureMode.Compatibility;
             return;
@@ -44,22 +44,5 @@ internal static class LegacyCompatibility
 
         // Keep only 9.4 in full mode, but send everything older to the safe fallback.
         return version.Equals(FullSupportedGameVersion, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool HasCommandLineArg(string name)
-    {
-        try
-        {
-            string[] args = Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-        }
-        catch { }
-        return false;
     }
 }

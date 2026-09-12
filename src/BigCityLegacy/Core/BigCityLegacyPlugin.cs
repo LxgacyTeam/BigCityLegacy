@@ -35,6 +35,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 LegacyCustomSettings.Register();
             }
 
+            LegacyHelpers.CheckOldPluginExist();
             LegacyPatchManager.PatchForCurrentMode(Harmony, Logger);
             LegacyUpdateChecker.StartIfNeeded(this);
 

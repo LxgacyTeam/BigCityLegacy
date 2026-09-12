@@ -29,7 +29,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         if (LegacyCommandLine.ConnectPort > 0) port = LegacyCommandLine.ConnectPort.ToString();
 
         window = new LegacyUIWindow(
-            "Server Connection",
+            LegacyLocalizer.Text("Server Connection", "Подключение к серверу"),
             GetStartRect(),
             new LegacyUIWindowOptions
             {
@@ -63,7 +63,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
                 showBtnStyle.fontSize = 16;
 
                 Rect showBtnRect = new Rect(Screen.width - 180f - 10f, Screen.height - 35f - 10f, 180f, 35f);
-                if (GUI.Button(showBtnRect, "Connection menu", showBtnStyle))
+                if (GUI.Button(showBtnRect, LegacyLocalizer.Text("Connection menu", "Меню подключения"), showBtnStyle))
                 {
                     SetVisible(!window.Visible);
                 };
@@ -95,8 +95,8 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         float y = content.y;
         float tabW = content.width / 2f;
 
-        if (LegacyUI.TabButton(new Rect(x, y, tabW, 25f), "Master Server", tab == 0)) tab = 0;
-        if (LegacyUI.TabButton(new Rect(x + tabW, y, tabW, 25f), "Direct Connect", tab == 1)) tab = 1;
+        if (LegacyUI.TabButton(new Rect(x, y, tabW, 25f), LegacyLocalizer.Text("Master Server", "Подключение к Master"), tab == 0)) tab = 0;
+        if (LegacyUI.TabButton(new Rect(x + tabW, y, tabW, 25f), LegacyLocalizer.Text("Direct Connect", "Прямое подключение"), tab == 1)) tab = 1;
 
         y += 40f;
         DrawTabContent(content, x, y);
@@ -125,24 +125,24 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         float btnY = win.y + win.height - 40f;
         float btnW = (win.width - 40f) / 2f;
 
-        if (LegacyUI.GreenButton(new Rect(x, btnY, btnW, 26f), isMaster ? "Resolve List" : "Connect"))
+        if (LegacyUI.GreenButton(new Rect(x, btnY, btnW, 26f), isMaster ? LegacyLocalizer.Text("Resolve List", "Получить список") : LegacyLocalizer.Text("Connect", "Подключиться")))
         {
             if (isMaster) ResolveMaster(); else ConnectDirect();
         }
 
-        if (LegacyUI.Button(new Rect(x + btnW + 10f, btnY, btnW, 26f), isMaster ? "Set Local Master" : "Set Localhost"))
+        if (LegacyUI.Button(new Rect(x + btnW + 10f, btnY, btnW, 26f), isMaster ? LegacyLocalizer.Text("Set Local Master", "Localhost") : LegacyLocalizer.Text("Set Localhost", "Localhost")))
         {
             if (isMaster)
             {
                 masterHost = "127.0.0.1";
                 masterPort = "35000";
-                status = "Local master selected";
+                status = LegacyLocalizer.Text("Local master selected", "Выбран локальный Master");
             }
             else
             {
                 ip = "127.0.0.1";
                 port = "7800";
-                status = "Localhost selected";
+                status = LegacyLocalizer.Text("Localhost selected", "Выбран localhost");
             }
         }
     }
@@ -151,8 +151,8 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
     {
         string ipText = (ip ?? string.Empty).Trim();
         string portText = (port ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(ipText) || ipText.Contains(" ")) { status = string.IsNullOrEmpty(ipText) ? "IP is empty" : "IP contains spaces"; return; }
-        if (!int.TryParse(portText, out int p) || p < 1 || p > 65535) { status = "Bad port"; return; }
+        if (string.IsNullOrEmpty(ipText) || ipText.Contains(" ")) { status = string.IsNullOrEmpty(ipText) ? LegacyLocalizer.Text("IP is empty", "IP не заполнен") : LegacyLocalizer.Text("IP contains spaces", "IP содержит пробелы"); return; }
+        if (!int.TryParse(portText, out int p) || p < 1 || p > 65535) { status = LegacyLocalizer.Text("Invalid port", "Port указан неверно"); return; }
 
         LegacyCommandLine.ConnectIP = ipText;
         LegacyCommandLine.ConnectPort = p;
@@ -163,7 +163,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         NetUIPatches.RefreshServerListNow(owner);
 
         if (NetManager.me == null) { status = "NetManager is null"; return; }
-        status = $"Connecting to {ipText}:{p}";
+        status = $"{LegacyLocalizer.Text("Connecting to", "Подключение к")} {ipText}:{p}";
         NetManager.me.ConnectTo(ipText, p);
     }
 
@@ -171,12 +171,12 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
     {
         int p = GetMasterPortValue();
         string host = (masterHost ?? string.Empty).Trim();
-        if (p <= 0 || string.IsNullOrEmpty(host)) { status = p <= 0 ? "Bad master port" : "Master host is empty"; return; }
+        if (p <= 0 || string.IsNullOrEmpty(host)) { status = p <= 0 ? LegacyLocalizer.Text("Invalid master port", "Master Port указан неверно") : LegacyLocalizer.Text("Master host is empty", "Master host не заполнен"); return; }
 
         LegacyMasterClient.SetMaster(host, p, autoMaster, true);
-        if (LegacyMasterClient.GetMasterEndPoint() == null) { status = "Failed to resolve master"; return; }
+        if (LegacyMasterClient.GetMasterEndPoint() == null) { status = LegacyLocalizer.Text("Failed to resolve master", "Не удалось получить список"); return; }
 
-        status = $"Resolving list from {host}:{p}";
+        status = $"{LegacyLocalizer.Text("Resolving list from", "Получение списка с")} {host}:{p}";
         NetUIPatches.RefreshServerListNow(owner);
     }
 

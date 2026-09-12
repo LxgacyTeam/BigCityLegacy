@@ -10,16 +10,16 @@ internal static class NetConnectAndControlPatches
     private static readonly HashSet<NetConnect> WaitingForWorld = new HashSet<NetConnect>();
 
 
-    [HarmonyPatch(typeof(NetConnect), "isNeedDropByTimeout")]
+    [HarmonyPatch(typeof(NetInputControl), "CheckDisconnect")]
     [HarmonyPrefix]
-    private static bool NetConnect_IsNeedDropByTimeout_Prefix(NetConnect __instance, ref bool __result)
+    private static bool NetInputControl_CheckDisconnect_Prefix(NetInputControl __instance)
     {
-        if (!NetManager.isServer || !LegacyAutoDropTimeout.HasOverride)
+        if (!NetManager.isServer || !LegacyIdleKickTimeout.HasOverride)
         {
             return true;
         }
 
-        __result = LegacyAutoDropTimeout.IsNeedDropByTimeout(__instance);
+        LegacyIdleKickTimeout.CheckIdleDisconnect(__instance);
         return false;
     }
 

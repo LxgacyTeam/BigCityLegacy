@@ -12,7 +12,7 @@ Master=true
 maxCars=100
 maxCarsByPlayer=15
 maxNikLength=20
-autoDropTimeout=4000ms
+idleKickTimeout=120s
 
 serversList=""
 eventsList=""
@@ -39,12 +39,12 @@ Args=()
 [[ "$noServerCli" == "true" ]] && Args+=("-noServerCli")
 [[ "$ChatEvents" == "false" ]] && Args+=("-noChatEvents")
 [[ "$noCheckUpdates" == "true" ]] && Args+=("-noUpdCheck")
-[[ -n "$serversList" ]] && Args+=("-serversList:$serversList")
-[[ -n "$eventsList" ]] && Args+=("-eventsList:$eventsList")
-[[ -n "$respawnPoints" ]] && Args+=("-respawnPoints:$respawnPoints")
-[[ -n "$banList" ]] && Args+=("-banList:$banList")
+[[ -n "$serversList" ]] && Args+=("-serversList:\"$serversList\"")
+[[ -n "$eventsList" ]] && Args+=("-eventsList:\"$eventsList\"")
+[[ -n "$respawnPoints" ]] && Args+=("-respawnPoints:\"$respawnPoints\"")
+[[ -n "$banList" ]] && Args+=("-banList:\"$banList\"")
 
 ./run_bepinex.sh ./game -bend_GameServer -batchmode -nographics \
   "-port:$Port" "-maxConn:$MaxPlayers" "-Mode:$GameMode" \
-  "-maxCars:$maxCars" "-maxCarsByPlayer:$maxCarsByPlayer" "-maxNikLength:$maxNikLength" "-autoDropTimeout:$autoDropTimeout" \
+  "-maxCars:$maxCars" "-maxCarsByPlayer:$maxCarsByPlayer" "-maxNikLength:$maxNikLength" "-idleKickTimeout:$idleKickTimeout" \
   "${Args[@]}"

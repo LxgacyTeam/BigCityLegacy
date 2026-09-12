@@ -7,6 +7,7 @@
 	<Authors>LegacyTeam</Authors>
 	<VersionPrefix>1.3.0</VersionPrefix>
 	<VersionSuffix></VersionSuffix>
+	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <RootNamespace>BigCityLegacy</RootNamespace>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -70,7 +71,8 @@
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj" />
+	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj"
+					  SetConfiguration="Configuration=$(Configuration)"/>
 	  
     <Reference Include="BepInEx">
       <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>
@@ -211,10 +213,14 @@
 	  <RefBuildID6>6994850301373200383263390312037424</RefBuildID6>
 	  <RefBuildID7>6627282731930472236072401306668224</RefBuildID7>
 	  <RefBuildID8>6791119859750463425255893715788626</RefBuildID8>
+	  <RefBuildID9>8434449908363994631184002377032226</RefBuildID9>
+	  <RefBuildID10>5699118576668139137866903445209498</RefBuildID10>
+	  <RefBuildID11>8256090106561636365101426506307152</RefBuildID11>
+	  <RefBuildID12>8259931944488839985267068326399972</RefBuildID12>
   </PropertyGroup>
 
   <Target Name="GenerateProjectValues" BeforeTargets="BeforeCompile">
-      <WriteLinesToFile File="$(IntermediateOutputPath)ProjectValues.g.cs" Overwrite="true" Lines=" internal static class ProjectValues {&#xD;&#xA;			    internal const string RBID1 = &quot;$(RefBuildID1)&quot;%3B&#xD;&#xA;				internal const string RBID2 = &quot;$(RefBuildID3)&quot;%3B&#xD;&#xA;				internal const string RBID3 = &quot;$(RefBuildID2)&quot;%3B&#xD;&#xA;				internal const string RBID4 = &quot;$(RefBuildID4)&quot;%3B&#xD;&#xA;	            internal const string RBID5 = &quot;$(RefBuildID5)&quot;%3B&#xD;&#xA;	            internal const string RBID6 = &quot;$(RefBuildID7)&quot;%3B&#xD;&#xA;	            internal const string RBID7 = &quot;$(RefBuildID6)&quot;%3B&#xD;&#xA;	            internal const string RBID8 = &quot;$(RefBuildID8)&quot;%3B }" />
+      <WriteLinesToFile File="$(IntermediateOutputPath)ProjectValues.g.cs" Overwrite="true" Lines=" internal static class ProjectValues {&#xD;&#xA;			    internal const string RBID1 = &quot;$(RefBuildID1)&quot;%3B&#xD;&#xA;				internal const string RBID2 = &quot;$(RefBuildID3)&quot;%3B&#xD;&#xA;				internal const string RBID3 = &quot;$(RefBuildID2)&quot;%3B&#xD;&#xA;				internal const string RBID4 = &quot;$(RefBuildID4)&quot;%3B&#xD;&#xA;	            internal const string RBID5 = &quot;$(RefBuildID5)&quot;%3B&#xD;&#xA;	            internal const string RBID6 = &quot;$(RefBuildID7)&quot;%3B&#xD;&#xA;	            internal const string RBID7 = &quot;$(RefBuildID6)&quot;%3B&#xD;&#xA;	            internal const string RBID8 = &quot;$(RefBuildID8)&quot;%3B&#xD;&#xA;	            internal const string RBID9 = &quot;$(RefBuildID9)&quot;%3B&#xD;&#xA;	            internal const string RBID10 = &quot;$(RefBuildID11)&quot;%3B&#xD;&#xA;	            internal const string RBID11 = &quot;$(RefBuildID10)&quot;%3B&#xD;&#xA;	            internal const string RBID12 = &quot;$(RefBuildID12)&quot;%3B}" />
 	  <ItemGroup>
 			<Compile Include="$(IntermediateOutputPath)ProjectValues.g.cs" />
 		</ItemGroup>

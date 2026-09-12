@@ -116,7 +116,7 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
 
         if (LegacyUI.Button(new Rect(x + chkBtnW + gap, btnY, 75f, 28f), LegacyLocalizer.Text("GitHub", "GitHub")))
         {
-            Application.OpenURL("https://github.com");
+            Application.OpenURL($"https://github.com/{BigCityLegacyPlugin.GitHubOwner}/{BigCityLegacyPlugin.GitHubRepo}");
         }
     }
 

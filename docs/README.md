@@ -1,54 +1,52 @@
-# MadOutLegacy
+# BigCityLegacy
 
-#### 🇷🇺 README на Русском
+A BepInEx plugin for the Steam version of **MadOut2 BigCityOnline** that fully restores online and offline functionality.
 
----
+#### Detailed information about the mod features, server startup, and server configuration is available in the Wiki section.
 
-A BepInEx plugin for the Steam version of **MadOut2 BigCityOnline** that fully restores the game's online and offline functionality.
+## Key features
 
-#### Detailed information about the mod's features, server launch options, and server configuration is available in the Wiki.
-
-## Features
-
-- Offline gameplay mode with the server dependency fully removed
-- The mandatory Steam requirement has been removed
-- Host your own game server with flexible configuration
-- Support for all online modes: FreeRoam, RP, Race, and Cops vs. Bandits
-- Ability to create custom tracks and locations for online races and Cops vs. Bandits events
-- Coins and diamonds can be obtained for free from the shop using the "+" button in the main menu
-- Additional hotkeys; see the Wiki
-- FPS limit removal
+- Run your own game server with flexible configuration and administration.
+- Support for all online modes: FreeRoam, RP, Race, and Cops vs Bandits.
+- Ability to create custom tracks and locations for online races and Cops vs Bandits.
+- Additional settings and hotkeys. See the Wiki.
 
 ## Compatibility
 
-Only the latest Steam version of the game, `9.4`, is fully supported.
+Only the latest Steam game version, `9.4`, is fully supported.
 
-For earlier versions (`4.9` - `9.2`), Compatibility Mode is available. It provides offline-only functionality. At the moment, Compatibility Mode does not guarantee fully stable behavior on older game versions.
+Earlier versions (`4.9 - 9.2`) can run in Compatibility Mode, which provides offline functionality only. At the moment, Compatibility Mode does not guarantee fully stable operation of older game versions.
 
 ## Installation
 
-* Download the latest **original** version of the game from Steam, or from here.
+* Download the latest **original** version of the game from Steam. Modified game builds are **not supported**.
 * Install BepInEx 5 into the game folder and launch the game once.
-* Download the zip file from the Releases section and extract it into the game root folder.
+* Download the zip file from the Releases section and unpack it into the game root folder.
 
 ## Building
 
 **Requirements:**
 
-- MadOut2 9.4 with BepInEx 5 installed
-- .NET SDK / MSBuild
+- MadOut2 9.4 with BepInEx 5 installed.
+- .NET SDK.
 
 **Build process:**
 
 1. Install BepInEx 5 into the game folder and launch the game once.
-2. Build the project and pass the path to the game root folder:
+2. Clone and build the project, passing the **absolute path** to the game root folder:
 
 ```bat
+git clone --recurse-submodules https://github.com/LxgacyTeam/BigCityLegacy.git
+cd BigCityLegacy
 dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 ```
 
-## Terms and Conditions
+[!info] When opening the project in Visual Studio, make sure to set the path to the game root folder in the `<GameDir>` property in every `.csproj` file. After that, all required Unity and BepInEx assemblies will be referenced automatically.
 
-1. This project is distributed under the MIT License and requires compliance with its terms.
-2. This project is not affiliated with MadOut Games and is not supported by the game's developers. The PC version of MadOut2 is officially closed and unsupported.
-3. This project is an independent, non-commercial fan modification. It does not contain or distribute unofficial or modified builds and files of the MadOut2 game.
+[!warning] When passing the `GameDir` property through a CLI flag, you **must use an absolute path**. Using `..\` or other relative paths can cause build errors, because this property also affects the dependent LegacyUIFramework project located in one of the nested directories.
+
+## Terms and conditions
+
+1. The project is distributed under the MIT License and requires compliance with its terms.
+2. The project is not affiliated with MadOut Games and is not supported by the game developers. The PC version of MadOut2 is officially discontinued and unsupported.
+3. This project is an independent, non-commercial fan modification. It does not contain or distribute unofficial or modified builds or files of the MadOut2 game.
