@@ -41,11 +41,11 @@ cd BigCityLegacy
 dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 ```
 
-[!NOTE]
-When opening the project in Visual Studio, make sure to set the path to the game root folder in the `<GameDir>` property in every `.csproj` file. After that, all required Unity and BepInEx assemblies will be referenced automatically.
+> [!NOTE]
+> When opening the project in Visual Studio, make sure to set the path to the game root folder in the `<GameDir>` property in every `.csproj` file. After that, all required Unity and BepInEx assemblies will be referenced automatically.
 
-[!WARNING]
-When passing the `GameDir` property through a CLI flag, you **must use an absolute path**. Using `..\` or other relative paths can cause build errors, because this property also affects the dependent LegacyUIFramework project located in one of the nested directories.
+> [!WARNING]
+> When passing the `GameDir` property through a CLI flag, you **must use an absolute path**. Using `..\` or other relative paths can cause build errors, because this property also affects the dependent LegacyUIFramework project located in one of the nested directories.
 
 ## Terms and conditions
 

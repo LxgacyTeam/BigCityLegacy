@@ -204,8 +204,8 @@ Example: hiding the total volume slider:
 LegacySettingsMenuHelper.HideStockItem("Sound", "Sound_Total");
 ```
 
-[!WARNING]
-Items should be hidden **strictly after** all custom items are registered, because a hidden item effectively disappears from the scene and can no longer be cloned. Otherwise, registration can fail.
+> [!WARNING]
+> Items should be hidden **strictly after** all custom items are registered, because a hidden item effectively disappears from the scene and can no longer be cloned. Otherwise, registration can fail.
 
 ## Important limitations
 

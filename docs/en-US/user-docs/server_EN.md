@@ -117,8 +117,8 @@ While the game server is running, it can be controlled through the interactive C
 | delcars {PlayerID} | Delete all cars of a specific player. |
 | stop | Stop the server. |
 
-[!WARNING]
-At the moment, the `msg` command requires at least one player on the server and sends the message effectively on their behalf, only replacing the nickname with "Server". This is caused by the current chat architecture in the game.
+> [!WARNING]
+> At the moment, the `msg` command requires at least one player on the server and sends the message effectively on their behalf, only replacing the nickname with "Server". This is caused by the current chat architecture in the game.
 
 #### PlayerID
 
