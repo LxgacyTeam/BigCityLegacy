@@ -27,7 +27,7 @@ internal static class LegacyPatchManager
     private static void PatchFullMode()
     {
         PatchClass(typeof(GeneralPatches));
-        PatchClass(typeof(InAppPatches));
+        PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
         PatchClass(typeof(NetworkPatches));
@@ -56,12 +56,6 @@ internal static class LegacyPatchManager
         SafePostfix("CarShop_Item.Awake", "CarShop_Item", "Awake", typeof(GeneralPatches), "CarShopItem_Awake_Postfix");
         SafePostfix("CarShop_Item.SetCar", "CarShop_Item", "SetCar", typeof(GeneralPatches), "CarShopItem_SetCar_Postfix");
         SafePrefix("CarShop_Item.Delivery", "CarShop_Item", "Delivery", typeof(GeneralPatches), "CarShopItem_Delivery_Prefix");
-
-        SafeGetterPrefix("InApp_But.isTest", "InApp_But", "isTest", typeof(InAppPatches), "InAppBut_IsTest_Prefix");
-        SafePrefix("InApp_But.GetPriceAndValuta(string,int)", "InApp_But", "GetPriceAndValuta", new[] { typeof(string), typeof(int) }, typeof(InAppPatches), "InAppBut_GetPriceFloat_Prefix");
-        SafePrefix("InApp_But.GetPriceAndValuta(texts)", "InApp_But", "GetPriceAndValuta", new[] { typeof(string), typeof(Text), typeof(Text), typeof(Text), typeof(Text) }, typeof(InAppPatches), "InAppBut_GetPriceTexts_Prefix");
-        SafePrefix("InApp_But.UpPercentTxt", "InApp_But", "UpPercentTxt", typeof(InAppPatches), "InAppBut_UpPercentTxt_Prefix");
-        SafePrefix("InApp_But.Pressed", "InApp_But", "Pressed", typeof(InAppPatches), "InAppBut_Pressed_Prefix");
     }
 
     private static void PatchClass(Type patchClass)

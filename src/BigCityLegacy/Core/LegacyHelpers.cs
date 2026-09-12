@@ -6,6 +6,7 @@ using System.Threading;
 using BepInEx.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
+using static InputBut;
 using Debug = UnityEngine.Debug;
 
 public static class LegacyHelpers
@@ -338,6 +339,31 @@ public static class LegacyHelpers
         AlwaysOnline.Verions buildVersionFromXML = AlwaysOnline.GetBuildVersionFromXML(text, false);
         int buildVersion = buildVersionFromXML.curVersion;
         return buildVersion;
+    }
+
+    internal static void ResetSubsStatus()
+    {
+        string text = "BigCityLegacy.isSubsReseted";
+
+        if (PlayerPrefs.HasKey(text) && PlayerPrefs.GetInt(text) == 1)
+            return;
+
+        PlayerPrefs.SetInt(text, 1);
+
+        string[] subKeys =
+        {
+            "Subs_Vk",
+            "Subs_Fb",
+            "Subs_Instagram"
+        };
+
+        foreach (string key in subKeys)
+        {
+            if (PlayerPrefs.HasKey(key))
+                PlayerPrefs.SetInt(key, 0);
+        }
+
+        PlayerPrefs.Save();
     }
 }
 
