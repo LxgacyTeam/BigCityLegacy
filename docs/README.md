@@ -49,6 +49,4 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 ## Terms and conditions
 
-1. The project is distributed under the MIT License and requires compliance with its terms.
-2. The project is not affiliated with MadOut Games and is not supported by the game developers. The PC version of MadOut2 is officially discontinued and unsupported.
-3. This project is an independent, non-commercial fan modification. It does not contain or distribute unofficial or modified builds or files of the MadOut2 game.
+### For detailed terms of use for the project and applicable legal provisions, please refer to NOTICE.
