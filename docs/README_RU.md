@@ -1,4 +1,4 @@
-# BigCityLegacy
+[# BigCityLegacy
 
 BepInEx плагин для Steam-версии игры **MadOut2 BigCityOnline**, полностью восстанавливающий онлайн и офлайн функционал.
 
@@ -20,7 +20,7 @@ BepInEx плагин для Steam-версии игры **MadOut2 BigCityOnline*
 ## Установка
 
 * Скачайте посделнюю **оригинальную** версию игры из Steam *(модифицированные сборки игры **не поддерживаются**)*
-* Установите BepInEx 5 в папку с игрой и запустите игру 1 раз
+* Установите [BepInEx 5](https://github.com/BepInEx/BepInEx) в папку с игрой и запустите игру 1 раз
 * Скачайте zip файл из раздела [Releases](https://github.com/LxgacyTeam/BigCityLegacy/releases) и распакуйте в корневую папку игры
 
 ## Сборка
@@ -50,3 +50,4 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 ## Условия и положения
 
 ### Подробные условия использования проекта, а также применяемые правовые нормы см. в [NOTICE_RU](https://github.com/LxgacyTeam/BigCityLegacy/blob/main/docs/NOTICE_RU.md).
+](https://github.com/BepInEx/BepInEx)
