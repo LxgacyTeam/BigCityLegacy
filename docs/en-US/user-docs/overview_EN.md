@@ -7,7 +7,6 @@ The project is a game modification distributed as a BepInEx 5 plugin.
 # Features and capabilities in detail
 
 * **The mod removes the game's mandatory dependency on online servers** and provides full offline mode functionality.
-* **The mod makes the game Steam-less**, meaning it removes the requirement to have Steam running to launch the game. Basic Steam functionality still remains available; for example, Steam can still track your online status and count your playtime.
 * **The mod allows you to launch the game in server mode** and **connect to it easily through a separate menu**. The server has several modes, flexible configuration, and administration through an interactive CLI interface. See the Server section for details.
 * **The server supports all main game modes**: FreeRoam, RP, Race, and Cops vs Bandits.
   *Online Parkour is planned for restoration in future releases and is not currently supported.*
@@ -20,7 +19,6 @@ The project is a game modification distributed as a BepInEx 5 plugin.
 * All mod UI elements support localization and react to language changes in the game settings.
 * The mod has a notification system for new updates.
 * The mod includes Point Tool v2 for convenient creation of custom events: coordinate chains for checkpoints or positions.
-* Coins and diamonds can be obtained for free by simply clicking offers in the shop: the `+` button in the upper-right corner of the main menu.
 * The mod adds several hotkeys:
   - `F5` - quick weather switch.
   - `F6` - instant spawn of the last selected car, without timeouts.
