@@ -11,7 +11,7 @@
     <RootNamespace>BigCityLegacy</RootNamespace>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-	<GameDir Condition="'$(GameDir)' == ''">..\prod_game</GameDir>
+	<GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\MadOut2_BigCityOnline</GameDir>
     <ManagedDir>$(GameDir)\game_Data\Managed</ManagedDir>
     <BepInExDir>$(GameDir)\BepInEx\core</BepInExDir>
     <LegacyUIFrameworkDll Condition="'$(LegacyUIFrameworkDll)' == ''">$(OutputPath)\LegacyUIFramework.dll</LegacyUIFrameworkDll>
