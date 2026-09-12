@@ -6,7 +6,7 @@
 
 A BepInEx plugin for the Steam version of **MadOut2 BigCityOnline** that fully restores online and offline functionality.
 
-### Detailed information about the mod features, server startup, and server configuration is available in the Wiki section.
+### Detailed information about the mod features, server startup, and server configuration is available in the [Wiki section](https://github.com/LxgacyTeam/BigCityLegacy/wiki#-documentation-on-english).
 
 ## Key features
 
