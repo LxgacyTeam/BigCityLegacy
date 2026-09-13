@@ -31,6 +31,13 @@ internal static class LegacyHotkeys
             }
         }
 
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            LegacyHudToggle.Toggle();
+        }
+
+        LegacyHudToggle.Tick();
+
         if (NetManager.isOnlineClient && Input.GetKeyDown(KeyCode.F12))
         {
             AskBoxUI.Show(LegacyLocalizer.Text("Disconnect from server?", "Отключиться с сервера?"), delegate(AskBoxUI box)
