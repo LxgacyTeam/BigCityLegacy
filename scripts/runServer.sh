@@ -21,6 +21,7 @@ banList=""
 useVanillaRespawn=false
 ChatEvents=true
 noCheckUpdates=false
+killchat=true
 
 verboseServerConsole=false
 noServerConsole=false
@@ -39,6 +40,7 @@ Args=()
 [[ "$noServerCli" == "true" ]] && Args+=("-noServerCli")
 [[ "$ChatEvents" == "false" ]] && Args+=("-noChatEvents")
 [[ "$noCheckUpdates" == "true" ]] && Args+=("-noUpdCheck")
+[[ "$killchat" == "false" ]] && Args+=("-noKillChat")
 [[ -n "$serversList" ]] && Args+=("-serversList:\"$serversList\"")
 [[ -n "$eventsList" ]] && Args+=("-eventsList:\"$eventsList\"")
 [[ -n "$respawnPoints" ]] && Args+=("-respawnPoints:\"$respawnPoints\"")

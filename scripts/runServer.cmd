@@ -22,6 +22,7 @@ set banList=""
 set useVanillaRespawn=false
 set ChatEvents=true
 set noCheckUpdates=false
+set killchat=true
 
 set verboseServerConsole=false
 set noServerConsole=false
@@ -40,6 +41,7 @@ if [%noServerConsole%] == [true] (set Args=%Args%-noServerConsole )
 if [%noServerCli%] == [true] (set Args=%Args%-noServerCli )
 if [%ChatEvents%] == [false] (set Args=%Args%-noChatEvents )
 if [%noCheckUpdates%] == [true] (set Args=%Args%-noUpdCheck )
+if [%killchat%] == [false] (set Args=%Args%-noKillChat )
 set "match1=0"
 if [%serversList%] == [""] set "match1=1"
 if [%serversList%] == [] set "match1=1"
