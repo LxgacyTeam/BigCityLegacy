@@ -31,12 +31,11 @@ internal static class LegacyHotkeys
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.F1))
+        if (Input.GetKeyDown(KeyCode.F1) && LegacyHelpers.IsGameplayRunning())
         {
             LegacyHudToggle.Toggle();
         }
 
-        LegacyHudToggle.Tick();
 
         if (NetManager.isOnlineClient && Input.GetKeyDown(KeyCode.F12))
         {

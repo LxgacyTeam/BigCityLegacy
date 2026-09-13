@@ -60,6 +60,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         LegacyHotkeys.Update();
         LegacyServerShutdown.Tick();
         LegacyChatEventQueue.Tick();
+        LegacyHudToggle.Tick();
     }
 
     private void OnDestroy()
