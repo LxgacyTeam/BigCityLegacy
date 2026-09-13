@@ -8,7 +8,7 @@ internal static class KillChatPatches
     [HarmonyPostfix]
     private static void PlayerControl_LiveChanget_Postfix(PlayerControl __instance, bool now_dead, WhoKill who)
     {
-        if (!NetManager.isServer || !now_dead)
+        if (!LegacyCommandLine.KillChatEnabled || !NetManager.isServer || !now_dead)
         {
             return;
         }
@@ -30,15 +30,15 @@ internal static class KillChatPatches
 
         if (killer == null)
         {
-            message = "died";
+            message = "\u2620 died";
         }
         else if (killer == victim)
         {
-            message = "killed themself";
+            message = "\u2620 killed themself";
         }
         else
         {
-            message = "killed by " + killer.nikName;
+            message = "\u2620 killed by " + killer.nikName;
         }
 
         ChatEventsPatches.SendChatMessage(victim, message);

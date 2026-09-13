@@ -12,6 +12,7 @@ internal static class LegacyCommandLine
     internal static string BindIP;
     internal static bool BindToSpecificIP;
     internal static bool ChatEventsEnabled = true;
+    internal static bool KillChatEnabled = true;
 
     private static string[] cachedProcessArgs;
 
@@ -30,6 +31,7 @@ internal static class LegacyCommandLine
         BindToSpecificIP = !string.IsNullOrEmpty(BindIP) || HasArg("-bindToIP") || HasArg("-bindSpecificIP");
         AutoConnectFromArgs = !string.IsNullOrEmpty(ConnectIP) && ConnectPort > 0;
         ChatEventsEnabled = !HasArg("-noChatEvents");
+        KillChatEnabled = !HasArg("-noKillChat");
 
         LegacyServerLimits.UpdateFromArgs(args);
         LegacyIdleKickTimeout.UpdateFromArgs(args);
