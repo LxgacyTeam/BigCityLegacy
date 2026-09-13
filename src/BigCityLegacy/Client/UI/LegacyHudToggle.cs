@@ -11,6 +11,7 @@ internal static class LegacyHudToggle
     private static readonly List<GameObject> _previouslyActive = new List<GameObject>();
 
     internal static bool IsHidden { get { return _hidden; } }
+    internal static bool ToggledByMenuEsc;
 
     internal static void Toggle()
     {
