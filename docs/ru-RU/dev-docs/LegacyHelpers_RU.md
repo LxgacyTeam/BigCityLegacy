@@ -286,14 +286,14 @@ string json = File.ReadAllText(path);
 
 ---
 
-# `IsGameplayRunning()`
+# `IsGameplayRunning`
 
 Проверяет, что клиент находится в активном gameplay-состоянии.
 
 Сигнатура:
 
 ```csharp
-public static bool IsGameplayRunning()
+public static bool IsGameplayRunning
 ```
 
 Метод возвращает `false`, если:
@@ -314,7 +314,7 @@ public static bool IsGameplayRunning()
 ```csharp
 private void Update()
 {
-    if (!LegacyHelpers.IsGameplayRunning())
+    if (!LegacyHelpers.IsGameplayRunning)
     {
         return;
     }
@@ -332,14 +332,14 @@ private void Update()
 
 ---
 
-# `IsCsOrSurvivalMatchRunning()`
+# `IsCsOrSurvivalMatchRunning`
 
 Проверяет, находится ли локальный игрок в активном матче CS или CS_Survival.
 
 Сигнатура:
 
 ```csharp
-public static bool IsCsOrSurvivalMatchRunning()
+public static bool IsCsOrSurvivalMatchRunning
 ```
 
 Метод работает только для online client:
@@ -371,7 +371,7 @@ Net_BaseEvent.CurState.Race
 ## Пример: запрет функции во время CS/CS_Survival
 
 ```csharp
-if (LegacyHelpers.IsCsOrSurvivalMatchRunning())
+if (LegacyHelpers.IsCsOrSurvivalMatchRunning)
 {
     return;
 }
@@ -385,34 +385,22 @@ FlyCamera.Create();
 
 ---
 
-# `GetBuildVersion()`
+# `GetBuildVersion`
 
 Возвращает build version игры из XML-asset'а `AlwaysOnline`.
+Пишет в лог ошибку если AlwaysOnline ещё не инициализирован.
 
 Сигнатура:
 
 ```csharp
-public static int GetBuildVersion()
+public static int GetBuildVersion
 ```
 
 ## Пример
 
 ```csharp
-int buildVersion = LegacyHelpers.GetBuildVersion();
+int buildVersion = LegacyHelpers.GetBuildVersion;
 Debug.Log("Game build version: " + buildVersion);
-```
-
-## Важно
-
-Метод предполагает, что `AlwaysOnline.me` уже существует и `buildVersionAsset` доступен. Не стоит вызывать его слишком рано при запуске игры без дополнительных проверок.
-
-Безопасный вариант:
-
-```csharp
-if (AlwaysOnline.me && AlwaysOnline.me.buildVersionAsset)
-{
-    int buildVersion = LegacyHelpers.GetBuildVersion();
-}
 ```
 
 ---

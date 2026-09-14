@@ -31,7 +31,7 @@ internal static class LegacyHotkeys
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.F1) && LegacyHelpers.IsGameplayRunning())
+        if (Input.GetKeyDown(KeyCode.F1) && LegacyHelpers.IsGameplayRunning)
         {
             LegacyHudToggle.Toggle();
         }

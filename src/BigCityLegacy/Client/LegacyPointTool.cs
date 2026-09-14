@@ -196,6 +196,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
         if (UseVisualPoints)
         {
+            _visPointsIsToggled = true;
             rectUseVisualX = rectToggleX - 87f;
             jsonByPlayerPos = LegacyUI.Toggle(new Rect(rectjsonByPlayerPosX - 75f, rectLine1Y + 4f, rectjsonByPlayerPosWidth + 10f, rectHeight), jsonByPlayerPos, copyModeLabel);
 
@@ -211,11 +212,16 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             jsonByPlayerPos = LegacyUI.Toggle(new Rect(rectjsonByPlayerPosX + 10f, rectLine1Y + 4f, rectjsonByPlayerPosWidth + 10f, rectHeight), jsonByPlayerPos, copyModeLabel);
             GUI.Label(new Rect(rectToggleX - 11f, rectLine1Y + 2f, 10f, rectHeight), "|", separatorStyle);
             UseVisualPoints = LegacyUI.Toggle(new Rect(rectUseVisualX, rectLine1Y + 4f, 135f, rectHeight), UseVisualPoints, "Use visual points");
-            LegacyEventsConfig.ClearDebugRaceCheckpoints();
+            if (_visPointsIsToggled)
+            {
+                LegacyEventsConfig.ClearDebugRaceCheckpoints();
+                _visPointsIsToggled = false;
+            }
         }
 
         if (ShowTeleportWindow)
         {
+            if (NetManager.isOnlineClient) { ShowTeleportWindow = !ShowTeleportWindow; }
             DrawTeleportContent(new Rect(x, y + 180f, 460f, 80f), cameraPos, rectHeight);
         }
     }
@@ -602,7 +608,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private void OnGUI()
 	{
-        if (!LegacyHelpers.IsGameplayRunning())
+        if (!LegacyHelpers.IsGameplayRunning)
         {
             return;
         }
@@ -642,7 +648,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             pointWindow.SavePrefs();
         }
 
-        if (!LegacyHelpers.IsGameplayRunning())
+        if (!LegacyHelpers.IsGameplayRunning)
         {
             return;
         }
@@ -751,4 +757,6 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 	private string jsonCopyText;
 
 	private bool _isVisible = true;
+
+    private bool _visPointsIsToggled = false;
 }

@@ -286,14 +286,14 @@ This method is suitable for configs and external JSON files where a missing file
 
 ---
 
-# `IsGameplayRunning()`
+# `IsGameplayRunning`
 
 Checks whether the client is in an active gameplay state.
 
 Signature:
 
 ```csharp
-public static bool IsGameplayRunning()
+public static bool IsGameplayRunning
 ```
 
 The method returns `false` if:
@@ -314,7 +314,7 @@ The method returns `false` if:
 ```csharp
 private void Update()
 {
-    if (!LegacyHelpers.IsGameplayRunning())
+    if (!LegacyHelpers.IsGameplayRunning)
     {
         return;
     }
@@ -332,14 +332,14 @@ This method is useful for client-side hotkeys, overlays, debug tools, and other 
 
 ---
 
-# `IsCsOrSurvivalMatchRunning()`
+# `IsCsOrSurvivalMatchRunning`
 
 Checks whether the local player is in an active CS or CS_Survival match.
 
 Signature:
 
 ```csharp
-public static bool IsCsOrSurvivalMatchRunning()
+public static bool IsCsOrSurvivalMatchRunning
 ```
 
 The method works only for an online client:
@@ -371,7 +371,7 @@ Lobby and complete states are not considered an active match.
 ## Example: disabling a feature during CS/CS_Survival
 
 ```csharp
-if (LegacyHelpers.IsCsOrSurvivalMatchRunning())
+if (LegacyHelpers.IsCsOrSurvivalMatchRunning)
 {
     return;
 }
@@ -385,34 +385,22 @@ This method is suitable for client-side features that must not interfere with co
 
 ---
 
-# `GetBuildVersion()`
+# `GetBuildVersion`
 
 Returns the game build version from the `AlwaysOnline` XML asset.
+Writes an error to log if AlwaysOnline not initialized yet.
 
 Signature:
 
 ```csharp
-public static int GetBuildVersion()
+public static int GetBuildVersion
 ```
 
 ## Example
 
 ```csharp
-int buildVersion = LegacyHelpers.GetBuildVersion();
+int buildVersion = LegacyHelpers.GetBuildVersion;
 Debug.Log("Game build version: " + buildVersion);
-```
-
-## Important
-
-The method assumes that `AlwaysOnline.me` already exists and `buildVersionAsset` is available. Do not call it too early during game startup without additional checks.
-
-Safe variant:
-
-```csharp
-if (AlwaysOnline.me && AlwaysOnline.me.buildVersionAsset)
-{
-    int buildVersion = LegacyHelpers.GetBuildVersion();
-}
 ```
 
 ---

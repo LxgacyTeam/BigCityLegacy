@@ -91,7 +91,7 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         y += 32f;
 
         string versionsLine = LegacyLocalizer.Text("<b>Mod version:</b>", "<b>Версия мода:</b>") + $" {VersionInfo.ModVersionName}\n" +
-                              LegacyLocalizer.Text("<b>Game version:</b>", "<b>Версия игры:</b>") + $" {Application.version} (build {LegacyHelpers.GetBuildVersion()})\n" +
+                              LegacyLocalizer.Text("<b>Game version:</b>", "<b>Версия игры:</b>") + $" {Application.version} (build {LegacyHelpers.GetBuildVersion})\n" +
                               LegacyLocalizer.Text("<b>UI Framework version:</b>", "<b>Версия UI Framework:</b>") + $" {LegacyUI.Version}";
 
         #if DEBUG

@@ -223,81 +223,87 @@ public static class LegacyHelpers
         }
     }
 
-    public static bool IsGameplayRunning()
+    public static bool IsGameplayRunning
     {
-        if (NetManager.isServer)
+        get
         {
-            return false;
-        }
+            if (NetManager.isServer)
+            {
+                return false;
+            }
 
-        if (!Nuligine.me || !Nuligine.RealGame)
-        {
-            return false;
-        }
+            if (!Nuligine.me || !Nuligine.RealGame)
+            {
+                return false;
+            }
 
-        if (!GameUI.me || !GameUI.me.isUsed())
-        {
-            return false;
-        }
+            if (!GameUI.me || !GameUI.me.isUsed())
+            {
+                return false;
+            }
 
-        if (Loading.me)
-        {
-            return false;
-        }
+            if (Loading.me)
+            {
+                return false;
+            }
 
-        if (Scenes.nowBusy())
-        {
-            return false;
-        }
+            if (Scenes.nowBusy())
+            {
+                return false;
+            }
 
-        if (FadeUI.me && FadeUI.fadeState != FadeUI.FadeState.Unfaded)
-        {
-            return false;
-        }
+            if (FadeUI.me && FadeUI.fadeState != FadeUI.FadeState.Unfaded)
+            {
+                return false;
+            }
 
-        if (MenuEsc.me || MenuEsc.needSelectWhere)
-        {
-            return false;
-        }
+            if (MenuEsc.me || MenuEsc.needSelectWhere)
+            {
+                return false;
+            }
 
-        if (GamePhone.me && GamePhone.me.gameObject.activeSelf)
-        {
-            return false;
-        }
+            if (GamePhone.me && GamePhone.me.gameObject.activeSelf)
+            {
+                return false;
+            }
 
-        InputControl input = InputControl.GetFirstUser();
+            InputControl input = InputControl.GetFirstUser();
 
-        if (!input)
-        {
-            return false;
-        }
+            if (!input)
+            {
+                return false;
+            }
 
-        if (!input.current)
-        {
-            return false;
-        }
+            if (!input.current)
+            {
+                return false;
+            }
 
-        if (!input.currentOrParent)
-        {
-            return false;
-        }
+            if (!input.currentOrParent)
+            {
+                return false;
+            }
 
-        return true;
-    }
-
-    public static bool IsCsOrSurvivalMatchRunning()
-    {
-        if (!NetManager.isOnlineClient)
-        {
-            return false;
-        }
-
-        if (IsLocalPlayerInActiveCsEvent(Net_BaseEvent.curUserInRaceInst))
-        {
             return true;
         }
+    }
 
-        return IsLocalPlayerInActiveCsEvent(Net_BaseEvent.isCurUserAddedToPlayersListG());
+    public static bool IsCsOrSurvivalMatchRunning
+    {
+        get
+        {
+            if (!NetManager.isOnlineClient)
+            {
+                return false;
+            }
+
+            if (IsLocalPlayerInActiveCsEvent(Net_BaseEvent.curUserInRaceInst))
+            {
+                return true;
+            }
+
+            return IsLocalPlayerInActiveCsEvent(Net_BaseEvent.isCurUserAddedToPlayersListG());
+        }
     }
 
     private static bool IsLocalPlayerInActiveCsEvent(Net_BaseEvent currentEvent)
@@ -333,12 +339,22 @@ public static class LegacyHelpers
         }
     }
 
-    public static int GetBuildVersion()
+    public static int GetBuildVersion
     {
-        string text = AlwaysOnline.me.buildVersionAsset.text;
-        AlwaysOnline.Verions buildVersionFromXML = AlwaysOnline.GetBuildVersionFromXML(text, false);
-        int buildVersion = buildVersionFromXML.curVersion;
-        return buildVersion;
+        get {
+            try
+            {
+                string text = AlwaysOnline.me.buildVersionAsset.text;
+                AlwaysOnline.Verions buildVersionFromXML = AlwaysOnline.GetBuildVersionFromXML(text, false);
+                int buildVersion = buildVersionFromXML.curVersion;
+                return buildVersion;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[BigCityLegacy] Failed to GetBuildVersion: AlwaysOnline.me is not initialized; ex: {ex.Message}");
+                return -1;    
+            }
+        }
     }
 
     internal static void ResetSubsStatus()
