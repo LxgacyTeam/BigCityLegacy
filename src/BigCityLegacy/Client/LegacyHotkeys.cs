@@ -17,6 +17,11 @@ internal static class LegacyHotkeys
             LegacyHelpers.SafeInvoke(typeof(WeatherManager), "DoRandom");
         }
 
+        if (Input.GetKeyDown(KeyCode.F8))
+        {
+            LegacyVinylPort.Instance.Toggle();
+        }
+
         if (Input.GetKeyDown(KeyCode.F6) && (!string.IsNullOrEmpty(LastSelectedCarNameApp) || !string.IsNullOrEmpty(LastSelectedCarNameShop)))
         {
             int F6SpawnMode = PlayerPrefs.GetInt("BigCityLegacy.F6_SpawnMode");
@@ -39,7 +44,7 @@ internal static class LegacyHotkeys
 
         if (NetManager.isOnlineClient && Input.GetKeyDown(KeyCode.F12))
         {
-            AskBoxUI.Show(LegacyLocalizer.Text("Disconnect from server?", "Отключиться с сервера?"), delegate(AskBoxUI box)
+            AskBoxUI.Show(LegacyLocalizer.Text("Disconnect from server?", "Отключиться с сервера?"), delegate (AskBoxUI box)
             {
                 if (box.isYes && NetManager.me)
                 {
