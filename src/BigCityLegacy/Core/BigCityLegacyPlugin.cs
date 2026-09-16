@@ -13,7 +13,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
     public const string GitHubOwner = "LxgacyTeam";
     public const string GitHubRepo = "BigCityLegacy";
 
-
+    
     internal static ManualLogSource Log;
     internal static Harmony Harmony;
 
@@ -61,6 +61,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         LegacyServerShutdown.Tick();
         LegacyChatEventQueue.Tick();
         LegacyHudToggle.Tick();
+        LegacyGarageVinylButton.Ensure();
     }
 
     private void OnDestroy()

@@ -17,11 +17,6 @@ internal static class LegacyHotkeys
             LegacyHelpers.SafeInvoke(typeof(WeatherManager), "DoRandom");
         }
 
-        if (Input.GetKeyDown(KeyCode.F8))
-        {
-            LegacyVinylPort.Instance.Toggle();
-        }
-
         if (Input.GetKeyDown(KeyCode.F6) && (!string.IsNullOrEmpty(LastSelectedCarNameApp) || !string.IsNullOrEmpty(LastSelectedCarNameShop)))
         {
             int F6SpawnMode = PlayerPrefs.GetInt("BigCityLegacy.F6_SpawnMode");

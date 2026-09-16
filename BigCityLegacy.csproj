@@ -65,8 +65,7 @@
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj"
-					  SetConfiguration="Configuration=$(Configuration)"/>
+	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj" SetConfiguration="Configuration=$(Configuration)" />
 	  
     <Reference Include="BepInEx">
       <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>
