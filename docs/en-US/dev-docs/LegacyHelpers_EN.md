@@ -4,40 +4,26 @@
 
 ---
 
-# `GameRoot`
+# `ModDataPath`
 
-Returns the path to the game root folder.
+Returns the path to the BigCityLegacy folder located in the game's root folder.
 
 Signature:
 
 ```csharp
-public static string GameRoot { get; }
+public static string ModDataPath { get; }
 ```
-
-How it works:
-
-1. the base fallback is `Directory.GetCurrentDirectory()`;
-2. if `Application.dataPath` is available, its parent folder is used;
-3. if the path cannot be obtained through Unity, the fallback is returned.
-
-For a regular Unity game, `Application.dataPath` points to a folder such as:
-
-```text
-game_Data
-```
-
-Therefore, `GameRoot` returns the parent directory, which is the game root.
 
 ## Example
 
 ```csharp
-string root = LegacyHelpers.GameRoot;
-string configFolder = Path.Combine(root, "BigCityLegacy");
+string data = LegacyHelpers.ModDataPath;
+string config = Path.Combine(dataFolder, "config");
 ```
 
 ## When to use
 
-Use `GameRoot` when you need to build a path relative to the game folder: configs, JSON files, helper directories, or local mod resources.
+The `BigCityLegacy` folder is used to store the mod's user data: configs, JSON files, auxiliary directories, and local mod resources.
 
 ---
 

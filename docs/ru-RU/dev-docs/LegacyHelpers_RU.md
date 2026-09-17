@@ -4,40 +4,26 @@
 
 ---
 
-# `GameRoot`
+# `ModDataPath`
 
-Возвращает путь к корневой папке игры.
+Возвращает путь к папке BigCityLegacy, располагающейся в корневой папке игры.
 
 Сигнатура:
 
 ```csharp
-public static string GameRoot { get; }
+public static string ModDataPath { get; }
 ```
-
-Логика работы:
-
-1. базовый fallback — `Directory.GetCurrentDirectory()`;
-2. если доступен `Application.dataPath`, берётся его родительская папка;
-3. если получить путь через Unity не удалось, возвращается fallback.
-
-Для обычной Unity-игры `Application.dataPath` указывает на папку вида:
-
-```text
-game_Data
-```
-
-Поэтому `GameRoot` вернёт родительскую директорию, то есть корень игры.
 
 ## Пример
 
 ```csharp
-string root = LegacyHelpers.GameRoot;
-string configFolder = Path.Combine(root, "BigCityLegacy");
+string data = LegacyHelpers.ModDataPath;
+string config = Path.Combine(dataFolder, "config");
 ```
 
 ## Когда использовать
 
-Используйте `GameRoot`, когда нужно построить путь относительно папки игры: конфиги, JSON-файлы, вспомогательные директории, локальные ресурсы мода.
+Папка `BigCityLegacy` используется для хранения пользовательских данных мода: конфиги, JSON-файлы, вспомогательные директории, локальные ресурсы мода.
 
 ---
 
