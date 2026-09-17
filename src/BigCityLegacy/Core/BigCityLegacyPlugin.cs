@@ -25,6 +25,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         Harmony = new Harmony(PluginGuid);
         try
         {
+            LegacyMigrationEvents.Init();
 
             if (LegacyCompatibility.IsFullMode)
             {
@@ -35,7 +36,6 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 LegacyCustomSettings.Register();
             }
 
-            LegacyHelpers.CheckOldPluginExist();
             LegacyHelpers.ResetSubsStatus();
             LegacyPatchManager.PatchForCurrentMode(Harmony, Logger);
             LegacyUpdateChecker.StartIfNeeded(this);

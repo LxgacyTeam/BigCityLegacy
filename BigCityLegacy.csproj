@@ -6,12 +6,12 @@
     <AssemblyName>BigCityLegacy</AssemblyName>
 	<Authors>LegacyTeam</Authors>
 	<VersionPrefix>1.3.1</VersionPrefix>
-	<VersionSuffix>dev</VersionSuffix>
+	<VersionSuffix>beta1</VersionSuffix>
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <RootNamespace>BigCityLegacy</RootNamespace>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-	<GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\MadOut2_BigCityOnline</GameDir>
+	<GameDir Condition="'$(GameDir)' == ''">R:\BigCityLegacy\prod_game</GameDir>
     <ManagedDir>$(GameDir)\game_Data\Managed</ManagedDir>
     <BepInExDir>$(GameDir)\BepInEx\core</BepInExDir>
     <LegacyUIFrameworkDll Condition="'$(LegacyUIFrameworkDll)' == ''">$(OutputPath)\LegacyUIFramework.dll</LegacyUIFrameworkDll>
@@ -65,7 +65,8 @@
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj" SetConfiguration="Configuration=$(Configuration)" />
+	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj"
+					  SetConfiguration="Configuration=$(Configuration)"/>
 	  
     <Reference Include="BepInEx">
       <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>

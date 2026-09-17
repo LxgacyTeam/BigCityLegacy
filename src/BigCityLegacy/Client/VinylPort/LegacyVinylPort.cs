@@ -9,12 +9,12 @@ using UnityEngine;
 public class LegacyVinylPort : MonoBehaviour
 {
     private const float WinWidth = 430f;
-    private const float WinHeight = 380f;
+    private const float WinHeight = 390f;
     private const float ListHeight = 220f;
     private const float PosXPercent = 0.156f;
     private const float PosYPercent = 0.15f;
     private const int MaxNameLength = 60;
-    private const string PackNameControl = "VinylPort_PackName";
+    private const float PackRefreshInterval = 0.5f;
 
     private static LegacyVinylPort instance;
     public static LegacyVinylPort Instance
@@ -34,11 +34,12 @@ public class LegacyVinylPort : MonoBehaviour
     private LegacyUIWindow win;
     private LegacyUIScrollView scroll;
     private List<PackInfo> choises = new List<PackInfo>();
-    private string packNmae = "my_vinyl";
+    private string packName = "my_vinyl";
     private string curCar = "";
+
     private string flashMsg = "";
-    private float flashTime = 0f;
-    private bool nameFocused;
+    private float flashTime;
+    private float nextPackRefreshTime;
 
     private struct PackInfo
     {
@@ -57,7 +58,7 @@ public class LegacyVinylPort : MonoBehaviour
                 WinHeight),
             new LegacyUIWindowOptions
             {
-                Draggable = false,
+                Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = true,
                 InputBlockMode = LegacyUIInputBlockMode.Window
@@ -75,51 +76,22 @@ public class LegacyVinylPort : MonoBehaviour
         if (win.Visible && CarGarageUI.me == null)
         {
             Close();
-        }
-        if (!win.Visible || !nameFocused) return;
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            nameFocused = IsMouseInsideNameField();
-            if (!nameFocused) return;
+            return;
         }
 
-        string typed = Input.inputString;
-        if (!string.IsNullOrEmpty(typed))
-        {
-            for (int i = 0; i < typed.Length; i++)
-            {
-                char c = typed[i];
-                if (c == '\b' || c == '\n' || c == '\r') continue;
-                packNmae += c;
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.Backspace) && packNmae.Length > 0)
-        {
-            packNmae = packNmae.Substring(0, packNmae.Length - 1);
-        }
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Escape))
-        {
-            nameFocused = false;
-        }
-        if (packNmae.Length > MaxNameLength)
-        {
-            packNmae = packNmae.Substring(0, MaxNameLength);
-        }
-    }
+        if (!win.Visible)
+            return;
 
-    private bool IsMouseInsideNameField()
-    {
-        if (win == null || !win.Visible) return false;
-        Vector2 mp = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-        Rect winRect = win.Rect;
-        if (!winRect.Contains(mp)) return false;
-        float padding = 8f;
-        Rect content = new Rect(winRect.x + padding, winRect.y + padding + 22f, winRect.width - padding * 2f, winRect.height - padding * 2f - 22f);
-        // имя + hint + list = 20+18+220 = 258; поле на позиции 258 от верха контента, высота 24
-        float fieldY = content.y + 20f + 18f + ListHeight;
-        Rect fieldRect = new Rect(content.x, fieldY, content.width * 0.6f - 4f, 24f);
-        return fieldRect.Contains(mp);
+        string garageCar = CurrentGarageCar();
+        if (!string.Equals(garageCar, curCar, StringComparison.OrdinalIgnoreCase))
+        {
+            curCar = garageCar;
+            RefreshPacks(true);
+            return;
+        }
+
+        if (Time.unscaledTime >= nextPackRefreshTime)
+            RefreshPacks(false);
     }
 
     public void Toggle()
@@ -131,45 +103,108 @@ public class LegacyVinylPort : MonoBehaviour
     public void Open()
     {
         curCar = CurrentGarageCar();
-        choises = ScanPacksForCar(curCar);
-        scroll.ResetScroll();
+        RefreshPacks(true);
         win.Visible = true;
-        nameFocused = false;
     }
 
     public void Close()
     {
         win.Visible = false;
-        nameFocused = false;
     }
 
     private string CurrentGarageCar()
     {
-        if (CarGarageUI.me && CarGarageUI.me.car) return CarGarageUI.me.car.prefabName;
+        if (CarGarageUI.me && CarGarageUI.me.car)
+            return CarGarageUI.me.car.prefabName;
+
         foreach (CarPaintItems p in Resources.FindObjectsOfTypeAll<CarPaintItems>())
         {
-            if (p != null && p.gameObject.activeInHierarchy && p.car != null) return p.car.prefabName;
+            if (p != null && p.gameObject.activeInHierarchy && p.car != null)
+                return p.car.prefabName;
         }
+
         return "";
     }
 
     private void OnGUI()
     {
-        if (win == null || !win.Visible) return;
+        if (win == null || !win.Visible)
+            return;
+
         using (new LegacyUIGuiScope(-10000))
         {
             win.Draw(DrawContent);
         }
     }
 
+    private string carDir
+    {
+        get
+        {
+            string carDir = Path.Combine(LegacyHelpers.ModDataPath, "vinylpacks", Sanitize(curCar));
+            return carDir;
+        }
+    }
+
+    private string carSaveKey
+    {
+        get { return "CarSaved_" + curCar; }
+    }
+
     private void DrawContent(Rect content)
     {
         LegacyUILayout ui = new LegacyUILayout(content);
 
-        LegacyUI.Label(ui.Row(20f), "Машина: " + (curCar == "" ? "<нет>" : curCar));
-        LegacyUI.MiniHint(ui.Row(18f), "Паков: " + choises.Count);
+        // Allocate all screen rectangles first. The order in which controls are DRAWN below
+        // is intentionally different from their visual order: the TextField is created before
+        // the dynamic ScrollView so its IMGUI control ID stays stable when the file list changes.
+        Rect labelRect = ui.Row(20f);
+        Rect hintRect = ui.Row(18f);
+        Rect listRect = ui.Row(ListHeight);
+        Rect inputRow = ui.Row(24f);
+        Rect statusRect = ui.Row(20f);
 
-        scroll.ViewRect = ui.Row(ListHeight);
+        LegacyUI.Label(labelRect, "Машина: " + (curCar == "" ? "<нет>" : curCar));
+
+        float folderButtonWidth = 110f;
+        Rect folderButtonRect = new Rect(
+            labelRect.xMax - folderButtonWidth,
+            labelRect.y,
+            folderButtonWidth,
+            25f);
+
+        if (Directory.Exists(carDir))
+        {
+            if (LegacyUI.Button(folderButtonRect, "Открыть папку"))
+                LegacyHelpers.OpenFolder(carDir);
+        }
+
+        LegacyUI.MiniHint(hintRect, "Паков: " + choises.Count);
+
+        // IMPORTANT: create the keyboard-focusable control before the dynamic scroll contents.
+        // GUI.TextField manages keyboardControl, hotControl, caret and selection on its own.
+        float nameWidth = inputRow.width * 0.6f;
+        Rect nameRect = new Rect(inputRow.x, inputRow.y, nameWidth - 4f, inputRow.height);
+
+        string newPackName = LegacyUI.TextField(nameRect, packName);
+        if (newPackName == null)
+            newPackName = "";
+        if (newPackName.Length > MaxNameLength)
+            newPackName = newPackName.Substring(0, MaxNameLength);
+        packName = newPackName;
+
+        if (LegacyUI.GreenButton(
+            new Rect(inputRow.x + nameWidth, inputRow.y, inputRow.width - nameWidth, inputRow.height),
+            "Export"))
+        {
+            Export();
+        }
+
+        LegacyUI.Status(statusRect, Time.unscaledTime < flashTime ? flashMsg : "");
+
+        // Draw the dynamic list last in IMGUI control order. Its variable number of buttons
+        // can no longer shift the control ID of the TextField above.
+        scroll.ViewRect = listRect;
         scroll.Draw(listContent =>
         {
             LegacyUILayout list = new LegacyUILayout(listContent, 5f);
@@ -177,72 +212,74 @@ public class LegacyVinylPort : MonoBehaviour
             {
                 PackInfo info = choises[i];
                 if (LegacyUI.Button(list.Row(26f), info.name))
-                {
                     ApplyPack(info.path);
-                }
             }
+
             if (choises.Count == 0)
-            {
                 LegacyUI.MiniHint(list.Row(18f), "Нет паков для этой машины");
-            }
         });
+    }
 
-        Rect row = ui.Row(24f);
-        float nameWidth = row.width * 0.6f;
-        Rect nameRect = new Rect(row.x, row.y, nameWidth - 4f, row.height);
+    private void RefreshPacks(bool resetScroll)
+    {
+        choises = ScanPacksForCar(curCar);
+        nextPackRefreshTime = Time.unscaledTime + PackRefreshInterval;
 
-        if (Event.current.type == EventType.MouseDown)
-        {
-            bool inside = nameRect.Contains(Event.current.mousePosition);
-            if (inside)
-            {
-                nameFocused = true;
-            }
-            else if (nameFocused)
-            {
-                nameFocused = false;
-            }
-        }
-
-        GUI.SetNextControlName(PackNameControl);
-        packNmae = LegacyUI.TextField(nameRect, packNmae);
-
-        if (nameFocused)
-        {
-            Color prev = GUI.color;
-            GUI.color = new Color(1f, 1f, 1f, 0.9f);
-            float cursorX = nameRect.x + 4f + GUI.skin.textField.CalcSize(new GUIContent(packNmae)).x;
-            cursorX = Mathf.Min(cursorX, nameRect.xMax - 4f);
-            GUI.DrawTexture(new Rect(cursorX, nameRect.y + 3f, 1f, nameRect.height - 6f), Texture2D.whiteTexture);
-            GUI.color = prev;
-        }
-
-        if (LegacyUI.GreenButton(new Rect(row.x + nameWidth, row.y, row.width - nameWidth, row.height), "Export")) Export();
-
-        LegacyUI.Status(ui.Row(20f), Time.unscaledTime < flashTime ? flashMsg : "");
+        if (resetScroll && scroll != null)
+            scroll.ResetScroll();
     }
 
     private List<PackInfo> ScanPacksForCar(string car)
     {
         List<PackInfo> result = new List<PackInfo>();
-        if (car == "") return result;
-        string packsDir = Path.Combine(Paths.GameRootPath, "VinylPacks");
-        if (!Directory.Exists(packsDir)) return result;
-        foreach (string file in Directory.GetFiles(packsDir, "*.vinyl", SearchOption.AllDirectories))
+        if (car == "")
+            return result;
+
+        string packsDir = Path.Combine(LegacyHelpers.ModDataPath, "vinylpacks");
+        if (!Directory.Exists(packsDir))
+            return result;
+
+        string[] files;
+        try
         {
+            files = Directory.GetFiles(packsDir, "*.vinyl", SearchOption.AllDirectories);
+        }
+        catch
+        {
+            return result;
+        }
+
+        for (int i = 0; i < files.Length; i++)
+        {
+            string file = files[i];
             try
             {
                 XmlDocument pack = new XmlDocument();
                 pack.Load(file);
-                string packCar = pack.DocumentElement.GetAttribute("car");
-                if (!string.Equals(packCar, car, StringComparison.OrdinalIgnoreCase)) continue;
+
+                XmlElement root = pack.DocumentElement;
+                if (root == null)
+                    continue;
+
+                string packCar = root.GetAttribute("car");
+                if (!string.Equals(packCar, car, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 PackInfo info = new PackInfo();
                 info.path = file;
                 info.name = Path.GetFileNameWithoutExtension(file);
                 result.Add(info);
             }
-            catch { }
+            catch
+            {
+            }
         }
+
+        result.Sort(delegate (PackInfo a, PackInfo b)
+        {
+            return string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase);
+        });
+
         return result;
     }
 
@@ -252,52 +289,173 @@ public class LegacyVinylPort : MonoBehaviour
         {
             XmlDocument pack = new XmlDocument();
             pack.Load(path);
-            XmlNode paint = pack.DocumentElement.SelectSingleNode("CarPaint");
+
+            XmlElement packRoot = pack.DocumentElement;
+            if (packRoot == null)
+            {
+                Flash("Некорректный пак");
+                return;
+            }
+
+            XmlNode paint = packRoot.SelectSingleNode("CarPaint");
             if (paint == null)
             {
                 Flash("нет CarPaint");
                 return;
             }
-            string packCar = pack.DocumentElement.GetAttribute("car");
+
+            string packCar = packRoot.GetAttribute("car");
             if (!string.Equals(packCar, curCar, StringComparison.OrdinalIgnoreCase))
             {
                 Flash("Пак не для этой машины");
                 return;
             }
-            string xml = CarSaveLoad.GetXmlForCar(curCar);
-            if (string.IsNullOrEmpty(xml)) return;
+
+            string xml = GetOrCreateCarSaveXml();
+            if (string.IsNullOrEmpty(xml))
+            {
+                Flash("Не удалось создать сохранение машины");
+                return;
+            }
+
             XmlDocument save = new XmlDocument();
             save.LoadXml(xml);
-            XmlNode old = save.DocumentElement.SelectSingleNode("CarPaint");
-            XmlNode imp = save.ImportNode(paint, true);
-            if (old != null) save.DocumentElement.ReplaceChild(imp, old);
-            else save.DocumentElement.AppendChild(imp);
-            XmlNode mat = pack.DocumentElement.SelectSingleNode("CarMaterial");
+            if (save.DocumentElement == null)
+            {
+                Flash("Некорректное сохранение машины");
+                return;
+            }
+
+            XmlNode oldPaint = save.DocumentElement.SelectSingleNode("CarPaint");
+            XmlNode importedPaint = save.ImportNode(paint, true);
+            if (oldPaint != null)
+                save.DocumentElement.ReplaceChild(importedPaint, oldPaint);
+            else
+                save.DocumentElement.AppendChild(importedPaint);
+
+            XmlNode mat = packRoot.SelectSingleNode("CarMaterial");
             if (mat != null)
             {
                 XmlNode oldMat = save.DocumentElement.SelectSingleNode("CarMaterial");
-                XmlNode impMat = save.ImportNode(mat, true);
-                if (oldMat != null) save.DocumentElement.ReplaceChild(impMat, oldMat);
-                else save.DocumentElement.AppendChild(impMat);
+                XmlNode importedMat = save.ImportNode(mat, true);
+                if (oldMat != null)
+                    save.DocumentElement.ReplaceChild(importedMat, oldMat);
+                else
+                    save.DocumentElement.AppendChild(importedMat);
             }
-            PlayerPrefs.SetString("CarSaved_" + curCar, save.OuterXml);
+
+            PlayerPrefs.SetString(carSaveKey, save.OuterXml);
             PlayerPrefs.Save();
-            foreach (CarSaveLoad sl in Resources.FindObjectsOfTypeAll<CarSaveLoad>())
+
+            CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+            if (targetSaveLoad != null)
             {
-                if (sl != null && sl.car != null && sl.car.prefabName == curCar)
-                {
-                    sl.LoadXml(save.OuterXml);
-                    break;
-                }
+                targetSaveLoad.LoadXml(save.OuterXml);
+
+                SyncGarageMaterialControls(targetSaveLoad.car);
             }
-            if (CarGarageUI.me) CarGarageUI.me.CarPaint_Finish();
+
+            if (CarGarageUI.me)
+                CarGarageUI.me.CarPaint_Finish();
+
             Flash("Применен пак: " + Path.GetFileNameWithoutExtension(path));
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Flash("Ошибка импорта: " + ex.Message);
+        }
+    }
+
+    private CarSaveLoad FindGarageSaveLoad()
+    {
+        if (CarGarageUI.me != null && CarGarageUI.me.car != null &&
+            string.Equals(CarGarageUI.me.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase))
+        {
+            CarSaveLoad direct = CarGarageUI.me.car.GetComponent<CarSaveLoad>();
+            if (direct != null)
+                return direct;
+        }
+
+        foreach (CarSaveLoad sl in Resources.FindObjectsOfTypeAll<CarSaveLoad>())
+        {
+            if (sl != null && sl.car != null &&
+                string.Equals(sl.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase))
+            {
+                return sl;
+            }
+        }
+
+        return null;
+    }
+
+    private string GetOrCreateCarSaveXml()
+    {
+        string xml = CarSaveLoad.GetXmlForCar(curCar);
+        if (!string.IsNullOrEmpty(xml))
+            return xml;
+
+        CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+        if (targetSaveLoad == null)
+            return string.Empty;
+
+        XmlDocument current = targetSaveLoad.SaveXml();
+        if (current == null || current.DocumentElement == null)
+            return string.Empty;
+
+        xml = current.OuterXml;
+
+        // A never-edited car has no CarSaved_<prefab> key at all. Seed it from the
+        // current runtime/default car state so there is a valid XML document into
+        // which the imported CarPaint/CarMaterial nodes can be merged.
+        PlayerPrefs.SetString(carSaveKey, xml);
+        PlayerPrefs.Save();
+
+        return xml;
+    }
+
+    private string CaptureCurrentGarageXml()
+    {
+        CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+        if (targetSaveLoad == null)
+            return string.Empty;
+
+        XmlDocument current = targetSaveLoad.SaveXml();
+        if (current == null || current.DocumentElement == null)
+            return string.Empty;
+
+        return current.OuterXml;
+    }
+
+    private void SyncGarageMaterialControls(CarControl car)
+    {
+        if (CarGarageUI.me == null || car == null)
+            return;
+
+        CarMaterial carMaterial = car.GetComponent<CarMaterial>();
+        if (carMaterial == null)
+            return;
+
+        if (CarGarageUI.me.bodyColor != null)
+        {
+            CarGarageUI.me.bodyColor.SetColor(carMaterial.body.color);
+            CarGarageUI.me.bodyColor.SetMettalic(carMaterial.body.Mettalic);
+            CarGarageUI.me.bodyColor.SetGloss(carMaterial.body.Gloss);
+        }
+
+        if (CarGarageUI.me.wheelColor != null)
+        {
+            CarGarageUI.me.wheelColor.SetColor(carMaterial.wheel.color);
+            CarGarageUI.me.wheelColor.SetMettalic(carMaterial.wheel.Mettalic);
+            CarGarageUI.me.wheelColor.SetGloss(carMaterial.wheel.Gloss);
+        }
     }
 
     private void Export()
     {
+        bool playerPrefsSwapped = false;
+        bool hadPreviousSave = false;
+        string previousSaveXml = null;
+
         try
         {
             if (curCar == "")
@@ -305,40 +463,100 @@ public class LegacyVinylPort : MonoBehaviour
                 Flash("Нет машины в гараже");
                 return;
             }
+
+            string currentGarageXml = CaptureCurrentGarageXml();
+            if (string.IsNullOrEmpty(currentGarageXml))
+            {
+                Flash("Не удалось получить текущее состояние машины");
+                return;
+            }
+
+            // Export must use the state that is visible in the editor right now, not
+            // the last state the player accepted/saved. Temporarily replace the car's
+            // PlayerPrefs XML in memory, use the normal GetXmlForCar pipeline, then
+            // restore the exact previous value in finally. Do NOT call PlayerPrefs.Save()
+            // while the temporary value is installed: an export must not implicitly
+            // commit the player's editor changes to disk.
+            hadPreviousSave = PlayerPrefs.HasKey(carSaveKey);
+            if (hadPreviousSave)
+                previousSaveXml = PlayerPrefs.GetString(carSaveKey);
+
+            PlayerPrefs.SetString(carSaveKey, currentGarageXml);
+            playerPrefsSwapped = true;
+
             string xml = CarSaveLoad.GetXmlForCar(curCar);
-            if (string.IsNullOrEmpty(xml)) return;
+            if (string.IsNullOrEmpty(xml))
+            {
+                Flash("Не удалось подготовить состояние машины для экспорта");
+                return;
+            }
+
             XmlDocument save = new XmlDocument();
             save.LoadXml(xml);
+            if (save.DocumentElement == null)
+            {
+                Flash("Некорректное состояние машины");
+                return;
+            }
+
             XmlNode paint = save.DocumentElement.SelectSingleNode("CarPaint");
-            if (paint == null) return;
+            if (paint == null)
+            {
+                Flash("Нет CarPaint");
+                return;
+            }
+
             XmlDocument pack = new XmlDocument();
             XmlElement root = pack.CreateElement("VinylPack");
             root.SetAttribute("version", "3");
             root.SetAttribute("car", curCar);
             pack.AppendChild(root);
             root.AppendChild(pack.ImportNode(paint, true));
+
             XmlNode mat = save.DocumentElement.SelectSingleNode("CarMaterial");
-            if (mat != null) root.AppendChild(pack.ImportNode(mat, true));
-            string carDir = Path.Combine(Paths.GameRootPath, "VinylPacks", Sanitze(curCar));
+            if (mat != null)
+                root.AppendChild(pack.ImportNode(mat, true));
+
             Directory.CreateDirectory(carDir);
-            pack.Save(Path.Combine(carDir, Sanitze(packNmae) + ".vinyl"));
-            packNmae = "";
-            Flash("экспорт готов");
+
+            string outputPath = Path.Combine(carDir, Sanitize(packName) + ".vinyl");
+            pack.Save(outputPath);
+
+            packName = "";
+            RefreshPacks(false);
+            Flash("Экспорт готов");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Flash("Ошибка экспорта: " + ex.Message);
+        }
+        finally
+        {
+            if (playerPrefsSwapped)
+            {
+                if (hadPreviousSave)
+                    PlayerPrefs.SetString(carSaveKey, previousSaveXml ?? string.Empty);
+                else
+                    PlayerPrefs.DeleteKey(carSaveKey);
+            }
+        }
     }
 
     private void Flash(string text)
     {
         flashMsg = text;
-        flashTime = Time.unscaledTime + 2f;
+        flashTime = Time.unscaledTime + 5f;
     }
 
-    private string Sanitze(string s)
+    private static string Sanitize(string s)
     {
-        if (s == "") return "pack";
+        if (string.IsNullOrEmpty(s))
+            return "pack";
+
         string result = s;
-        foreach (char c in Path.GetInvalidFileNameChars()) result = result.Replace(c, '_');
+        foreach (char c in Path.GetInvalidFileNameChars())
+            result = result.Replace(c, '_');
+
         return result;
     }
 }

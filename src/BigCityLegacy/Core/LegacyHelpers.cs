@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using BepInEx;
 using BepInEx.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -11,24 +12,26 @@ using Debug = UnityEngine.Debug;
 
 public static class LegacyHelpers
 {
-    public static string GameRoot
+    public static string ModDataPath
     {
         get
         {
-            string root = Directory.GetCurrentDirectory();
-            try
+            string path = Path.Combine(Paths.GameRootPath, "BigCityLegacy");
+            
+            if (!Directory.Exists(path))
             {
-                if (!string.IsNullOrEmpty(Application.dataPath))
+                try
                 {
-                    DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-                    if (parent != null)
-                    {
-                        root = parent.FullName;
-                    }
+                    Directory.CreateDirectory(path);
+                    Debug.Log($"[BigCityLegacy] Mod data dir created: {path}");
+                }
+                catch (Exception ex)
+                { 
+                    Debug.LogError($"[BigCityLegacy] Failed to create {path} dir: {ex.Message}");
                 }
             }
-            catch { }
-            return root;
+
+            return path;
         }
     }
 
@@ -187,24 +190,22 @@ public static class LegacyHelpers
 
         if (string.IsNullOrEmpty(text))
         {
-            string text2 = LegacyHelpers.GameRoot;
-            try
+            string path = ModDataPath;
+            string config = Path.Combine(path, "config");
+            text = Path.Combine(config, json);
+
+            if (!Directory.Exists(config))
             {
-                bool flag2 = !string.IsNullOrEmpty(Application.dataPath);
-                if (flag2)
+                try
                 {
-                    DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-                    bool flag3 = parent != null;
-                    if (flag3)
-                    {
-                        text2 = parent.FullName;
-                    }
+                    Directory.CreateDirectory(config);
+                    Debug.Log($"[BigCityLegacy] Config dir created: {config}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[BigCityLegacy] Failed to create {config} dir: {ex.Message}");
                 }
             }
-            catch
-            {
-            }
-            text = Path.Combine(Path.Combine(text2, "BigCityLegacy"), json);
         }
 
         return LegacyCommandLine.StripQuotes(text);
@@ -317,26 +318,6 @@ public static class LegacyHelpers
         return csEvent.state == Net_BaseEvent.CurState.Spawn_AfterLobby ||
                csEvent.state == Net_BaseEvent.CurState.BeginRace ||
                csEvent.state == Net_BaseEvent.CurState.Race;
-    }
-
-    internal static void CheckOldPluginExist()
-    {
-        string PluginGuid = "com.alonso.madoutlegacy";
-
-        if (Chainloader.PluginInfos.ContainsKey(PluginGuid))
-        {
-            string BiePath = "BepInEx/plugins";
-            if (Application.platform == RuntimePlatform.WindowsPlayer)
-                BiePath = BiePath.Replace("/", "\\");
-
-            NativeErrorDialog.Show("BigCityLegacy Startup Error",
-                                    "Outdated MadOutLegacy plugin detected!\n" +
-                                    "Game launch blocked to prevent a version conflict.\n\n" +
-                                    $"Please delete the \'MadOutLegacy\' folder from \'{BiePath}\'.");
-
-            OpenFolder(GameRoot + "/" + BiePath);
-            Application.Quit();
-        }
     }
 
     public static int GetBuildVersion

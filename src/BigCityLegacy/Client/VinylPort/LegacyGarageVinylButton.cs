@@ -140,7 +140,7 @@ public class LegacyGarageVinylButton : MonoBehaviour
         Localize label = ev ? ev.text : (grp ? grp.text : null);
         if (label)
         {
-            LegacySettingsMenuHelper.SetLocalize(label, "VinylPort");
+            LegacyLocalizer.SetLocalize(label, "VinylPort");
         }
         else
         {

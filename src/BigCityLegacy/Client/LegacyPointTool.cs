@@ -33,7 +33,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
         GameObject gameObject = new GameObject("PointTool");
 		global::UnityEngine.Object.DontDestroyOnLoad(gameObject);
 		LegacyPointTool.instance = gameObject.AddComponent<LegacyPointTool>();
-        string text = getPosOutFilePath();
+        string text = getPosOutFilePath;
         if (File.Exists(text))
         {
             File.Delete(text);
@@ -321,7 +321,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
 	private static string PeekLastPointFromFile()
 	{
-		string filePath = getPosOutFilePath();
+		string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -379,7 +379,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             return;
         }
 
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         Process.Start(new ProcessStartInfo
         {
@@ -390,7 +390,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private static bool RemoveLastPointFromFile()
 	{
-		string filePath = getPosOutFilePath();
+		string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -434,7 +434,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private bool CheckPosOutFileExistsOrNotEmpty()
     {
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -466,14 +466,14 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             return;
         }
 
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         AskBoxUI.Show("Clear ALL saved points?", delegate (AskBoxUI box)
         {
             if (box.isYes)
             {
                 LegacyEventsConfig.ClearDebugRaceCheckpoints();
-                string file = getPosOutFilePath();
+                string file = getPosOutFilePath;
                 File.Delete(file);
                 if (GameUI.me)
                 {
@@ -712,7 +712,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
 	private void writeToPosOutFile()
 	{
-		string file = getPosOutFilePath();
+		string file = getPosOutFilePath;
 		string dir = Path.GetDirectoryName(file);
 		if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
 		{
@@ -732,24 +732,13 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 		}
 	}
 
-	private static string getPosOutFilePath()
+	private static string getPosOutFilePath
 	{
-		string text = LegacyHelpers.GameRoot;
-		try
-		{
-			if (!string.IsNullOrEmpty(Application.dataPath))
-			{
-				DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-				if (parent != null)
-				{
-					text = parent.FullName;
-				}
-			}
-		}
-		catch
-		{
-		}
-		return Path.Combine(Path.Combine(text, "BigCityLegacy"), "pos_out.txt");
+        get
+        {
+            string path = Path.Combine(LegacyHelpers.ModDataPath, "pos_out.txt");
+            return path;
+        }
 	}
 
 	private static LegacyPointTool instance;

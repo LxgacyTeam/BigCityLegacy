@@ -15,6 +15,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
     private const uint AttachParentProcess = 0xFFFFFFFFU;
     private const int ErrorAccessDenied = 5;
+    private const string AttachParentConsoleArg = "-attachParentConsole";
     private const uint Utf8CodePage = 65001U;
 
     private const uint GenericRead = 0x80000000U;
@@ -450,31 +451,11 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         try
         {
-            bool attached = AttachConsole(AttachParentProcess);
-            int attachError = attached ? 0 : Marshal.GetLastWin32Error();
-
-            if (!attached && attachError == ErrorAccessDenied)
-            {
-                attached = true;
-            }
-
-            if (!attached)
-            {
-                bool allocated = AllocConsole();
-                int allocError = allocated ? 0 : Marshal.GetLastWin32Error();
-
-                if (!allocated && allocError == ErrorAccessDenied)
-                {
-                    allocated = true;
-                }
-
-                attached = allocated;
-            }
-
-            if (!attached)
+            bool consoleReady = AcquireWindowsServerConsole();
+            if (!consoleReady)
             {
                 throw new InvalidOperationException(
-                    "Unable to attach or allocate a Windows console. Win32 error=" +
+                    "Unable to acquire a Windows console. Win32 error=" +
                     Marshal.GetLastWin32Error().ToString()
                 );
             }
@@ -526,6 +507,37 @@ public sealed class LegacyServerConsole : MonoBehaviour
             CloseWindowsConsoleHandles();
             Debug.LogWarning("Failed to init Windows server console: " + ex.Message);
         }
+    }
+
+    private static bool AcquireWindowsServerConsole()
+    {
+        // Unity's Windows player is a GUI executable. When it is started
+        // directly from an interactive cmd/PowerShell session, the shell does not wait
+        // for it and immediately resumes reading the parent's console input. Attaching
+        // to that same console would therefore leave the shell and the server CLI racing
+        // for one buffer.
+        //
+        // By default use a private console, which gives the server exclusive input. The
+        // provided runServer.cmd executes game.exe from a command script (where cmd does
+        // wait), so it opts into sharing its parent console with -attachParentConsole.
+        if (LegacyCommandLine.HasArg(AttachParentConsoleArg))
+        {
+            bool attached = AttachConsole(AttachParentProcess);
+            int attachError = attached ? 0 : Marshal.GetLastWin32Error();
+
+            if (attached || attachError == ErrorAccessDenied)
+                return true;
+        }
+
+        try
+        {
+            FreeConsole();
+        }
+        catch
+        {
+        }
+
+        return AllocConsole();
     }
 
     private static void OpenWindowsConsoleHandles()
@@ -1002,6 +1014,9 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AttachConsole(uint dwProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeConsole();
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AllocConsole();

@@ -29,7 +29,7 @@ public class LegacyEventsConfig
         {
             return false;
         }
-        string configPath = LegacyEventsConfig.GetConfigPath();
+        string configPath = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
         LegacyEventsConfig.loadedConfigPath = configPath;
         if (!File.Exists(configPath))
         {
@@ -68,31 +68,6 @@ public class LegacyEventsConfig
             flag = false;
         }
         return flag;
-    }
-
-    private static string GetConfigPath()
-    {
-        string customPath = LegacyCommandLine.GetArgValue("-eventsList");
-        if (!string.IsNullOrEmpty(customPath))
-        {
-            return customPath;
-        }
-        string text = LegacyHelpers.GameRoot;
-        try
-        {
-            if (!string.IsNullOrEmpty(Application.dataPath))
-            {
-                DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-                if (parent != null)
-                {
-                    text = parent.FullName;
-                }
-            }
-        }
-        catch
-        {
-        }
-        return Path.Combine(Path.Combine(text, "BigCityLegacy"), "Events.json");
     }
 
     private static void TryCreateExampleConfig(string path)

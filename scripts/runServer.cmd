@@ -59,4 +59,6 @@ if [%banList%] == [""] set "match4=1"
 if [%banList%] == [] set "match4=1"
 if %match4% == 0 (set Args=%Args%-banList:%banList% )
 
-game.exe -bend_GameServer -batchmode -nographics -port:%Port% -maxConn:%MaxPlayers% -maxCars:%maxCars% -maxCarsByPlayer:%maxCarsByPlayer% -maxNikLength:%maxNikLength% -idleKickTimeout:%idleKickTimeout% -Mode:%GameMode% %Args%
+:: Safe here because cmd waits for GUI applications when they are launched from a command script.
+:: Direct interactive launches do NOT pass this flag and get a private server console instead.
+game.exe -bend_GameServer -batchmode -nographics -attachParentConsole -port:%Port% -maxConn:%MaxPlayers% -maxCars:%maxCars% -maxCarsByPlayer:%maxCarsByPlayer% -maxNikLength:%maxNikLength% -idleKickTimeout:%idleKickTimeout% -Mode:%GameMode% %Args%
