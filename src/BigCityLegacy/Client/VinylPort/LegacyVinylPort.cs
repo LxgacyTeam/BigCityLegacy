@@ -164,7 +164,10 @@ public class LegacyVinylPort : MonoBehaviour
         Rect inputRow = ui.Row(24f);
         Rect statusRect = ui.Row(20f);
 
-        LegacyUI.Label(labelRect, "Машина: " + (curCar == "" ? "<нет>" : curCar));
+        LegacyLocalizedText carLabel = new LegacyLocalizedText("Car: ", "Машина: ");
+        LegacyLocalizedText emptyCar = new LegacyLocalizedText("<not selected>", "<не выбрана>");
+
+        LegacyUI.Label(labelRect, carLabel + (curCar == "" ? $"{emptyCar}" : curCar));
 
         float folderButtonWidth = 110f;
         Rect folderButtonRect = new Rect(
@@ -175,11 +178,13 @@ public class LegacyVinylPort : MonoBehaviour
 
         if (Directory.Exists(carDir))
         {
-            if (LegacyUI.Button(folderButtonRect, "Открыть папку"))
+            if (LegacyUI.Button(folderButtonRect, LegacyLocalizer.Text("Open folder", "Открыть папку")))
                 LegacyHelpers.OpenFolder(carDir);
         }
 
-        LegacyUI.MiniHint(hintRect, "Паков: " + choises.Count);
+        LegacyLocalizedText numOfPacks = new LegacyLocalizedText("Packs: ", "Паков: ");
+
+        LegacyUI.MiniHint(hintRect, $"{numOfPacks}" + choises.Count);
 
         // IMPORTANT: create the keyboard-focusable control before the dynamic scroll contents.
         // GUI.TextField manages keyboardControl, hotControl, caret and selection on its own.
@@ -195,7 +200,7 @@ public class LegacyVinylPort : MonoBehaviour
 
         if (LegacyUI.GreenButton(
             new Rect(inputRow.x + nameWidth, inputRow.y, inputRow.width - nameWidth, inputRow.height),
-            "Export"))
+            LegacyLocalizer.Text("Export", "Экспорт")))
         {
             Export();
         }
@@ -216,7 +221,7 @@ public class LegacyVinylPort : MonoBehaviour
             }
 
             if (choises.Count == 0)
-                LegacyUI.MiniHint(list.Row(18f), "Нет паков для этой машины");
+                LegacyUI.MiniHint(list.Row(18f), LegacyLocalizer.Text("No packs for this car", "Нет паков для этой машины"));
         });
     }
 
@@ -293,28 +298,28 @@ public class LegacyVinylPort : MonoBehaviour
             XmlElement packRoot = pack.DocumentElement;
             if (packRoot == null)
             {
-                Flash("Некорректный пак");
+                Flash(LegacyLocalizer.Text("Invalid pack", "Некорректный пак"));
                 return;
             }
 
             XmlNode paint = packRoot.SelectSingleNode("CarPaint");
             if (paint == null)
             {
-                Flash("нет CarPaint");
+                Flash(LegacyLocalizer.Text("No CarPaint", "Нет CarPaint"));
                 return;
             }
 
             string packCar = packRoot.GetAttribute("car");
             if (!string.Equals(packCar, curCar, StringComparison.OrdinalIgnoreCase))
             {
-                Flash("Пак не для этой машины");
+                Flash(LegacyLocalizer.Text("This pack is for another car", "Пак не для этой машины"));
                 return;
             }
 
             string xml = GetOrCreateCarSaveXml();
             if (string.IsNullOrEmpty(xml))
             {
-                Flash("Не удалось создать сохранение машины");
+                Flash(LegacyLocalizer.Text("Failed to create car save", "Не удалось создать сохранение машины"));
                 return;
             }
 
@@ -322,7 +327,7 @@ public class LegacyVinylPort : MonoBehaviour
             save.LoadXml(xml);
             if (save.DocumentElement == null)
             {
-                Flash("Некорректное сохранение машины");
+                Flash(LegacyLocalizer.Text("Invalid car save", "Некорректное сохранение машины"));
                 return;
             }
 
@@ -358,11 +363,13 @@ public class LegacyVinylPort : MonoBehaviour
             if (CarGarageUI.me)
                 CarGarageUI.me.CarPaint_Finish();
 
-            Flash("Применен пак: " + Path.GetFileNameWithoutExtension(path));
+            LegacyLocalizedText packApplied = new LegacyLocalizedText("Applied pack: ", "Применен пак: ");
+            Flash(packApplied + Path.GetFileNameWithoutExtension(path));
         }
         catch (Exception ex)
         {
-            Flash("Ошибка импорта: " + ex.Message);
+            LegacyLocalizedText importErr = new LegacyLocalizedText("Import error: ", "Ошибка импорта: ");
+            Flash(importErr + ex.Message);
         }
     }
 
@@ -460,14 +467,14 @@ public class LegacyVinylPort : MonoBehaviour
         {
             if (curCar == "")
             {
-                Flash("Нет машины в гараже");
+                Flash(LegacyLocalizer.Text("No car in garage", "Нет машины в гараже"));
                 return;
             }
 
             string currentGarageXml = CaptureCurrentGarageXml();
             if (string.IsNullOrEmpty(currentGarageXml))
             {
-                Flash("Не удалось получить текущее состояние машины");
+                Flash(LegacyLocalizer.Text("Failed to get current car state", "Не удалось получить текущее состояние машины"));
                 return;
             }
 
@@ -487,7 +494,7 @@ public class LegacyVinylPort : MonoBehaviour
             string xml = CarSaveLoad.GetXmlForCar(curCar);
             if (string.IsNullOrEmpty(xml))
             {
-                Flash("Не удалось подготовить состояние машины для экспорта");
+                Flash(LegacyLocalizer.Text("Failed to prepare car state for export", "Не удалось подготовить состояние машины для экспорта"));
                 return;
             }
 
@@ -495,14 +502,14 @@ public class LegacyVinylPort : MonoBehaviour
             save.LoadXml(xml);
             if (save.DocumentElement == null)
             {
-                Flash("Некорректное состояние машины");
+                Flash(LegacyLocalizer.Text("Invalid car state", "Некорректное состояние машины"));
                 return;
             }
 
             XmlNode paint = save.DocumentElement.SelectSingleNode("CarPaint");
             if (paint == null)
             {
-                Flash("Нет CarPaint");
+                Flash(LegacyLocalizer.Text("No CarPaint", "Нет CarPaint"));
                 return;
             }
 
@@ -524,11 +531,12 @@ public class LegacyVinylPort : MonoBehaviour
 
             packName = "";
             RefreshPacks(false);
-            Flash("Экспорт готов");
+            Flash(LegacyLocalizer.Text("Export done!", "Экспорт готов!"));
         }
         catch (Exception ex)
         {
-            Flash("Ошибка экспорта: " + ex.Message);
+            LegacyLocalizedText exportErr = new LegacyLocalizedText("Export error: ", "Ошибка экспорта: ");
+            Flash(exportErr + ex.Message);
         }
         finally
         {

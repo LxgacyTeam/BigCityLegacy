@@ -30,10 +30,11 @@ internal static class LegacyServerLimits
         if (!initialized || previousMaxCars != MaxCars || previousMaxCarsByPlayer != MaxCarsByPlayer || previousMaxNikLength != MaxNikLength)
         {
             initialized = true;
-            Debug.Log(
+            LegacyServerConsole.LogAfterConsoleInit(
                 "Server limits: maxCars=" + FormatLimit(MaxCars) +
                 ", maxCarsByPlayer=" + FormatLimit(MaxCarsByPlayer) +
-                ", maxNikLength=" + FormatLimit(MaxNikLength)
+                ", maxNikLength=" + FormatLimit(MaxNikLength),
+                LogType.Log
             );
         }
     }
@@ -124,9 +125,10 @@ internal static class LegacyServerLimits
 
         if (!int.TryParse(text, out value) || value < 0)
         {
-            Debug.LogWarning(
+            LegacyServerConsole.LogAfterConsoleInit(
                 "Invalid " + optionName + " value '" + text +
-                "'. Using default " + defaultValue.ToString() + "."
+                "'. Using default " + defaultValue.ToString() + ".",
+                LogType.Warning
             );
 
             return defaultValue;

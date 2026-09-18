@@ -39,6 +39,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));
         PatchClass(typeof(AsyncRequestString_Patch));
+        PatchClass(typeof(NetManagerTools_OnEnable_Patch));
     }
 
     private static void PatchCompatibilityMode()

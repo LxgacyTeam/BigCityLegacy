@@ -51,7 +51,10 @@ internal static class LegacyIdleKickTimeout
             {
                 TimeoutEnabled = true;
                 IdleTimeoutMs = DefaultIdleTimeoutMs;
-                Debug.LogWarning("[BigCityLegacy] Invalid " + ArgName + " value '" + value + "'. Using vanilla inactivity timeout " + FormatMs(DefaultIdleTimeoutMs) + ".");
+                LegacyServerConsole.LogAfterConsoleInit(
+                    "Invalid " + ArgName + " value '" + value + "'. Using vanilla inactivity timeout " + FormatMs(DefaultIdleTimeoutMs) + ".",
+                    LogType.Warning
+                );
             }
         }
 
@@ -60,15 +63,24 @@ internal static class LegacyIdleKickTimeout
             initialized = true;
             if (!HasOverride)
             {
-                Debug.Log("[BigCityLegacy] Idle kick timeout: vanilla " + FormatMs(DefaultIdleTimeoutMs) + ".");
+                LegacyServerConsole.LogAfterConsoleInit(
+                    "Idle kick timeout: vanilla " + FormatMs(DefaultIdleTimeoutMs) + ".",
+                    LogType.Log
+                );
             }
             else if (!TimeoutEnabled)
             {
-                Debug.Log("[BigCityLegacy] Idle kick inactivity timeout: disabled by " + ArgName + ".");
+                LegacyServerConsole.LogAfterConsoleInit(
+                    "Idle kick inactivity timeout: disabled by " + ArgName + ".",
+                    LogType.Log
+                );
             }
             else
             {
-                Debug.Log("[BigCityLegacy] Idle kick inactivity timeout: " + FormatMs(IdleTimeoutMs) + ".");
+                LegacyServerConsole.LogAfterConsoleInit(
+                    "Idle kick inactivity timeout: " + FormatMs(IdleTimeoutMs) + ".",
+                    LogType.Log
+                );
             }
         }
     }

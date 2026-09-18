@@ -27,6 +27,7 @@ verboseServerConsole=false
 noServerConsole=false
 noServerCli=false
 masterDebug=false
+noLogFile=true
 
 # --------------------------
 
@@ -41,6 +42,7 @@ Args=()
 [[ "$ChatEvents" == "false" ]] && Args+=("-noChatEvents")
 [[ "$noCheckUpdates" == "true" ]] && Args+=("-noUpdCheck")
 [[ "$killchat" == "false" ]] && Args+=("-noKillChat")
+[[ "$noLogFile" == "true" ]] && Args+=("-noLogFile")
 [[ -n "$serversList" ]] && Args+=("-serversList:\"$serversList\"")
 [[ -n "$eventsList" ]] && Args+=("-eventsList:\"$eventsList\"")
 [[ -n "$respawnPoints" ]] && Args+=("-respawnPoints:\"$respawnPoints\"")

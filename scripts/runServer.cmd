@@ -28,6 +28,7 @@ set verboseServerConsole=false
 set noServerConsole=false
 set noServerCli=false
 set masterDebug=false
+set noLogFile=true
 
 :: --------------------------
 
@@ -42,6 +43,7 @@ if [%noServerCli%] == [true] (set Args=%Args%-noServerCli )
 if [%ChatEvents%] == [false] (set Args=%Args%-noChatEvents )
 if [%noCheckUpdates%] == [true] (set Args=%Args%-noUpdCheck )
 if [%killchat%] == [false] (set Args=%Args%-noKillChat )
+if [%noLogFile%] == [true] (set Args=%Args%-noLogFile )
 set "match1=0"
 if [%serversList%] == [""] set "match1=1"
 if [%serversList%] == [] set "match1=1"
@@ -59,6 +61,6 @@ if [%banList%] == [""] set "match4=1"
 if [%banList%] == [] set "match4=1"
 if %match4% == 0 (set Args=%Args%-banList:%banList% )
 
-:: Safe here because cmd waits for GUI applications when they are launched from a command script.
-:: Direct interactive launches do NOT pass this flag and get a private server console instead.
+:: DO NOT PASS "-attachParentConsole" when running directly from an interactive console.
+
 game.exe -bend_GameServer -batchmode -nographics -attachParentConsole -port:%Port% -maxConn:%MaxPlayers% -maxCars:%maxCars% -maxCarsByPlayer:%maxCarsByPlayer% -maxNikLength:%maxNikLength% -idleKickTimeout:%idleKickTimeout% -Mode:%GameMode% %Args%

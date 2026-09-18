@@ -76,6 +76,10 @@ internal static class NetworkPatches
         }
         NetManager.me.gameObject.GetOrAddComponent<NetManagerTools>();
         LegacyServerConsole.CreateIfNeeded();
+        LegacyServerConsole.LogAfterConsoleInit(
+            "Game Server started on port " + __instance.networkPort.ToString() + ".",
+            LogType.Log
+        );
         LegacyNearestPointRespawn.TryLoad();
         LegacyMasterServer.AttachIfNeeded(NetManager.me.gameObject);
         if (!LegacyEventsConfig.TryLoadAndBuild() && __instance.loadEventsMap)
@@ -268,5 +272,44 @@ internal static class AsyncRequestString_Patch
         throw new Exception(
             "Could not find RequestUDP.isError check in AsyncRequestString"
         );
+    }
+}
+
+// adds console flag to disable creating m_log files
+[HarmonyPatch(typeof(NetManagerTools), "OnEnable")]
+public static class NetManagerTools_OnEnable_Patch
+{
+    static IEnumerable<CodeInstruction> Transpiler(
+        IEnumerable<CodeInstruction> instructions)
+    {
+        var codes = new List<CodeInstruction>(instructions);
+
+        MethodInfo getIsEditor = AccessTools.PropertyGetter(
+            typeof(Application),
+            nameof(Application.isEditor));
+
+        MethodInfo hasArg = AccessTools.Method(
+            typeof(LegacyCommandLine),
+            nameof(LegacyCommandLine.HasArg),
+            new[] { typeof(string) });
+
+        for (int i = 0; i < codes.Count; i++)
+        {
+            yield return codes[i];
+
+            if (codes[i].Calls(getIsEditor))
+            {
+                yield return new CodeInstruction(
+                    OpCodes.Ldstr,
+                    "-noLogFile");
+
+                yield return new CodeInstruction(
+                    OpCodes.Call,
+                    hasArg);
+
+                yield return new CodeInstruction(
+                    OpCodes.Or);
+            }
+        }
     }
 }
