@@ -5,11 +5,13 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using Net.UI.MenuEsc;
 using UnityEngine;
+using UnityEngine.UI;
 
 [HarmonyPatch]
 internal static class NetUIPatches
 {
     private static readonly Dictionary<NetUI_ClinetChoiseServer, LegacyDirectConnectGui> DirectGuis = new Dictionary<NetUI_ClinetChoiseServer, LegacyDirectConnectGui>();
+    private static readonly Dictionary<NetPlayerUI, Text> TypingAdTexts = new Dictionary<NetPlayerUI, Text>();
 
     [HarmonyPatch(typeof(NetUI_ClinetChoiseServer), "Awake")]
     [HarmonyPrefix]
@@ -264,5 +266,23 @@ internal static class NetUIPatches
             return Net.UI.MenuEsc.NetUI_OnlineModeGroup.ModeGroup.CS.ToString();
         }
         return mode;
+    }
+
+    [HarmonyPatch(typeof(NetPlayerUI), "UpControlData")]
+    [HarmonyPostfix]
+    private static void NetPlayerUI_UpControlData_Postfix(NetPlayerUI __instance, bool viewAds, float dist_for_player)
+    {
+        if (!viewAds || dist_for_player >= 50f) return;
+        if (!__instance || !__instance.watchAd) return;
+        Text t;
+        if (!TypingAdTexts.TryGetValue(__instance, out t))
+        {
+            t = __instance.watchAd.GetComponentInChildren<Text>(true);
+            TypingAdTexts[__instance] = t;
+        }
+        if (t && t.text != "...")
+        {
+            t.text = "...";
+        }
     }
 }
