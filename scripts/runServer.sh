@@ -22,6 +22,7 @@ useVanillaRespawn=false
 ChatEvents=true
 noCheckUpdates=false
 killchat=true
+noCsDamageCooldown=false
 
 verboseServerConsole=false
 noServerConsole=false
@@ -43,6 +44,7 @@ Args=()
 [[ "$noCheckUpdates" == "true" ]] && Args+=("-noUpdCheck")
 [[ "$killchat" == "false" ]] && Args+=("-noKillChat")
 [[ "$noLogFile" == "true" ]] && Args+=("-noLogFile")
+[[ "$noCsDamageCooldown" == "true" ]] && Args+=("-noCsDamageCooldown")
 [[ -n "$serversList" ]] && Args+=("-serversList:\"$serversList\"")
 [[ -n "$eventsList" ]] && Args+=("-eventsList:\"$eventsList\"")
 [[ -n "$respawnPoints" ]] && Args+=("-respawnPoints:\"$respawnPoints\"")

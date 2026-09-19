@@ -113,16 +113,23 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
 
         float btnY = content.yMax - 30f;
         float gap = 8f;
-        float chkBtnW = 155f;
+        float chkBtnW = 157f;
+        float lnkBtnW = 78f;
+        float btnH = 28f;
 
-        if (LegacyUI.GreenButton(new Rect(x, btnY, chkBtnW, 28f), LegacyLocalizer.Text("Check updates", "Проверить обновления")))
+        if (LegacyUI.GreenButton(new Rect(x, btnY, chkBtnW, btnH), LegacyLocalizer.Text("Check updates", "Проверить обновления")))
         {
             LegacyUpdateChecker.CheckNow(this);
         }
 
-        if (LegacyUI.Button(new Rect(x + chkBtnW + gap, btnY, 75f, 28f), LegacyLocalizer.Text("GitHub", "GitHub")))
+        if (LegacyUI.Button(new Rect(x + chkBtnW + gap, btnY, lnkBtnW, btnH), "GitHub"))
         {
             Application.OpenURL($"https://github.com/{BigCityLegacyPlugin.GitHubOwner}/{BigCityLegacyPlugin.GitHubRepo}");
+        }
+
+        if (LegacyUI.Button(new Rect(x + chkBtnW + lnkBtnW + gap * 2, btnY, lnkBtnW, btnH), "Telegram"))
+        {
+            Application.OpenURL($"https://t.me/{BigCityLegacyPlugin.GitHubRepo}");
         }
     }
 

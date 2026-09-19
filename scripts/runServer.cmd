@@ -23,6 +23,7 @@ set useVanillaRespawn=false
 set ChatEvents=true
 set noCheckUpdates=false
 set killchat=true
+set noCsDamageCooldown=false
 
 set verboseServerConsole=false
 set noServerConsole=false
@@ -44,6 +45,7 @@ if [%ChatEvents%] == [false] (set Args=%Args%-noChatEvents )
 if [%noCheckUpdates%] == [true] (set Args=%Args%-noUpdCheck )
 if [%killchat%] == [false] (set Args=%Args%-noKillChat )
 if [%noLogFile%] == [true] (set Args=%Args%-noLogFile )
+if [%noCsDamageCooldown%] == [true] (set Args=%Args%-noCsDamageCooldown )
 set "match1=0"
 if [%serversList%] == [""] set "match1=1"
 if [%serversList%] == [] set "match1=1"

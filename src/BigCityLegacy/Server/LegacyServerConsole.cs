@@ -993,7 +993,8 @@ public sealed class LegacyServerConsole : MonoBehaviour
             || message.IndexOf("Vehicle slot released") != -1
             || message.IndexOf("Car spawn rejected") != -1
             || message.IndexOf("RemoveUserFromColorArray") != -1
-            || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1;
+            || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1
+            || message.IndexOf("Unknow EventType for launch: RP") != -1;
     }
 
     private static void TryPrintServerReadyStatus(string message)
