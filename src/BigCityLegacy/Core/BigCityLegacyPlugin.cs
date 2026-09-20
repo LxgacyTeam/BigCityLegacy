@@ -13,7 +13,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
     public const string GitHubOwner = "LxgacyTeam";
     public const string GitHubRepo = "BigCityLegacy";
 
-
+    
     internal static ManualLogSource Log;
     internal static Harmony Harmony;
 
@@ -25,6 +25,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         Harmony = new Harmony(PluginGuid);
         try
         {
+            LegacyMigrationEvents.Init();
 
             if (LegacyCompatibility.IsFullMode)
             {
@@ -35,7 +36,6 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 LegacyCustomSettings.Register();
             }
 
-            LegacyHelpers.CheckOldPluginExist();
             LegacyHelpers.ResetSubsStatus();
             LegacyPatchManager.PatchForCurrentMode(Harmony, Logger);
             LegacyUpdateChecker.StartIfNeeded(this);
@@ -60,6 +60,9 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         LegacyHotkeys.Update();
         LegacyServerShutdown.Tick();
         LegacyChatEventQueue.Tick();
+        LegacyHudToggle.Tick();
+        LegacyGarageVinylButton.Ensure();
+        LegacyTypingIndicator.Ensure();
     }
 
     private void OnDestroy()

@@ -43,11 +43,7 @@ internal static class NetConnectAndControlPatches
             LegacyServerAdminService.ObserveAuthenticatedConnection(__instance, setPrivateID, sanitizedNikName, platform);
         }
 
-        //LegacyServerLimits.LogNicknameWasSanitized(
-        //    originalNikName,
-        //    sanitizedNikName,
-        //    "Cmd_SetPrivateID / initial connect"
-        //);
+
         if (NetManager.isLogType(NetManager.mLogType.Info))
         {
             Debug.Log("Player: " + __instance.nikName + " guid: " + __instance.privateGUID + " PlayerXml: " + setPlayerXml);
@@ -77,11 +73,6 @@ internal static class NetConnectAndControlPatches
         set = LegacyServerLimits.SanitizeNikName(set);
         LegacyServerAdminService.ObserveNickname(__instance, set);
 
-        //LegacyServerLimits.LogNicknameWasSanitized(
-        //    originalNikName,
-        //    set,
-        //    "Cmd_InitNikName" + (string.IsNullOrEmpty(reasone) ? string.Empty : " / " + reasone)
-        //);
     }
 
     [HarmonyPatch(typeof(NetInputControl), "DeliveryCar")]
@@ -91,6 +82,16 @@ internal static class NetConnectAndControlPatches
         if (!NetManager.isServer)
         {
             return true;
+        }
+
+        Net_BaseEvent curEvent = __instance.curEvent;
+        if (curEvent is Net_CS && curEvent.state != Net_BaseEvent.CurState.Lobbi && curEvent.state != Net_BaseEvent.CurState.Complite)
+        {
+            Debug.LogWarning(
+                "[Server] Car spawn rejected for '" + LegacyServerAdminService.GetNicknameForInput(__instance) +
+                "': active CS/CS_Sur round, state=" + curEvent.state.ToString()
+            );
+            return false;
         }
 
         int currentCars;

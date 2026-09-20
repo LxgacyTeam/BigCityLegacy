@@ -33,7 +33,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
         GameObject gameObject = new GameObject("PointTool");
 		global::UnityEngine.Object.DontDestroyOnLoad(gameObject);
 		LegacyPointTool.instance = gameObject.AddComponent<LegacyPointTool>();
-        string text = getPosOutFilePath();
+        string text = getPosOutFilePath;
         if (File.Exists(text))
         {
             File.Delete(text);
@@ -196,6 +196,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
         if (UseVisualPoints)
         {
+            _visPointsIsToggled = true;
             rectUseVisualX = rectToggleX - 87f;
             jsonByPlayerPos = LegacyUI.Toggle(new Rect(rectjsonByPlayerPosX - 75f, rectLine1Y + 4f, rectjsonByPlayerPosWidth + 10f, rectHeight), jsonByPlayerPos, copyModeLabel);
 
@@ -211,11 +212,16 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             jsonByPlayerPos = LegacyUI.Toggle(new Rect(rectjsonByPlayerPosX + 10f, rectLine1Y + 4f, rectjsonByPlayerPosWidth + 10f, rectHeight), jsonByPlayerPos, copyModeLabel);
             GUI.Label(new Rect(rectToggleX - 11f, rectLine1Y + 2f, 10f, rectHeight), "|", separatorStyle);
             UseVisualPoints = LegacyUI.Toggle(new Rect(rectUseVisualX, rectLine1Y + 4f, 135f, rectHeight), UseVisualPoints, "Use visual points");
-            LegacyEventsConfig.ClearDebugRaceCheckpoints();
+            if (_visPointsIsToggled)
+            {
+                LegacyEventsConfig.ClearDebugRaceCheckpoints();
+                _visPointsIsToggled = false;
+            }
         }
 
         if (ShowTeleportWindow)
         {
+            if (NetManager.isOnlineClient) { ShowTeleportWindow = !ShowTeleportWindow; }
             DrawTeleportContent(new Rect(x, y + 180f, 460f, 80f), cameraPos, rectHeight);
         }
     }
@@ -315,7 +321,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
 	private static string PeekLastPointFromFile()
 	{
-		string filePath = getPosOutFilePath();
+		string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -373,7 +379,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             return;
         }
 
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         Process.Start(new ProcessStartInfo
         {
@@ -384,7 +390,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private static bool RemoveLastPointFromFile()
 	{
-		string filePath = getPosOutFilePath();
+		string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -428,7 +434,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private bool CheckPosOutFileExistsOrNotEmpty()
     {
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         if (!File.Exists(filePath))
         {
@@ -460,14 +466,14 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             return;
         }
 
-        string filePath = getPosOutFilePath();
+        string filePath = getPosOutFilePath;
 
         AskBoxUI.Show("Clear ALL saved points?", delegate (AskBoxUI box)
         {
             if (box.isYes)
             {
                 LegacyEventsConfig.ClearDebugRaceCheckpoints();
-                string file = getPosOutFilePath();
+                string file = getPosOutFilePath;
                 File.Delete(file);
                 if (GameUI.me)
                 {
@@ -602,7 +608,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private void OnGUI()
 	{
-        if (!LegacyHelpers.IsGameplayRunning())
+        if (!LegacyHelpers.IsGameplayRunning)
         {
             return;
         }
@@ -642,7 +648,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             pointWindow.SavePrefs();
         }
 
-        if (!LegacyHelpers.IsGameplayRunning())
+        if (!LegacyHelpers.IsGameplayRunning)
         {
             return;
         }
@@ -706,7 +712,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
 	private void writeToPosOutFile()
 	{
-		string file = getPosOutFilePath();
+		string file = getPosOutFilePath;
 		string dir = Path.GetDirectoryName(file);
 		if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
 		{
@@ -726,24 +732,13 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 		}
 	}
 
-	private static string getPosOutFilePath()
+	private static string getPosOutFilePath
 	{
-		string text = LegacyHelpers.GameRoot;
-		try
-		{
-			if (!string.IsNullOrEmpty(Application.dataPath))
-			{
-				DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-				if (parent != null)
-				{
-					text = parent.FullName;
-				}
-			}
-		}
-		catch
-		{
-		}
-		return Path.Combine(Path.Combine(text, "BigCityLegacy"), "pos_out.txt");
+        get
+        {
+            string path = Path.Combine(LegacyHelpers.ModDataPath, "pos_out.txt");
+            return path;
+        }
 	}
 
 	private static LegacyPointTool instance;
@@ -751,4 +746,6 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 	private string jsonCopyText;
 
 	private bool _isVisible = true;
+
+    private bool _visPointsIsToggled = false;
 }

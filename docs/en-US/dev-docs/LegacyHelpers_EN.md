@@ -4,40 +4,26 @@
 
 ---
 
-# `GameRoot`
+# `ModDataPath`
 
-Returns the path to the game root folder.
+Returns the path to the BigCityLegacy folder located in the game's root folder.
 
 Signature:
 
 ```csharp
-public static string GameRoot { get; }
+public static string ModDataPath { get; }
 ```
-
-How it works:
-
-1. the base fallback is `Directory.GetCurrentDirectory()`;
-2. if `Application.dataPath` is available, its parent folder is used;
-3. if the path cannot be obtained through Unity, the fallback is returned.
-
-For a regular Unity game, `Application.dataPath` points to a folder such as:
-
-```text
-game_Data
-```
-
-Therefore, `GameRoot` returns the parent directory, which is the game root.
 
 ## Example
 
 ```csharp
-string root = LegacyHelpers.GameRoot;
-string configFolder = Path.Combine(root, "BigCityLegacy");
+string data = LegacyHelpers.ModDataPath;
+string config = Path.Combine(dataFolder, "config");
 ```
 
 ## When to use
 
-Use `GameRoot` when you need to build a path relative to the game folder: configs, JSON files, helper directories, or local mod resources.
+The `BigCityLegacy` folder is used to store the mod's user data: configs, JSON files, auxiliary directories, and local mod resources.
 
 ---
 
@@ -286,14 +272,14 @@ This method is suitable for configs and external JSON files where a missing file
 
 ---
 
-# `IsGameplayRunning()`
+# `IsGameplayRunning`
 
 Checks whether the client is in an active gameplay state.
 
 Signature:
 
 ```csharp
-public static bool IsGameplayRunning()
+public static bool IsGameplayRunning
 ```
 
 The method returns `false` if:
@@ -314,7 +300,7 @@ The method returns `false` if:
 ```csharp
 private void Update()
 {
-    if (!LegacyHelpers.IsGameplayRunning())
+    if (!LegacyHelpers.IsGameplayRunning)
     {
         return;
     }
@@ -332,14 +318,14 @@ This method is useful for client-side hotkeys, overlays, debug tools, and other 
 
 ---
 
-# `IsCsOrSurvivalMatchRunning()`
+# `IsCsOrSurvivalMatchRunning`
 
 Checks whether the local player is in an active CS or CS_Survival match.
 
 Signature:
 
 ```csharp
-public static bool IsCsOrSurvivalMatchRunning()
+public static bool IsCsOrSurvivalMatchRunning
 ```
 
 The method works only for an online client:
@@ -371,7 +357,7 @@ Lobby and complete states are not considered an active match.
 ## Example: disabling a feature during CS/CS_Survival
 
 ```csharp
-if (LegacyHelpers.IsCsOrSurvivalMatchRunning())
+if (LegacyHelpers.IsCsOrSurvivalMatchRunning)
 {
     return;
 }
@@ -385,34 +371,22 @@ This method is suitable for client-side features that must not interfere with co
 
 ---
 
-# `GetBuildVersion()`
+# `GetBuildVersion`
 
 Returns the game build version from the `AlwaysOnline` XML asset.
+Writes an error to log if AlwaysOnline not initialized yet.
 
 Signature:
 
 ```csharp
-public static int GetBuildVersion()
+public static int GetBuildVersion
 ```
 
 ## Example
 
 ```csharp
-int buildVersion = LegacyHelpers.GetBuildVersion();
+int buildVersion = LegacyHelpers.GetBuildVersion;
 Debug.Log("Game build version: " + buildVersion);
-```
-
-## Important
-
-The method assumes that `AlwaysOnline.me` already exists and `buildVersionAsset` is available. Do not call it too early during game startup without additional checks.
-
-Safe variant:
-
-```csharp
-if (AlwaysOnline.me && AlwaysOnline.me.buildVersionAsset)
-{
-    int buildVersion = LegacyHelpers.GetBuildVersion();
-}
 ```
 
 ---

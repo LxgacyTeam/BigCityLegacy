@@ -62,13 +62,13 @@ internal static class LegacyUpdateChecker
     {
         if (LegacyCommandLine.HasNoUpdateCheck())
         {
-            Debug.Log("[BCL Updater] update check disabled by command line: -noUpdCheck");
+            LogInfo("[BCL Updater] update check disabled by command line: -noUpdCheck");
             yield break;
         }
 
         if (!IsEnabled)
         {
-            Debug.Log("[BCL Updater] update check disabled by PlayerPrefs: " + EnabledPlayerPrefsKey);
+            LogInfo("[BCL Updater] update check disabled by PlayerPrefs: " + EnabledPlayerPrefsKey);
             yield break;
         }
 
@@ -98,7 +98,7 @@ internal static class LegacyUpdateChecker
         string repo = (GitHubRepo ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
         {
-            Debug.LogWarning("[BCL Updater] GitHub updater skipped: repository owner/repo is not configured.");
+            LogWarning("[BCL Updater] GitHub updater skipped: repository owner/repo is not configured.");
             requestInProgress = false;
             yield break;
         }
@@ -114,7 +114,7 @@ internal static class LegacyUpdateChecker
 
             if (IsRequestError(request))
             {
-                Debug.LogWarning("[BCL Updater] GitHub update check failed: " + GetRequestError(request));
+                LogWarning("[BCL Updater] GitHub update check failed: " + GetRequestError(request));
                 requestInProgress = false;
                 yield break;
             }
@@ -124,14 +124,14 @@ internal static class LegacyUpdateChecker
             string parseError;
             if (!TryParseGitHubRelease(json, out release, out parseError))
             {
-                Debug.LogWarning("[BCL Updater] GitHub update check JSON parse failed: " + parseError);
+                LogWarning("[BCL Updater] GitHub update check JSON parse failed: " + parseError);
                 requestInProgress = false;
                 yield break;
             }
 
             if (release == null || string.IsNullOrEmpty(release.tag_name))
             {
-                Debug.LogWarning("[BCL Updater] GitHub update check failed: latest release response has no tag_name.");
+                LogWarning("[BCL Updater] GitHub update check failed: latest release response has no tag_name.");
                 requestInProgress = false;
                 yield break;
             }
@@ -144,7 +144,7 @@ internal static class LegacyUpdateChecker
             }
             else if (showNoUpdateLog)
             {
-                Debug.Log("[BCL Updater] No stable BigCityLegacy update found. Current=" + VersionInfo.ModVersionName + ", latest tag=" + release.tag_name);
+                LogInfo("[BCL Updater] No stable BigCityLegacy update found. Current=" + VersionInfo.ModVersionName + ", latest tag=" + release.tag_name);
             }
         }
 
@@ -174,17 +174,27 @@ internal static class LegacyUpdateChecker
 
     private static void PrintServerUpdateNotification(LegacyUpdateInfo update)
     {
-        LegacyServerConsole.WriteAdminLine("\n");
+        LegacyServerConsole.WriteAdminLineAfterConsoleInit("\n");
         WriteUpdaterLine("*****************************************");
         WriteUpdaterLine("New version is available: " + update.LatestVersion);
         WriteUpdaterLine(update.ReleaseUrl);
         WriteUpdaterLine("*****************************************");
-        LegacyServerConsole.WriteAdminLine("\n");
+        LegacyServerConsole.WriteAdminLineAfterConsoleInit("\n");
     }
 
     private static void WriteUpdaterLine(string text)
     {
-        LegacyServerConsole.WriteAdminLine("[Updater] " + (text ?? string.Empty));
+        LegacyServerConsole.WriteAdminLineAfterConsoleInit("[Updater] " + (text ?? string.Empty));
+    }
+
+    private static void LogInfo(string text)
+    {
+        LegacyServerConsole.LogAfterConsoleInit(text, LogType.Log);
+    }
+
+    private static void LogWarning(string text)
+    {
+        LegacyServerConsole.LogAfterConsoleInit(text, LogType.Warning);
     }
 
     private static bool TryParseGitHubRelease(string json, out LegacyGitHubReleaseResponse release, out string error)
@@ -270,14 +280,14 @@ internal static class LegacyUpdateChecker
         LegacySemanticVersion remoteVersion;
         if (!LegacySemanticVersion.TryParseStableTag(release.tag_name, out remoteVersion))
         {
-            Debug.Log("[BCL Updater] GitHub latest release tag is not a stable X.Y.Z tag, skipped: " + release.tag_name);
+            LogInfo("[BCL Updater] GitHub latest release tag is not a stable X.Y.Z tag, skipped: " + release.tag_name);
             return false;
         }
 
         LegacySemanticVersion localVersion;
         if (!LegacySemanticVersion.TryParseStableTag(VersionInfo.ModVersion, out localVersion))
         {
-            Debug.LogWarning("[BCL Updater] Cannot parse local ModVersion as stable version: " + VersionInfo.ModVersion);
+            LogWarning("[BCL Updater] Cannot parse local ModVersion as stable version: " + VersionInfo.ModVersion);
             return false;
         }
 

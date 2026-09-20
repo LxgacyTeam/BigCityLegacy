@@ -1,0 +1,46 @@
+using HarmonyLib;
+using UnityEngine;
+
+[HarmonyPatch]
+internal static class KillChatPatches
+{
+    [HarmonyPatch(typeof(PlayerControl), "LiveChanget")]
+    [HarmonyPostfix]
+    private static void PlayerControl_LiveChanget_Postfix(PlayerControl __instance, bool now_dead, WhoKill who)
+    {
+        if (!LegacyCommandLine.KillChatEnabled || !NetManager.isServer || !now_dead)
+        {
+            return;
+        }
+
+        NetInputControl victim = __instance.GetInputFromMinusLive() ? __instance.GetInputFromMinusLive().netInput : null;
+        if (victim == null)
+        {
+            return;
+        }
+
+        Net_BaseEvent curEvent = victim.curEvent;
+        if (curEvent == null || curEvent.state == Net_BaseEvent.CurState.Lobbi || curEvent.state == Net_BaseEvent.CurState.Complite)
+        {
+            return;
+        }
+
+        NetInputControl killer = who.netInputControl;
+        string message;
+
+        if (killer == null)
+        {
+            message = "\u2620 died";
+        }
+        else if (killer == victim)
+        {
+            message = "\u2620 killed themself";
+        }
+        else
+        {
+            message = "\u2620 killed by " + killer.nikName;
+        }
+
+        ChatEventsPatches.SendChatMessage(victim, message);
+    }
+}

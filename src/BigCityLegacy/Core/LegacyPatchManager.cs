@@ -37,6 +37,10 @@ internal static class LegacyPatchManager
         PatchClass(typeof(ShadowFixPatches));
         PatchClass(typeof(SettingsMenuPatches));
         PatchClass(typeof(SuppressReporterGesturePatch));
+        PatchClass(typeof(KillChatPatches));
+        PatchClass(typeof(CsDamageCooldownPatches));
+        PatchClass(typeof(AsyncRequestString_Patch));
+        PatchClass(typeof(NetManagerTools_OnEnable_Patch));
     }
 
     private static void PatchCompatibilityMode()

@@ -59,6 +59,32 @@ internal static class GeneralPatches
         return false;
     }
 
+    [HarmonyPatch(typeof(MenuEsc), "OnEnable")]
+    [HarmonyPrefix]
+    private static bool MenuEsc_OnEnable(MenuEsc __instance)
+    {
+        if (LegacyHudToggle.IsHidden)
+        {
+            LegacyHudToggle.Toggle();
+            LegacyHudToggle.ToggledByMenuEsc = true;
+        }
+            
+        return true;
+    }
+
+    [HarmonyPatch(typeof(MenuEsc), "OnDisable")]
+    [HarmonyPrefix]
+    private static bool MenuEsc_OnDisable(MenuEsc __instance)
+    {
+        if (LegacyHudToggle.ToggledByMenuEsc)
+        {
+            LegacyHudToggle.Toggle();
+            LegacyHudToggle.ToggledByMenuEsc = false;
+        }
+
+        return true;
+    }
+
     [HarmonyPatch(typeof(MenuShop), "OnEnable")]
     [HarmonyPrefix]
     private static bool MenuShop_OnEnable(MenuShop __instance)

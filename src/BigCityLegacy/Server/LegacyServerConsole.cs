@@ -15,6 +15,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
     private const uint AttachParentProcess = 0xFFFFFFFFU;
     private const int ErrorAccessDenied = 5;
+    private const string AttachParentConsoleArg = "-attachParentConsole";
     private const uint Utf8CodePage = 65001U;
 
     private const uint GenericRead = 0x80000000U;
@@ -25,8 +26,23 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
     private static readonly IntPtr InvalidHandleValue = new IntPtr(-1);
     private static readonly object ConsoleWriteSync = new object();
+    private static readonly object DeferredConsoleSync = new object();
     private static readonly Queue<string> PendingCommands = new Queue<string>();
+    private static readonly Queue<DeferredConsoleRecord> DeferredConsoleRecords = new Queue<DeferredConsoleRecord>();
     private static readonly AutoResetEvent CommandProcessed = new AutoResetEvent(false);
+
+    private enum DeferredConsoleRecordKind
+    {
+        UnityLog,
+        AdminLine
+    }
+
+    private struct DeferredConsoleRecord
+    {
+        public DeferredConsoleRecordKind Kind;
+        public string Text;
+        public LogType Type;
+    }
 
     private static LegacyServerConsole instance;
     private static bool windowsInitTried;
@@ -37,6 +53,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
     private static bool inputSpacerActive;
     private static bool worldReadyForCli;
     private static bool commandReaderStarted;
+    private static bool consoleInitializationCompleted;
     private static volatile bool quitRequested;
     private static ConsoleCtrlHandler consoleCtrlHandler;
     private static UnixSignalHandler unixSignalHandler;
@@ -145,6 +162,8 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         TryInitWindowsServerConsole();
         TryInitLinuxServerConsole();
+        consoleInitializationCompleted = true;
+        FlushDeferredConsoleRecords();
 
         // Do not print a CLI prompt here. World startup continues to emit logs after
         // this component is created, which makes a prompt look broken and can visually
@@ -190,6 +209,38 @@ public sealed class LegacyServerConsole : MonoBehaviour
         WriteLinuxServerConsoleLog(message, stackTrace, type);
     }
 
+    internal static void LogAfterConsoleInit(string text, LogType type)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        if (ShouldDeferServerConsoleOutput())
+        {
+            EnqueueDeferredConsoleRecord(DeferredConsoleRecordKind.UnityLog, text, type);
+            return;
+        }
+
+        EmitUnityLog(text, type);
+    }
+
+    internal static void WriteAdminLineAfterConsoleInit(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        if (ShouldDeferServerConsoleOutput())
+        {
+            EnqueueDeferredConsoleRecord(DeferredConsoleRecordKind.AdminLine, text, LogType.Log);
+            return;
+        }
+
+        WriteAdminLine(text);
+    }
+
     internal static void WriteAdminLine(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -203,6 +254,74 @@ public sealed class LegacyServerConsole : MonoBehaviour
         }
 
         Debug.Log(text);
+    }
+
+    private static bool ShouldDeferServerConsoleOutput()
+    {
+        return IsDedicatedServerConsoleWanted() && !consoleInitializationCompleted;
+    }
+
+    private static void EnqueueDeferredConsoleRecord(DeferredConsoleRecordKind kind, string text, LogType type)
+    {
+        lock (DeferredConsoleSync)
+        {
+            DeferredConsoleRecords.Enqueue(new DeferredConsoleRecord
+            {
+                Kind = kind,
+                Text = text,
+                Type = type
+            });
+        }
+    }
+
+    private static void FlushDeferredConsoleRecords()
+    {
+        DeferredConsoleRecord[] records;
+
+        lock (DeferredConsoleSync)
+        {
+            if (DeferredConsoleRecords.Count == 0)
+            {
+                return;
+            }
+
+            records = DeferredConsoleRecords.ToArray();
+            DeferredConsoleRecords.Clear();
+        }
+
+        for (int i = 0; i < records.Length; i++)
+        {
+            DeferredConsoleRecord record = records[i];
+
+            if (record.Kind == DeferredConsoleRecordKind.AdminLine)
+            {
+                WriteAdminLine(record.Text);
+            }
+            else
+            {
+                EmitUnityLog(record.Text, record.Type);
+            }
+        }
+    }
+
+    private static void EmitUnityLog(string text, LogType type)
+    {
+        switch (type)
+        {
+            case LogType.Warning:
+                Debug.LogWarning(text);
+                break;
+
+            case LogType.Error:
+            case LogType.Assert:
+            case LogType.Exception:
+                Debug.LogError(text);
+                break;
+
+            default:
+                Debug.Log(text);
+                break;
+        }
     }
 
     private static void StartCommandReaderIfNeeded()
@@ -450,31 +569,11 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         try
         {
-            bool attached = AttachConsole(AttachParentProcess);
-            int attachError = attached ? 0 : Marshal.GetLastWin32Error();
-
-            if (!attached && attachError == ErrorAccessDenied)
-            {
-                attached = true;
-            }
-
-            if (!attached)
-            {
-                bool allocated = AllocConsole();
-                int allocError = allocated ? 0 : Marshal.GetLastWin32Error();
-
-                if (!allocated && allocError == ErrorAccessDenied)
-                {
-                    allocated = true;
-                }
-
-                attached = allocated;
-            }
-
-            if (!attached)
+            bool consoleReady = AcquireWindowsServerConsole();
+            if (!consoleReady)
             {
                 throw new InvalidOperationException(
-                    "Unable to attach or allocate a Windows console. Win32 error=" +
+                    "Unable to acquire a Windows console. Win32 error=" +
                     Marshal.GetLastWin32Error().ToString()
                 );
             }
@@ -526,6 +625,37 @@ public sealed class LegacyServerConsole : MonoBehaviour
             CloseWindowsConsoleHandles();
             Debug.LogWarning("Failed to init Windows server console: " + ex.Message);
         }
+    }
+
+    private static bool AcquireWindowsServerConsole()
+    {
+        // Unity's Windows player is a GUI executable. When it is started
+        // directly from an interactive cmd/PowerShell session, the shell does not wait
+        // for it and immediately resumes reading the parent's console input. Attaching
+        // to that same console would therefore leave the shell and the server CLI racing
+        // for one buffer.
+        //
+        // By default use a private console, which gives the server exclusive input. The
+        // provided runServer.cmd executes game.exe from a command script (where cmd does
+        // wait), so it opts into sharing its parent console with -attachParentConsole.
+        if (LegacyCommandLine.HasArg(AttachParentConsoleArg))
+        {
+            bool attached = AttachConsole(AttachParentProcess);
+            int attachError = attached ? 0 : Marshal.GetLastWin32Error();
+
+            if (attached || attachError == ErrorAccessDenied)
+                return true;
+        }
+
+        try
+        {
+            FreeConsole();
+        }
+        catch
+        {
+        }
+
+        return AllocConsole();
     }
 
     private static void OpenWindowsConsoleHandles()
@@ -863,7 +993,8 @@ public sealed class LegacyServerConsole : MonoBehaviour
             || message.IndexOf("Vehicle slot released") != -1
             || message.IndexOf("Car spawn rejected") != -1
             || message.IndexOf("RemoveUserFromColorArray") != -1
-            || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1;
+            || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1
+            || message.IndexOf("Unknow EventType for launch: RP") != -1;
     }
 
     private static void TryPrintServerReadyStatus(string message)
@@ -961,7 +1092,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
         int currentProcessId = Process.GetCurrentProcess().Id;
         IntPtr foundWindow = IntPtr.Zero;
 
-        EnumWindows(delegate(IntPtr hWnd, IntPtr lParam)
+        EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
         {
             uint processId;
             GetWindowThreadProcessId(hWnd, out processId);
@@ -1002,6 +1133,9 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AttachConsole(uint dwProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool FreeConsole();
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AllocConsole();

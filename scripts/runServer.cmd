@@ -22,11 +22,14 @@ set banList=""
 set useVanillaRespawn=false
 set ChatEvents=true
 set noCheckUpdates=false
+set killchat=true
+set noCsDamageCooldown=false
 
 set verboseServerConsole=false
 set noServerConsole=false
 set noServerCli=false
 set masterDebug=false
+set noLogFile=true
 
 :: --------------------------
 
@@ -40,6 +43,9 @@ if [%noServerConsole%] == [true] (set Args=%Args%-noServerConsole )
 if [%noServerCli%] == [true] (set Args=%Args%-noServerCli )
 if [%ChatEvents%] == [false] (set Args=%Args%-noChatEvents )
 if [%noCheckUpdates%] == [true] (set Args=%Args%-noUpdCheck )
+if [%killchat%] == [false] (set Args=%Args%-noKillChat )
+if [%noLogFile%] == [true] (set Args=%Args%-noLogFile )
+if [%noCsDamageCooldown%] == [true] (set Args=%Args%-noCsDamageCooldown )
 set "match1=0"
 if [%serversList%] == [""] set "match1=1"
 if [%serversList%] == [] set "match1=1"
@@ -57,4 +63,6 @@ if [%banList%] == [""] set "match4=1"
 if [%banList%] == [] set "match4=1"
 if %match4% == 0 (set Args=%Args%-banList:%banList% )
 
-game.exe -bend_GameServer -batchmode -nographics -port:%Port% -maxConn:%MaxPlayers% -maxCars:%maxCars% -maxCarsByPlayer:%maxCarsByPlayer% -maxNikLength:%maxNikLength% -idleKickTimeout:%idleKickTimeout% -Mode:%GameMode% %Args%
+:: DO NOT PASS "-attachParentConsole" when running directly from an interactive console.
+
+game.exe -bend_GameServer -batchmode -nographics -attachParentConsole -port:%Port% -maxConn:%MaxPlayers% -maxCars:%maxCars% -maxCarsByPlayer:%maxCarsByPlayer% -maxNikLength:%maxNikLength% -idleKickTimeout:%idleKickTimeout% -Mode:%GameMode% %Args%

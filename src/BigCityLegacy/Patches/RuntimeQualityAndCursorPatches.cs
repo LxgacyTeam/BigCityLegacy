@@ -185,7 +185,7 @@ internal static class RuntimeQualityAndCursorPatches
     [HarmonyPrefix]
     private static bool FlyCamera_Create_Prefix()
     {
-        return !LegacyHelpers.IsCsOrSurvivalMatchRunning();
+        return !LegacyHelpers.IsCsOrSurvivalMatchRunning;
     }
 
     private static float GetFlyCameraMouseAxis(string axisName)

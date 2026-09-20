@@ -1,3 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
@@ -69,6 +76,10 @@ internal static class NetworkPatches
         }
         NetManager.me.gameObject.GetOrAddComponent<NetManagerTools>();
         LegacyServerConsole.CreateIfNeeded();
+        LegacyServerConsole.LogAfterConsoleInit(
+            "Game Server started on port " + __instance.networkPort.ToString() + ".",
+            LogType.Log
+        );
         LegacyNearestPointRespawn.TryLoad();
         LegacyMasterServer.AttachIfNeeded(NetManager.me.gameObject);
         if (!LegacyEventsConfig.TryLoadAndBuild() && __instance.loadEventsMap)
@@ -190,5 +201,115 @@ internal static class NetworkPatches
     private static bool IsHeadlessServerChat()
     {
         return NetManagerTools.isCommandLineArgHaveServerStr() && (NetManagerTools.isCommandLineArgBatchmode() || LegacyCommandLine.HasNoGraphics());
+    }
+}
+
+// disables 'Connection Error, post: /mirror/hand_shake' log spamming
+[HarmonyPatch]
+internal static class AsyncRequestString_Patch
+{
+    static MethodBase TargetMethod()
+    {
+        var original = AccessTools.Method(
+            typeof(RequestUDP),
+            "AsyncRequestString",
+            new[]
+            {
+                typeof(object),
+                typeof(IPEndPoint),
+                typeof(string),
+                typeof(string),
+                typeof(float)
+            });
+
+        if (original == null)
+            throw new Exception("AsyncRequestString not found");
+
+        var attr = original.GetCustomAttribute<AsyncStateMachineAttribute>();
+
+        if (attr == null)
+            throw new Exception("AsyncRequestString has no async state machine");
+
+        var moveNext = AccessTools.Method(
+            attr.StateMachineType,
+            "MoveNext"
+        );
+
+        if (moveNext == null)
+            throw new Exception("MoveNext not found");
+
+        return moveNext;
+    }
+
+    static IEnumerable<CodeInstruction> Transpiler(
+        IEnumerable<CodeInstruction> instructions)
+    {
+        var codes = instructions.ToList();
+
+        var isErrorField = AccessTools.Field(
+            typeof(RequestUDP),
+            "isError"
+        );
+
+        if (isErrorField == null)
+            throw new Exception("RequestUDP.isError field not found");
+
+        for (int i = 0; i < codes.Count; i++)
+        {
+            if (codes[i].LoadsField(isErrorField))
+            {
+                var replacement = new CodeInstruction(OpCodes.Ldc_I4_0);
+
+                replacement.labels.AddRange(codes[i].labels);
+                replacement.blocks.AddRange(codes[i].blocks);
+
+                codes[i] = replacement;
+
+                return codes;
+            }
+        }
+
+        throw new Exception(
+            "Could not find RequestUDP.isError check in AsyncRequestString"
+        );
+    }
+}
+
+// adds console flag to disable creating m_log files
+[HarmonyPatch(typeof(NetManagerTools), "OnEnable")]
+public static class NetManagerTools_OnEnable_Patch
+{
+    static IEnumerable<CodeInstruction> Transpiler(
+        IEnumerable<CodeInstruction> instructions)
+    {
+        var codes = new List<CodeInstruction>(instructions);
+
+        MethodInfo getIsEditor = AccessTools.PropertyGetter(
+            typeof(Application),
+            nameof(Application.isEditor));
+
+        MethodInfo hasArg = AccessTools.Method(
+            typeof(LegacyCommandLine),
+            nameof(LegacyCommandLine.HasArg),
+            new[] { typeof(string) });
+
+        for (int i = 0; i < codes.Count; i++)
+        {
+            yield return codes[i];
+
+            if (codes[i].Calls(getIsEditor))
+            {
+                yield return new CodeInstruction(
+                    OpCodes.Ldstr,
+                    "-noLogFile");
+
+                yield return new CodeInstruction(
+                    OpCodes.Call,
+                    hasArg);
+
+                yield return new CodeInstruction(
+                    OpCodes.Or);
+            }
+        }
     }
 }

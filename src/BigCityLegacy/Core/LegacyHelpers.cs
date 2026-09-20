@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using BepInEx;
 using BepInEx.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -11,24 +12,26 @@ using Debug = UnityEngine.Debug;
 
 public static class LegacyHelpers
 {
-    public static string GameRoot
+    public static string ModDataPath
     {
         get
         {
-            string root = Directory.GetCurrentDirectory();
-            try
+            string path = Path.Combine(Paths.GameRootPath, "BigCityLegacy");
+            
+            if (!Directory.Exists(path))
             {
-                if (!string.IsNullOrEmpty(Application.dataPath))
+                try
                 {
-                    DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-                    if (parent != null)
-                    {
-                        root = parent.FullName;
-                    }
+                    Directory.CreateDirectory(path);
+                    Debug.Log($"[BigCityLegacy] Mod data dir created: {path}");
+                }
+                catch (Exception ex)
+                { 
+                    Debug.LogError($"[BigCityLegacy] Failed to create {path} dir: {ex.Message}");
                 }
             }
-            catch { }
-            return root;
+
+            return path;
         }
     }
 
@@ -187,24 +190,22 @@ public static class LegacyHelpers
 
         if (string.IsNullOrEmpty(text))
         {
-            string text2 = LegacyHelpers.GameRoot;
-            try
+            string path = ModDataPath;
+            string config = Path.Combine(path, "config");
+            text = Path.Combine(config, json);
+
+            if (!Directory.Exists(config))
             {
-                bool flag2 = !string.IsNullOrEmpty(Application.dataPath);
-                if (flag2)
+                try
                 {
-                    DirectoryInfo parent = Directory.GetParent(Application.dataPath);
-                    bool flag3 = parent != null;
-                    if (flag3)
-                    {
-                        text2 = parent.FullName;
-                    }
+                    Directory.CreateDirectory(config);
+                    Debug.Log($"[BigCityLegacy] Config dir created: {config}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[BigCityLegacy] Failed to create {config} dir: {ex.Message}");
                 }
             }
-            catch
-            {
-            }
-            text = Path.Combine(Path.Combine(text2, "BigCityLegacy"), json);
         }
 
         return LegacyCommandLine.StripQuotes(text);
@@ -223,81 +224,87 @@ public static class LegacyHelpers
         }
     }
 
-    public static bool IsGameplayRunning()
+    public static bool IsGameplayRunning
     {
-        if (NetManager.isServer)
+        get
         {
-            return false;
-        }
+            if (NetManager.isServer)
+            {
+                return false;
+            }
 
-        if (!Nuligine.me || !Nuligine.RealGame)
-        {
-            return false;
-        }
+            if (!Nuligine.me || !Nuligine.RealGame)
+            {
+                return false;
+            }
 
-        if (!GameUI.me || !GameUI.me.isUsed())
-        {
-            return false;
-        }
+            if (!GameUI.me || !GameUI.me.isUsed())
+            {
+                return false;
+            }
 
-        if (Loading.me)
-        {
-            return false;
-        }
+            if (Loading.me)
+            {
+                return false;
+            }
 
-        if (Scenes.nowBusy())
-        {
-            return false;
-        }
+            if (Scenes.nowBusy())
+            {
+                return false;
+            }
 
-        if (FadeUI.me && FadeUI.fadeState != FadeUI.FadeState.Unfaded)
-        {
-            return false;
-        }
+            if (FadeUI.me && FadeUI.fadeState != FadeUI.FadeState.Unfaded)
+            {
+                return false;
+            }
 
-        if (MenuEsc.me || MenuEsc.needSelectWhere)
-        {
-            return false;
-        }
+            if (MenuEsc.me || MenuEsc.needSelectWhere)
+            {
+                return false;
+            }
 
-        if (GamePhone.me && GamePhone.me.gameObject.activeSelf)
-        {
-            return false;
-        }
+            if (GamePhone.me && GamePhone.me.gameObject.activeSelf)
+            {
+                return false;
+            }
 
-        InputControl input = InputControl.GetFirstUser();
+            InputControl input = InputControl.GetFirstUser();
 
-        if (!input)
-        {
-            return false;
-        }
+            if (!input)
+            {
+                return false;
+            }
 
-        if (!input.current)
-        {
-            return false;
-        }
+            if (!input.current)
+            {
+                return false;
+            }
 
-        if (!input.currentOrParent)
-        {
-            return false;
-        }
+            if (!input.currentOrParent)
+            {
+                return false;
+            }
 
-        return true;
-    }
-
-    public static bool IsCsOrSurvivalMatchRunning()
-    {
-        if (!NetManager.isOnlineClient)
-        {
-            return false;
-        }
-
-        if (IsLocalPlayerInActiveCsEvent(Net_BaseEvent.curUserInRaceInst))
-        {
             return true;
         }
+    }
 
-        return IsLocalPlayerInActiveCsEvent(Net_BaseEvent.isCurUserAddedToPlayersListG());
+    public static bool IsCsOrSurvivalMatchRunning
+    {
+        get
+        {
+            if (!NetManager.isOnlineClient)
+            {
+                return false;
+            }
+
+            if (IsLocalPlayerInActiveCsEvent(Net_BaseEvent.curUserInRaceInst))
+            {
+                return true;
+            }
+
+            return IsLocalPlayerInActiveCsEvent(Net_BaseEvent.isCurUserAddedToPlayersListG());
+        }
     }
 
     private static bool IsLocalPlayerInActiveCsEvent(Net_BaseEvent currentEvent)
@@ -313,32 +320,22 @@ public static class LegacyHelpers
                csEvent.state == Net_BaseEvent.CurState.Race;
     }
 
-    internal static void CheckOldPluginExist()
+    public static int GetBuildVersion
     {
-        string PluginGuid = "com.alonso.madoutlegacy";
-
-        if (Chainloader.PluginInfos.ContainsKey(PluginGuid))
-        {
-            string BiePath = "BepInEx/plugins";
-            if (Application.platform == RuntimePlatform.WindowsPlayer)
-                BiePath = BiePath.Replace("/", "\\");
-
-            NativeErrorDialog.Show("BigCityLegacy Startup Error",
-                                    "Outdated MadOutLegacy plugin detected!\n" +
-                                    "Game launch blocked to prevent a version conflict.\n\n" +
-                                    $"Please delete the \'MadOutLegacy\' folder from \'{BiePath}\'.");
-
-            OpenFolder(GameRoot + "/" + BiePath);
-            Application.Quit();
+        get {
+            try
+            {
+                string text = AlwaysOnline.me.buildVersionAsset.text;
+                AlwaysOnline.Verions buildVersionFromXML = AlwaysOnline.GetBuildVersionFromXML(text, false);
+                int buildVersion = buildVersionFromXML.curVersion;
+                return buildVersion;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[BigCityLegacy] Failed to GetBuildVersion: AlwaysOnline.me is not initialized; ex: {ex.Message}");
+                return -1;    
+            }
         }
-    }
-
-    public static int GetBuildVersion()
-    {
-        string text = AlwaysOnline.me.buildVersionAsset.text;
-        AlwaysOnline.Verions buildVersionFromXML = AlwaysOnline.GetBuildVersionFromXML(text, false);
-        int buildVersion = buildVersionFromXML.curVersion;
-        return buildVersion;
     }
 
     internal static void ResetSubsStatus()
