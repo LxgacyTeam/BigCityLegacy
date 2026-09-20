@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BigCityLegacy", "BigCityLegacy.csproj", "{6F5CF6F1-B8C1-6E80-D0B0-F3301A8248F6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyUIFramework", "libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj", "{C8D94DB1-6A81-AE38-B22C-E169ED850B1B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6F5CF6F1-B8C1-6E80-D0B0-F3301A8248F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F5CF6F1-B8C1-6E80-D0B0-F3301A8248F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F5CF6F1-B8C1-6E80-D0B0-F3301A8248F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8D94DB1-6A81-AE38-B22C-E169ED850B1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8D94DB1-6A81-AE38-B22C-E169ED850B1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8D94DB1-6A81-AE38-B22C-E169ED850B1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8D94DB1-6A81-AE38-B22C-E169ED850B1B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
