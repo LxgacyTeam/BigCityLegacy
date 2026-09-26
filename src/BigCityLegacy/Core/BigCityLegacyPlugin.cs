@@ -63,6 +63,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         LegacyHudToggle.Tick();
         LegacyGarageVinylButton.Ensure();
         LegacyTypingIndicator.Ensure();
+        LegacyCsKillZoneWorker.Ensure();
     }
 
     private void OnDestroy()

@@ -420,9 +420,9 @@ internal static class NetConnectAndControlPatches
         return false; 
     }
 
-    [HarmonyPatch(typeof(WeatherManager), "DoRandom")]
+    [HarmonyPatch(typeof(WeatherManager), "UpdateSwitchByTime")]
     [HarmonyPrefix]
-    private static bool WeatherManager_DoRandom_Prefix()
+    private static bool WeatherManager_UpdateSwitchByTime_Prefix()
     {
         return !LegacyWeatherLock.IsEnabled;
     }
@@ -433,33 +433,4 @@ internal static class NetConnectAndControlPatches
     {
         return !LegacyWeatherLock.IsEnabled;
     }
-
-    [HarmonyPatch(typeof(WeatherManager), "UpdateSwitchByTime")]
-    [HarmonyPrefix]
-    private static bool WeatherManager_UpdateSwitchByTime_Prefix()
-    {
-        return !LegacyWeatherLock.IsEnabled;
-    }
-
-    [HarmonyPatch(typeof(WeatherManager), "Start")]
-    [HarmonyPostfix]
-    private static void WeatherManager_Start_Postfix()
-    {
-        LegacyWeatherLock.Bootstrapped = true;
-    }
-
-    [HarmonyPatch(typeof(WeatherManager), "MakeCurrentByName")]
-    [HarmonyPrefix]
-    private static bool WeatherManager_MakeCurrentByName_Prefix()
-    {
-        return !LegacyWeatherLock.IsEnabled || !LegacyWeatherLock.Bootstrapped;
-    }
-
-    [HarmonyPatch(typeof(WeatherManager.It), "MakeCurrent")]
-    [HarmonyPrefix]
-    private static bool WeatherManager_It_MakeCurrent_Prefix()
-    {
-        return !LegacyWeatherLock.IsEnabled || !LegacyWeatherLock.Bootstrapped;
-    }
-
 }
