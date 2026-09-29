@@ -31,6 +31,8 @@ internal static class LegacyPatchManager
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
         PatchClass(typeof(NetworkPatches));
+        PatchClass(typeof(ServerHeadlessOptimizationPatches));
+        PatchClass(typeof(ServerPerformancePatches));
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(RuntimeQualityAndCursorPatches));
         PatchClass(typeof(ChatEventsPatches));

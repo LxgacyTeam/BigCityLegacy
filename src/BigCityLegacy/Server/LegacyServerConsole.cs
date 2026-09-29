@@ -165,6 +165,8 @@ public sealed class LegacyServerConsole : MonoBehaviour
         consoleInitializationCompleted = true;
         FlushDeferredConsoleRecords();
 
+        TryFinalizeWorldReady();
+
         // Do not print a CLI prompt here. World startup continues to emit logs after
         // this component is created, which makes a prompt look broken and can visually
         // split the first input line.
@@ -994,7 +996,38 @@ public sealed class LegacyServerConsole : MonoBehaviour
             || message.IndexOf("Car spawn rejected") != -1
             || message.IndexOf("RemoveUserFromColorArray") != -1
             || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1
-            || message.IndexOf("Unknow EventType for launch: RP") != -1;
+            || message.IndexOf("Unknow EventType for launch: RP") != -1
+            || message.IndexOf("Obscured Cheating Detector") != -1;
+    }
+
+    internal static void NotifyWorldLoaded()
+    {
+        if (!LegacyCommandLine.HasServerArg())
+        {
+            return;
+        }
+
+        worldReadyForCli = true;
+        TryFinalizeWorldReady();
+    }
+
+    private static void TryFinalizeWorldReady()
+    {
+        if (readyStatusPrinted || !worldReadyForCli)
+        {
+            return;
+        }
+
+        // If the dedicated console has not been acquired yet, keep the state and
+        // finalize from OnEnable() after stdout/stdin are ready.
+        if (!windowsReady && !linuxReady)
+        {
+            return;
+        }
+
+        readyStatusPrinted = true;
+        WriteServerConsoleText(false, "[Status] Server ready. World loaded successfully." + Environment.NewLine);
+        StartCommandReaderIfNeeded();
     }
 
     private static void TryPrintServerReadyStatus(string message)
@@ -1007,21 +1040,9 @@ public sealed class LegacyServerConsole : MonoBehaviour
             return;
         }
 
-        if (message.IndexOf("Textures was remed") == -1)
+        if (message.IndexOf("Textures was remed", StringComparison.Ordinal) != -1)
         {
-            return;
-        }
-
-        readyStatusPrinted = true;
-        worldReadyForCli = true;
-
-        string text = "[Status] Server ready. World loaded successfully.";
-
-        WriteServerConsoleText(false, text + Environment.NewLine);
-
-        if (worldReadyForCli)
-        {
-            StartCommandReaderIfNeeded();
+            NotifyWorldLoaded();
         }
     }
 

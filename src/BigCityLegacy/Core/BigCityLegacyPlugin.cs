@@ -9,13 +9,15 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
     public const string PluginGuid = "com.bigcitylegacy.baseplugin";
     public const string PluginName = "BigCityLegacy";
 
-    public const bool IsPrerelease = false;
+    public const bool IsPrerelease = true;
     public const string GitHubOwner = "LxgacyTeam";
     public const string GitHubRepo = "BigCityLegacy";
 
     
     internal static ManualLogSource Log;
     internal static Harmony Harmony;
+
+    private bool _serverProcess;
 
     private void Awake()
     {
@@ -30,10 +32,18 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             if (LegacyCompatibility.IsFullMode)
             {
                 LegacyCommandLine.UpdateFromArgs();
+                _serverProcess = LegacyCommandLine.HasServerArg();
+
                 LegacyServerConsole.PrepareForServerMode();
                 LegacyServerShutdown.Initialize();
-                LegacyPointTool.InitIfNeeded();
-                LegacyCustomSettings.Register();
+                LegacyPerformanceMonitor.Ensure(gameObject);
+
+                // Do not instantiate/register client-only systems on a dedicated server.
+                if (!_serverProcess)
+                {
+                    LegacyPointTool.InitIfNeeded();
+                    LegacyCustomSettings.Register();
+                }
             }
 
             LegacyHelpers.ResetSubsStatus();
@@ -57,9 +67,14 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 
     private void Update()
     {
+        if (_serverProcess)
+        {
+            LegacyServerShutdown.Tick();
+            LegacyChatEventQueue.Tick();
+            return;
+        }
+
         LegacyHotkeys.Update();
-        LegacyServerShutdown.Tick();
-        LegacyChatEventQueue.Tick();
         LegacyHudToggle.Tick();
         LegacyGarageVinylButton.Ensure();
         LegacyTypingIndicator.Ensure();

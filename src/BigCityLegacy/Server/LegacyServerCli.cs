@@ -69,6 +69,10 @@ internal static class LegacyServerCli
                 DeleteCars(arguments);
                 return;
 
+            case "stats":
+                LegacyPerformanceMonitor.WriteServerStats();
+                return;
+
             case "stop":
                 LegacyServerShutdown.Request("CLI command");
                 return;
@@ -92,6 +96,7 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   cleardrop\t\t| remove all world weapon/medical drops");
         LegacyServerConsole.WriteAdminLine("[CLI]   delcars all\t\t| remove every spawned car");
         LegacyServerConsole.WriteAdminLine("[CLI]   delcars <PlayerID>\t| remove cars spawned by a player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   stats\t\t\t| display CPU, memory, frame and runtime statistics");
         LegacyServerConsole.WriteAdminLine("[CLI]   stop\t\t\t| stop server");
     }
 

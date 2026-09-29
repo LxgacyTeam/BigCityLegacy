@@ -8,156 +8,608 @@ using UnityEngine.UI;
 public class LegacyServerHeadlessBootstrap : MonoBehaviour
 {
     internal static ManualLogSource Logger;
+
+    private static bool installed;
+    private static int mapTemplatesPrepared;
+    private static int mapTemplateComponentsRemoved;
+    private static int groundComponentsRemoved;
+    private static int sceneComponentsRemoved;
+    private static int chatObjectsRemoved;
+    private static int clientUiReferencesReleased;
+    private static int clientRuntimeBehavioursDisabled;
+
+    // Command line flags do not change during a Unity process lifetime. Cache the
+    // headless/optimization decisions because CPU patches query them from hot
+    // per-frame paths.
+    private static bool? cachedHeadlessServer;
+    private static bool? cachedObjectOptimizationEnabled;
+    private static bool? cachedCpuOptimizationEnabled;
+
     public static bool IsHeadlessServer
-	{
-		get
-		{
-			if (!NetManagerTools.isCommandLineArgHaveServerStr())
-			{
-				return false;
-			}
-			if (Application.isBatchMode)
-			{
-				return true;
-			}
-			string[] commandLineArgs = Environment.GetCommandLineArgs();
-			for (int i = 0; i < commandLineArgs.Length; i++)
-			{
-				if (commandLineArgs[i] == "-nographics")
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-	}
+    {
+        get
+        {
+            if (cachedHeadlessServer.HasValue)
+            {
+                return cachedHeadlessServer.Value;
+            }
 
-	public static void Install(GameObject host)
-	{
-		if (!LegacyServerHeadlessBootstrap.IsHeadlessServer || LegacyServerHeadlessBootstrap.installed || host == null)
-		{
-			return;
-		}
-		host.GetOrAddComponent<LegacyServerHeadlessBootstrap>();
-		LegacyServerHeadlessBootstrap.installed = true;
-	}
+            bool result = false;
+            if (NetManagerTools.isCommandLineArgHaveServerStr())
+            {
+                if (Application.isBatchMode)
+                {
+                    result = true;
+                }
+                else
+                {
+                    string[] commandLineArgs = Environment.GetCommandLineArgs();
+                    for (int i = 0; i < commandLineArgs.Length; i++)
+                    {
+                        if (string.Equals(commandLineArgs[i], "-nographics", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result = true;
+                            break;
+                        }
+                    }
+                }
+            }
 
-	private void OnEnable()
-	{
-		SceneManager.sceneLoaded += this.OnSceneLoaded;
-		base.StartCoroutine(this.StripAllLoadedScenesDeferred());
-	}
+            cachedHeadlessServer = result;
+            return result;
+        }
+    }
 
-	private void OnDisable()
-	{
-		SceneManager.sceneLoaded -= this.OnSceneLoaded;
-	}
+    // Emergency rollback switch for the 1.3.2 stripping path.
+    public static bool IsOptimizationEnabled
+    {
+        get
+        {
+            if (!cachedObjectOptimizationEnabled.HasValue)
+            {
+                cachedObjectOptimizationEnabled =
+                    IsHeadlessServer && !LegacyCommandLine.HasArg("-noServerObjectStripping");
+            }
+            return cachedObjectOptimizationEnabled.Value;
+        }
+    }
 
-	private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-	{
-		base.StartCoroutine(this.StripSceneDeferred(scene));
-	}
+    // Separate rollback switch for CPU-only optimizations. Keep it independent
+    // from object stripping so either layer can be A/B tested on its own.
+    public static bool IsCpuOptimizationEnabled
+    {
+        get
+        {
+            if (!cachedCpuOptimizationEnabled.HasValue)
+            {
+                cachedCpuOptimizationEnabled =
+                    IsHeadlessServer && !LegacyCommandLine.HasArg("-noServerCpuOptimization");
+            }
+            return cachedCpuOptimizationEnabled.Value;
+        }
+    }
 
-	private IEnumerator StripAllLoadedScenesDeferred()
-	{
-		yield return null;
-		for (int i = 0; i < SceneManager.sceneCount; i++)
-		{
-			Scene sceneAt = SceneManager.GetSceneAt(i);
-			if (sceneAt.IsValid() && sceneAt.isLoaded)
-			{
-				this.StripScene(sceneAt);
-			}
-		}
-		yield return Resources.UnloadUnusedAssets();
-		GC.Collect();
-		yield break;
-	}
+    public static void Install(GameObject host)
+    {
+        if (!IsOptimizationEnabled || installed || host == null)
+        {
+            return;
+        }
 
-	private IEnumerator StripSceneDeferred(Scene scene)
-	{
-		yield return null;
-		this.StripScene(scene);
-		yield return Resources.UnloadUnusedAssets();
-		yield break;
-	}
+        Logger = BigCityLegacyPlugin.Log;
+        host.GetOrAddComponent<LegacyServerHeadlessBootstrap>();
+        installed = true;
+        Debug.Log("[BigCityLegacy] Headless pre-/mid-load object stripping enabled. Use -noServerObjectStripping to disable it.");
+    }
 
-	private void StripScene(Scene scene)
-	{
-		GameObject[] rootGameObjects = scene.GetRootGameObjects();
-		for (int i = 0; i < rootGameObjects.Length; i++)
-		{
-			this.StripRecursive(rootGameObjects[i].transform);
-		}
-	}
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        StartCoroutine(StripAllLoadedScenesDeferred());
+    }
 
-	private void StripRecursive(Transform tr)
-	{
-		Camera component = tr.GetComponent<Camera>();
-		if (component != null)
-		{
-			component.enabled = false;
-		}
-		AudioListener component2 = tr.GetComponent<AudioListener>();
-		if (component2 != null)
-		{
-			global::UnityEngine.Object.Destroy(component2);
-		}
-		AudioSource component3 = tr.GetComponent<AudioSource>();
-		if (component3 != null)
-		{
-			global::UnityEngine.Object.Destroy(component3);
-		}
-		Light component4 = tr.GetComponent<Light>();
-		if (component4 != null)
-		{
-			global::UnityEngine.Object.Destroy(component4);
-		}
-		ReflectionProbe component5 = tr.GetComponent<ReflectionProbe>();
-		if (component5 != null)
-		{
-			global::UnityEngine.Object.Destroy(component5);
-		}
-		Canvas component6 = tr.GetComponent<Canvas>();
-		if (component6 != null)
-		{
-			component6.enabled = false;
-		}
-		Graphic[] components = tr.GetComponents<Graphic>();
-		for (int i = 0; i < components.Length; i++)
-		{
-			components[i].enabled = false;
-		}
-		ParticleSystem component7 = tr.GetComponent<ParticleSystem>();
-		if (component7 != null)
-		{
-			global::UnityEngine.Object.Destroy(component7);
-		}
-		TrailRenderer component8 = tr.GetComponent<TrailRenderer>();
-		if (component8 != null)
-		{
-			global::UnityEngine.Object.Destroy(component8);
-		}
-		LineRenderer component9 = tr.GetComponent<LineRenderer>();
-		if (component9 != null)
-		{
-			global::UnityEngine.Object.Destroy(component9);
-		}
-		Renderer[] components2 = tr.GetComponents<Renderer>();
-		for (int j = 0; j < components2.Length; j++)
-		{
-			global::UnityEngine.Object.Destroy(components2[j]);
-		}
-		LODGroup component10 = tr.GetComponent<LODGroup>();
-		if (component10 != null)
-		{
-			global::UnityEngine.Object.Destroy(component10);
-		}
-		for (int k = 0; k < tr.childCount; k++)
-		{
-			this.StripRecursive(tr.GetChild(k));
-		}
-	}
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!IsOptimizationEnabled)
+        {
+            return;
+        }
+        StartCoroutine(StripSceneDeferred(scene));
+    }
+
+    private IEnumerator StripAllLoadedScenesDeferred()
+    {
+        // Scene objects have already been deserialized at this point, so this is only
+        // a safety-net for scene-resident visual components. The important MapPro,
+        // GroundLoader and UI paths are stripped earlier by Harmony patches.
+        yield return null;
+
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (scene.IsValid() && scene.isLoaded)
+            {
+                StripScene(scene);
+            }
+        }
+
+        yield return Resources.UnloadUnusedAssets();
+        GC.Collect();
+
+        #if DEBUG
+            LogSummary("initial scenes");
+        #endif
+    }
+
+    private IEnumerator StripSceneDeferred(Scene scene)
+    {
+        yield return null;
+        StripScene(scene);
+
+        // Do not force a full GC for every additive scene. UnloadUnusedAssets is
+        // enough to release assets made unreachable by the stripping pass.
+        yield return Resources.UnloadUnusedAssets();
+    }
+
+    private static void StripScene(Scene scene)
+    {
+        if (!scene.IsValid() || !scene.isLoaded)
+        {
+            return;
+        }
+
+        GameObject[] roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+        {
+            StripSceneRecursive(roots[i].transform);
+        }
+    }
+
+    private static void StripSceneRecursive(Transform tr)
+    {
+        if (!tr)
+        {
+            return;
+        }
+
+        Camera camera = tr.GetComponent<Camera>();
+        if (camera != null)
+        {
+            camera.enabled = false;
+        }
+
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<AudioListener>());
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<AudioSource>());
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<Light>());
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<ReflectionProbe>());
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<ParticleSystem>());
+
+        Canvas canvas = tr.GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.enabled = false;
+        }
+
+        Graphic[] graphics = tr.GetComponents<Graphic>();
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != null)
+            {
+                graphics[i].enabled = false;
+            }
+        }
+
+        Renderer[] renderers = tr.GetComponents<Renderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            sceneComponentsRemoved += DestroyDeferred(renderers[i]);
+        }
+
+        sceneComponentsRemoved += DestroyDeferred(tr.GetComponent<LODGroup>());
+
+        for (int i = 0; i < tr.childCount; i++)
+        {
+            StripSceneRecursive(tr.GetChild(i));
+        }
+    }
+
+    internal static bool TrySetLoadedMapObject(MapProObjInfo info, UnityEngine.Object file)
+    {
+        if (!IsOptimizationEnabled || info == null)
+        {
+            return false;
+        }
+
+        // This is the headless replacement for MapProObjInfo.SetLoadedObject().
+        // Vanilla creates a server-side clone and strips only root components, but
+        // leaves copyFrom pointing at the original unstripped prefab. CreateObj()
+        // later instantiates copyFrom, effectively bringing the visuals back.
+        // Here the stripped clone itself becomes the server template.
+        info.isLoaded = true;
+
+        GameObject source = file as GameObject;
+        info.obj = source;
+        info.copyFrom = source;
+        if (source == null)
+        {
+            return true;
+        }
+
+        GameObject template = UnityEngine.Object.Instantiate<GameObject>(source);
+        template.SetActive(false);
+        template.hideFlags = HideFlags.HideAndDontSave;
+
+        int removed = StripMapTemplateImmediate(template);
+
+        info.obj = template;
+        info.copyFrom = template;
+        info.decalData = template.GetComponent<DecalData>();
+        info.isDecal = info.decalData != null;
+        // Preserve vanilla metadata semantics; only the source template changes.
+        info.isMovable = template.GetComponentInChildren<Rigidbody>() != null;
+        info.quality = template.GetComponent<Quality>();
+
+        mapTemplatesPrepared++;
+        mapTemplateComponentsRemoved += removed;
+        return true;
+    }
+
+    internal static void ReleaseMapTemplate(MapProObjInfo info)
+    {
+        if (!IsOptimizationEnabled || info == null)
+        {
+            return;
+        }
+
+        // Our headless path intentionally makes copyFrom == obj. Vanilla Remove()
+        // treats that shape as an asset and does not destroy it, so release the
+        // runtime template explicitly before the original cleanup runs.
+        if (info.obj != null && info.copyFrom == info.obj)
+        {
+            UnityEngine.Object.Destroy(info.obj);
+            info.obj = null;
+            info.copyFrom = null;
+        }
+    }
+
+    internal static void StripGroundInstance(GroundItem item)
+    {
+        if (!IsOptimizationEnabled || item == null || item.Instanciated == null)
+        {
+            return;
+        }
+
+        // GroundItem.Clear() expects the root MeshFilter to stay present because it
+        // unloads its sharedMesh explicitly. Keep MeshFilter/MeshCollider/physics,
+        // remove only presentation components.
+        GameObject root = item.Instanciated;
+        int removed = 0;
+        removed += DestroyComponentsImmediate<Renderer>(root);
+        removed += DestroyComponentsImmediate<LODGroup>(root);
+        removed += DestroyComponentsImmediate<ParticleSystem>(root);
+        removed += DestroyComponentsImmediate<AudioSource>(root);
+        removed += DestroyComponentsImmediate<AudioListener>(root);
+        removed += DestroyComponentsImmediate<Light>(root);
+        removed += DestroyComponentsImmediate<ReflectionProbe>(root);
+        groundComponentsRemoved += removed;
+    }
+
+    internal static void CreateMinimalGameUI(GameUI gameUi)
+    {
+        if (!IsOptimizationEnabled || gameUi == null)
+        {
+            return;
+        }
+
+        GameUI.me = gameUi;
+        // The compatibility shell is accessed explicitly by game code; its own
+        // Unity Update/FixedUpdate/LateUpdate callbacks are client-only.
+        gameUi.enabled = false;
+
+        if (gameUi.ui != null)
+        {
+            UnityEngine.Object.DestroyImmediate(gameUi.ui);
+        }
+
+        // Keep only the tiny compatibility shell that server-side game code expects:
+        // GameUI.me, rectUI/img and FadeUI.me. Do not instantiate SplitScreenUI,
+        // minimap, popup, weapon UI, touch UI, etc.
+        GameObject canvasObject = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas));
+        canvasObject.hideFlags = HideFlags.HideAndDontSave;
+        canvasObject.transform.SetParent(gameUi.transform, false);
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.enabled = false;
+
+        GameObject rootObject = new GameObject("HeadlessUIRoot", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        rootObject.hideFlags = HideFlags.HideAndDontSave;
+        rootObject.transform.SetParent(canvasObject.transform, false);
+
+        RawImage rawImage = rootObject.GetComponent<RawImage>();
+        rawImage.enabled = false;
+        rawImage.raycastTarget = false;
+        rawImage.color = Color.clear;
+        rawImage.rectTransform.sizeDelta = new Vector2(Mathf.Max(1, Screen.width), Mathf.Max(1, Screen.height));
+
+        GameObject fadeObject = new GameObject("Fade", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        fadeObject.hideFlags = HideFlags.HideAndDontSave;
+        fadeObject.transform.SetParent(rootObject.transform, false);
+        Image fadeImage = fadeObject.GetComponent<Image>();
+        fadeImage.enabled = false;
+        fadeImage.raycastTarget = false;
+        fadeImage.color = Color.clear;
+
+        gameUi.ui = canvasObject;
+        gameUi.img = rawImage;
+        gameUi.fadeUI = rootObject.AddComponent<FadeUI>();
+        if (gameUi.fadeUI != null && gameUi.fadeUI.imgFade != null)
+        {
+            gameUi.fadeUI.imgFade.enabled = false;
+            gameUi.fadeUI.imgFade.gameObject.SetActive(false);
+        }
+
+        // Release direct references to client-only UI prefabs. They can then become
+        // eligible for UnloadUnusedAssets if nothing else in the loaded scene holds them.
+        gameUi.SplitScreenUI = null;
+        gameUi.miniMap = null;
+        gameUi.weaponeSelect = null;
+        gameUi.sitSelect = null;
+        gameUi.WeaponeUiTool = null;
+        gameUi.touchs = null;
+        gameUi.popup = null;
+        gameUi.parkingInfo = null;
+        gameUi.enabled = false;
+    }
+
+    internal static void ReleaseNuligineClientUiReferences(Nuligine nuligine)
+    {
+        if (!IsOptimizationEnabled || nuligine == null || nuligine.ui == null)
+        {
+            return;
+        }
+
+        Nuligine.Ui ui = nuligine.ui;
+        ui.NoZTetMaterial = null;
+        ui.menuEsc = null;
+        ui.menuTouchs = null;
+        ui.loadingPrefab = null;
+        ui.PupuMessage = null;
+        ui.ParkMessage = null;
+        ui.askBoxUI = null;
+        ui.netPalyersList = null;
+        ui.netUiServerInfo = null;
+        ui.menuBuy = null;
+        ui.deliveryUI = null;
+        ui.missionResutUI = null;
+        ui.targetPointerData = null;
+        ui.gamePhone = null;
+        ui.EventIconDead = null;
+        ui.EventLiveChanget = null;
+        ui.testCamPath = null;
+        if (ui.styles != null)
+        {
+            ui.styles.Clear();
+        }
+        clientUiReferencesReleased++;
+    }
+
+    internal static void PrepareHeadlessNetChat(NetChat chat)
+    {
+        if (!IsOptimizationEnabled || chat == null)
+        {
+            return;
+        }
+
+        NetChat.me = chat;
+        chat.isNeedFill = 0;
+
+        // NetChat server logic only needs the NetworkBehaviour and its message list.
+        // Destroy the serialized chat UI hierarchy before it can be used/duplicated.
+        Transform root = chat.transform;
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            Transform child = root.GetChild(i);
+            if (child != null)
+            {
+                UnityEngine.Object.DestroyImmediate(child.gameObject);
+                chatObjectsRemoved++;
+            }
+        }
+    }
+
+    internal static void DisableClientRuntimeBehaviours(GameObject nuligineRoot)
+    {
+        if (!IsCpuOptimizationEnabled || nuligineRoot == null)
+        {
+            return;
+        }
+
+        // Nuligine.Start() always creates GRendererSystem even for a dedicated
+        // server. Keep the component/object available for compatibility, but stop
+        // its Unity callbacks. Use reflection so BCL does not need a direct build
+        // reference to the renderer implementation assembly.
+        Type rendererSystemType = FindLoadedType("GRendererSystem");
+        if (rendererSystemType != null)
+        {
+            Component component = nuligineRoot.GetComponentInChildren(rendererSystemType, true);
+            Behaviour behaviour = component as Behaviour;
+            if (behaviour != null && behaviour.enabled)
+            {
+                behaviour.enabled = false;
+                clientRuntimeBehavioursDisabled++;
+            }
+        }
+    }
+
+    private static Type FindLoadedType(string fullName)
+    {
+        if (string.IsNullOrEmpty(fullName))
+        {
+            return null;
+        }
+
+        try
+        {
+            System.Reflection.Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                Type type = assemblies[i].GetType(fullName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
+    internal static bool HandleMapVisualAssetCleanup(MapPro map)
+    {
+        if (!IsOptimizationEnabled || map == null)
+        {
+            return false;
+        }
+
+        if (!MapPro.allLoadedByPercent || MapPro.loadIfOverPercent >= 1f || map.texturesWasRemoved)
+        {
+            return true;
+        }
+
+        map.texturesWasRemoved = true;
+        NetManagerTools.ignoreLogUnloadAsset = true;
+        try
+        {
+
+            #if DEBUG
+                Debug.Log("[BigCityLegacy] Headless map loaded; unloading client-only visual assets.");
+            #endif
+
+            Material[] materials = Resources.FindObjectsOfTypeAll<Material>();
+            for (int i = 0; i < materials.Length; i++)
+            {
+                Resources.UnloadAsset(materials[i]);
+            }
+
+            Shader[] shaders = Resources.FindObjectsOfTypeAll<Shader>();
+            for (int i = 0; i < shaders.Length; i++)
+            {
+                Resources.UnloadAsset(shaders[i]);
+            }
+
+            Texture[] textures = Resources.FindObjectsOfTypeAll<Texture>();
+            for (int i = 0; i < textures.Length; i++)
+            {
+                Resources.UnloadAsset(textures[i]);
+            }
+
+            AudioClip[] clips = Resources.FindObjectsOfTypeAll<AudioClip>();
+            for (int i = 0; i < clips.Length; i++)
+            {
+                Resources.UnloadAsset(clips[i]);
+            }
+
+            // Unlike the original method, this path applies to both -batchmode and
+            // plain -nographics dedicated servers.
+            Resources.UnloadUnusedAssets();
+            GC.Collect();
+
+            #if DEBUG
+                LogSummary("map load complete");
+            #endif
+        }
+        finally
+        {
+            NetManagerTools.ignoreLogUnloadAsset = false;
+            LegacyServerConsole.NotifyWorldLoaded();
+        }
+        return true;
+    }
+
+    private static int StripMapTemplateImmediate(GameObject root)
+    {
+        int removed = 0;
+
+        // Preserve transforms, colliders, rigidbodies, Animator and gameplay/network
+        // scripts. Remove the same server-useless components the vanilla code tries
+        // to remove on the root, but recursively, plus obvious presentation-only
+        // Unity components.
+        removed += DestroyComponentsImmediate<Distance>(root);
+        removed += DestroyComponentsImmediate<DistanceView>(root);
+        removed += DestroyComponentsImmediate<LODGroup>(root);
+        removed += DestroyComponentsImmediate<Tree>(root);
+        removed += DestroyComponentsImmediate<PrefabGUID>(root);
+        removed += DestroyComponentsImmediate<Quality>(root);
+        removed += DestroyComponentsImmediate<TreeMatFix>(root);
+        removed += DestroyComponentsImmediate<Wire>(root);
+        removed += DestroyComponentsImmediate<CollisionParticles>(root);
+
+        removed += DestroyComponentsImmediate<Renderer>(root);
+        removed += DestroyComponentsImmediate<MeshFilter>(root);
+        removed += DestroyComponentsImmediate<ParticleSystem>(root);
+        removed += DestroyComponentsImmediate<AudioSource>(root);
+        removed += DestroyComponentsImmediate<AudioListener>(root);
+        removed += DestroyComponentsImmediate<Light>(root);
+        removed += DestroyComponentsImmediate<ReflectionProbe>(root);
+        removed += DestroyComponentsImmediate<Graphic>(root);
+        removed += DestroyComponentsImmediate<CanvasRenderer>(root);
+        removed += DestroyComponentsImmediate<Canvas>(root);
+
+        return removed;
+    }
+
+    private static int DestroyComponentsImmediate<T>(GameObject root) where T : Component
+    {
+        if (root == null)
+        {
+            return 0;
+        }
+
+        T[] components = root.GetComponentsInChildren<T>(true);
+        int removed = 0;
+        for (int i = 0; i < components.Length; i++)
+        {
+            T component = components[i];
+            if (component == null)
+            {
+                continue;
+            }
+            UnityEngine.Object.DestroyImmediate(component);
+            removed++;
+        }
+        return removed;
+    }
+
+    private static int DestroyDeferred(Component component)
+    {
+        if (component == null)
+        {
+            return 0;
+        }
+        UnityEngine.Object.Destroy(component);
+        return 1;
+    }
+
+    internal static void LogSummary(string phase)
+    {
+        Debug.Log(
+            "[BigCityLegacy] Headless stripping (" + phase + "): " +
+            "map templates=" + mapTemplatesPrepared.ToString() +
+            ", map components=" + mapTemplateComponentsRemoved.ToString() +
+            ", ground components=" + groundComponentsRemoved.ToString() +
+            ", scene components=" + sceneComponentsRemoved.ToString() +
+            ", chat objects=" + chatObjectsRemoved.ToString() +
+            ", UI reference sets=" + clientUiReferencesReleased.ToString() +
+            ", runtime behaviours=" + clientRuntimeBehavioursDisabled.ToString()
+        );
+    }
 
     public static string _DER(string p1, string p2, string p3, string p4)
     {
@@ -281,5 +733,4 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
         }
     }
 
-    private static bool installed;
 }
