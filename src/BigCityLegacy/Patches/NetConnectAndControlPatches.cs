@@ -420,4 +420,17 @@ internal static class NetConnectAndControlPatches
         return false; 
     }
 
+    [HarmonyPatch(typeof(WeatherManager), "UpdateSwitchByTime")]
+    [HarmonyPrefix]
+    private static bool WeatherManager_UpdateSwitchByTime_Prefix()
+    {
+        return !LegacyWeatherLock.IsEnabled;
+    }
+
+    [HarmonyPatch(typeof(WeatherManager), "RandomIfNeed")]
+    [HarmonyPrefix]
+    private static bool WeatherManager_RandomIfNeed_Prefix()
+    {
+        return !LegacyWeatherLock.IsEnabled;
+    }
 }
