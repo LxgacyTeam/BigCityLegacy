@@ -1,13 +1,21 @@
-# BigCityLegacy
-
-### [README на Русском](https://github.com/LxgacyTeam/BigCityLegacy/blob/main/docs/README_RU.md)
-
+### [Русский](.README_RU.md) | [> English <](/README.md)
 ---
 
-A BepInEx plugin for the Steam version of **MadOut2 BigCityOnline** that fully restores online and offline functionality.
+<div align="center">
+  <picture>
+    <img alt="bcl" src="./img/bcl-logo.png" style="max-width:256px;width:100%">
+  </picture>
+  <h1>BigCityLegacy</h1>
+  <h3>A BepInEx plugin for the Steam version of <b>MadOut2 BigCityOnline</b> that fully restores online and offline functionality.</h3>
+  <h3>
+    <a href="https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe">Download installer</a>
+     | <a href="https://github.com/LxgacyTeam/BigCityLegacy/wiki#-documentation-on-english">Visit Wiki</a>
+     | <a href="https://t.me/BigCityLegacy">Our Telegram</a>
+  </h3>
+  <p>Detailed information about the mod features, server startup, and server configuration is available in the Wiki section.</p>
+</div>
 
-### Detailed information about the mod features, server startup, and server configuration is available in the [Wiki section](https://github.com/LxgacyTeam/BigCityLegacy/wiki#-documentation-on-english).
-
+---
 ## Key features
 
 - Run your own game server with flexible configuration and administration.
@@ -24,6 +32,10 @@ Earlier versions (`4.9 - 9.2`) can run in Compatibility Mode, which provides off
 ## Installation
 
 * Download the latest **original** version of the game from Steam. Modified game builds are **not supported**.
+* Download [**official online installer**](https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe) and install mod on a clean game.
+
+*or install manually:*
+
 * Install [BepInEx 5](https://github.com/BepInEx/BepInEx) into the game folder and launch the game once.
 * Download the zip file from the [Releases](https://github.com/LxgacyTeam/BigCityLegacy/releases) section and unpack it into the game root folder.
 
