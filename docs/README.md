@@ -1,4 +1,4 @@
-### [Русский](.README_RU.md) | [> English <](/README.md)
+### [Русский](./README_RU.md) | [> English <](./README.md)
 ---
 
 <div align="center">
