@@ -155,9 +155,6 @@ public class LegacyVinylPort : MonoBehaviour
     {
         LegacyUILayout ui = new LegacyUILayout(content);
 
-        // Allocate all screen rectangles first. The order in which controls are DRAWN below
-        // is intentionally different from their visual order: the TextField is created before
-        // the dynamic ScrollView so its IMGUI control ID stays stable when the file list changes.
         Rect labelRect = ui.Row(20f);
         Rect hintRect = ui.Row(18f);
         Rect listRect = ui.Row(ListHeight);
@@ -186,8 +183,6 @@ public class LegacyVinylPort : MonoBehaviour
 
         LegacyUI.MiniHint(hintRect, $"{numOfPacks}" + choises.Count);
 
-        // IMPORTANT: create the keyboard-focusable control before the dynamic scroll contents.
-        // GUI.TextField manages keyboardControl, hotControl, caret and selection on its own.
         float nameWidth = inputRow.width * 0.6f;
         Rect nameRect = new Rect(inputRow.x, inputRow.y, nameWidth - 4f, inputRow.height);
 
@@ -207,8 +202,6 @@ public class LegacyVinylPort : MonoBehaviour
 
         LegacyUI.Status(statusRect, Time.unscaledTime < flashTime ? flashMsg : "");
 
-        // Draw the dynamic list last in IMGUI control order. Its variable number of buttons
-        // can no longer shift the control ID of the TextField above.
         scroll.ViewRect = listRect;
         scroll.Draw(listContent =>
         {
@@ -411,9 +404,6 @@ public class LegacyVinylPort : MonoBehaviour
 
         xml = current.OuterXml;
 
-        // A never-edited car has no CarSaved_<prefab> key at all. Seed it from the
-        // current runtime/default car state so there is a valid XML document into
-        // which the imported CarPaint/CarMaterial nodes can be merged.
         PlayerPrefs.SetString(carSaveKey, xml);
         PlayerPrefs.Save();
 
@@ -478,12 +468,6 @@ public class LegacyVinylPort : MonoBehaviour
                 return;
             }
 
-            // Export must use the state that is visible in the editor right now, not
-            // the last state the player accepted/saved. Temporarily replace the car's
-            // PlayerPrefs XML in memory, use the normal GetXmlForCar pipeline, then
-            // restore the exact previous value in finally. Do NOT call PlayerPrefs.Save()
-            // while the temporary value is installed: an export must not implicitly
-            // commit the player's editor changes to disk.
             hadPreviousSave = PlayerPrefs.HasKey(carSaveKey);
             if (hadPreviousSave)
                 previousSaveXml = PlayerPrefs.GetString(carSaveKey);

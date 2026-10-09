@@ -168,23 +168,24 @@ internal static class LegacyServerDropCleanup
         return true;
     }
 
-//    internal static bool TryGetZoneForEvent(Net_CS currentEvent, out Vector3 center, out float radius)
-//    {
-//        center = Vector3.zero;
-//        radius = 0f;
-//        if (!NetManager.isServer || currentEvent == null)
-//        {
-//            return false;
-//        }
-//        LegacyEventDropZone zone;
-//        if (!zonesByEventId.TryGetValue(currentEvent.GetInstanceID(), out zone) || zone == null || !zone.IsConfigured)
-//        {
-//            return false;
-//        }
-//        center = zone.Center;
-//        radius = zone.Radius;
-//        return true;
-//    }
+    internal static bool TryGetZoneForEvent(Net_CS currentEvent, out Vector3 center, out float radius)
+    {
+        center = Vector3.zero;
+        radius = 0f;
+        if (!NetManager.isServer || currentEvent == null)
+        {
+            return false;
+        }
+        LegacyEventDropZone zone;
+        if (!zonesByEventId.TryGetValue(currentEvent.GetInstanceID(), out zone) || zone == null || !zone.isConfigured)
+        {
+            return false;
+        }
+
+        center = zone.center;
+        radius = zone.radius;
+        return true;
+    }
 }
 
 internal sealed class LegacyEventDropZone : MonoBehaviour
