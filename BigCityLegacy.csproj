@@ -6,7 +6,7 @@
     <AssemblyName>BigCityLegacy</AssemblyName>
 	<Authors>LegacyTeam</Authors>
 	<VersionPrefix>1.4.0</VersionPrefix>
-	<VersionSuffix>draft</VersionSuffix>
+	<VersionSuffix>beta1</VersionSuffix>
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <RootNamespace>BigCityLegacy</RootNamespace>
     <OutputPath>bin\$(Configuration)\</OutputPath>
