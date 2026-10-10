@@ -66,6 +66,13 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
         internal int Inputs;
         internal int Loot;
         internal int GroundCells;
+        internal int Cars;
+        internal int CarsAwake;
+        internal int CarsSleeping;
+        internal int CarsHandled;
+        internal int CarsClientOwned;
+        internal int CarsServerOwned;
+        internal int CarsSleepFastPath;
 
         internal string GpuName;
         internal string GpuApi;
@@ -342,7 +349,9 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             "[Stats] BCL optimizations: objectStripping=" +
             (LegacyServerHeadlessBootstrap.IsOptimizationEnabled ? "ON" : "OFF") +
             ", cpu=" +
-            (LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled ? "ON" : "OFF")
+            (LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled ? "ON" : "OFF") +
+            ", carSleep=" +
+            (ServerCarSleepPatches.Enabled ? "4.9-style" : "vanilla")
         );
 #endif
 
@@ -407,6 +416,25 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             ", InputControl=" + s.Inputs.ToString() +
             ", Loot=" + s.Loot.ToString() +
             ", groundCells=" + s.GroundCells.ToString()
+        );
+
+        LegacyServerConsole.WriteAdminLine(
+            "[Stats] Cars: total=" + s.Cars.ToString() +
+            ", awake=" + s.CarsAwake.ToString() +
+            ", sleeping=" + s.CarsSleeping.ToString() +
+            ", handled=" + s.CarsHandled.ToString() +
+            ", clientOwned=" + s.CarsClientOwned.ToString() +
+            ", serverOwned=" + s.CarsServerOwned.ToString() +
+            ", sleepFastPath=" + s.CarsSleepFastPath.ToString()
+        );
+
+        LegacyServerConsole.WriteAdminLine(
+            "[Stats] Server car optimization: sleepDelay=" +
+            ServerCarSleepPatches.SleepDelayMs.ToString("0") + "ms, presentation=" +
+            (ServerCarPresentationPatches.Enabled ? "ON" : "OFF") +
+            ", UNet pendingBuffers=" + (ServerNetworkBufferPatches.Enabled
+                ? ServerNetworkBufferPatches.PendingLimit.ToString() : "vanilla") +
+            ", connectionsConfigured=" + ServerNetworkBufferPatches.ConfiguredConnections.ToString()
         );
 
         string gpu = string.IsNullOrEmpty(s.GpuName) ? "N/A" : s.GpuName;
@@ -498,7 +526,8 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
 
         objLine = "Game players " + s.Players.ToString() +
                   "  |  Control " + s.Controls.ToString() +
-                  "  |  NetControl " + s.NetControls.ToString() +
+                  "  |  Cars " + s.Cars.ToString() +
+                  " (" + s.CarsSleeping.ToString() + " sleep)" +
                   "  |  SmoothSync " + s.SmoothSyncs.ToString();
     }
 
@@ -934,6 +963,60 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
         try { target.NetControls = NetControl.netControls != null ? NetControl.netControls.Count : 0; } catch { target.NetControls = 0; }
         try { target.SmoothSyncs = SmoothSync.instacnes != null ? SmoothSync.instacnes.Count : 0; } catch { target.SmoothSyncs = 0; }
         try { target.Inputs = InputControl.inputs != null ? InputControl.inputs.Count : 0; } catch { target.Inputs = 0; }
+
+        try
+        {
+            if (Control.controls != null)
+            {
+                for (int i = 0; i < Control.controls.Count; i++)
+                {
+                    CarControl car = Control.controls[i] as CarControl;
+                    if (!car)
+                    {
+                        continue;
+                    }
+
+                    target.Cars++;
+                    if (car.body != null && car.body.IsSleeping())
+                    {
+                        target.CarsSleeping++;
+                    }
+                    else
+                    {
+                        target.CarsAwake++;
+                    }
+
+                    if (car.nowHandleUser)
+                    {
+                        target.CarsHandled++;
+                    }
+
+                    if (ServerCarSleepPatches.IsClientOwnedCar(car))
+                    {
+                        target.CarsClientOwned++;
+                    }
+                    else
+                    {
+                        target.CarsServerOwned++;
+                    }
+
+                    if (ServerCarSleepPatches.IsSleepingFastPathCandidate(car))
+                    {
+                        target.CarsSleepFastPath++;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            target.Cars = 0;
+            target.CarsAwake = 0;
+            target.CarsSleeping = 0;
+            target.CarsHandled = 0;
+            target.CarsClientOwned = 0;
+            target.CarsServerOwned = 0;
+            target.CarsSleepFastPath = 0;
+        }
 
         target.Loot = GetCollectionCount(lootItemsField, null);
         target.GroundCells = GroundLoader.me != null ? GetCollectionCount(groundItemsMapField, GroundLoader.me) : 0;

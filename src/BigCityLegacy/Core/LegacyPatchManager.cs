@@ -33,6 +33,9 @@ internal static class LegacyPatchManager
         PatchClass(typeof(NetworkPatches));
         PatchClass(typeof(ServerHeadlessOptimizationPatches));
         PatchClass(typeof(ServerPerformancePatches));
+        PatchClass(typeof(ServerCarSleepPatches));
+        PatchClass(typeof(ServerCarPresentationPatches));
+        PatchClass(typeof(ServerNetworkBufferPatches));
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(RuntimeQualityAndCursorPatches));
         PatchClass(typeof(ChatEventsPatches));
@@ -40,7 +43,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SettingsMenuPatches));
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));
-        PatchClass(typeof(CsDamageCooldownPatches));
+        PatchClass(typeof(CsPatches));
         PatchClass(typeof(AsyncRequestString_Patch));
         PatchClass(typeof(NetManagerTools_OnEnable_Patch));
     }

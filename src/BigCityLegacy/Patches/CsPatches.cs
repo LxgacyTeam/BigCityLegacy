@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 [HarmonyPatch]
-internal static class CsDamageCooldownPatches
+internal static class CsPatches
 {
     private static readonly Dictionary<int, int> CsReconnectMoneySnapshot = new Dictionary<int, int>();
 
