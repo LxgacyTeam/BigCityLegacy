@@ -32,10 +32,6 @@ public class LegacyVinylPort : MonoBehaviour
     }
 
     private LegacyUIWindow win;
-    private LegacyUIWindow warning;
-    private LegacyVinylPack pendingPack;
-    private string pendingPath;
-    private CarControl pendingCar;
     private LegacyUIScrollView scroll;
     private List<PackInfo> choises = new List<PackInfo>();
     private string packName = "my_vinyl";
@@ -68,12 +64,6 @@ public class LegacyVinylPort : MonoBehaviour
                 InputBlockMode = LegacyUIInputBlockMode.Window
             });
         win.Visible = false;
-        win.Closed += CancelPending;
-        warning = new LegacyUIWindow("VinylPort", new Rect(0, 0, 550, 340),
-            new LegacyUIWindowOptions { Draggable = true, ClampToScreen = true, ShowCloseButton = true,
-                InputBlockMode = LegacyUIInputBlockMode.Screen, BackgroundAlpha = 0.98f });
-        warning.Visible = false;
-        warning.Closed += ClearPending;
 
         scroll = new LegacyUIScrollView(new Rect(0f, 0f, 100f, 100f));
         scroll.Padding = 8f;
@@ -91,9 +81,6 @@ public class LegacyVinylPort : MonoBehaviour
 
         if (!win.Visible)
             return;
-
-        if (pendingPack != null && (!CarGarageUI.me || CarGarageUI.me.car != pendingCar))
-            CancelPending();
 
         string garageCar = CurrentGarageCar();
         if (!string.Equals(garageCar, curCar, StringComparison.OrdinalIgnoreCase))
@@ -122,13 +109,8 @@ public class LegacyVinylPort : MonoBehaviour
 
     public void Close()
     {
-        CancelPending();
-        win?.Close();
+        win.Visible = false;
     }
-
-    private void OnDestroy() { Close(); if (instance == this) instance = null; }
-    private void ClearPending() { pendingPack = null; pendingPath = null; pendingCar = null; }
-    private void CancelPending() { warning?.Close(); ClearPending(); }
 
     private string CurrentGarageCar()
     {
@@ -151,8 +133,7 @@ public class LegacyVinylPort : MonoBehaviour
 
         using (new LegacyUIGuiScope(-10000))
         {
-            if (warning.Visible) warning.Draw(DrawWarning);
-            else win.Draw(DrawContent);
+            win.Draw(DrawContent);
         }
     }
 
@@ -163,6 +144,11 @@ public class LegacyVinylPort : MonoBehaviour
             string carDir = Path.Combine(LegacyHelpers.ModDataPath, "vinylpacks", Sanitize(curCar));
             return carDir;
         }
+    }
+
+    private string carSaveKey
+    {
+        get { return "CarSaved_" + curCar; }
     }
 
     private void DrawContent(Rect content)
@@ -266,11 +252,11 @@ public class LegacyVinylPort : MonoBehaviour
             string file = files[i];
             try
             {
-                if (new FileInfo(file).Length > LegacyVinylPackCodec.MaxCharacters * 4L) continue;
-                XmlDocument pack = LegacyVinylPackCodec.ReadXml(File.ReadAllText(file));
+                XmlDocument pack = new XmlDocument();
+                pack.Load(file);
 
                 XmlElement root = pack.DocumentElement;
-                if (root == null || root.Name != "VinylPack")
+                if (root == null)
                     continue;
 
                 string packCar = root.GetAttribute("car");
@@ -299,149 +285,142 @@ public class LegacyVinylPort : MonoBehaviour
     {
         try
         {
-            if (FindGarageSaveLoad() == null) throw new InvalidOperationException(
-                LegacyLocalizer.Text("No car in garage", "Нет машины в гараже"));
-            var pack = LegacyVinylPackCodec.ReadFile(path, curCar);
-            CheckPaintCompatibility(pack);
-            if (pack.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText ||
-                pack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts)
+            XmlDocument pack = new XmlDocument();
+            pack.Load(path);
+
+            XmlElement packRoot = pack.DocumentElement;
+            if (packRoot == null)
             {
-                pendingPack = pack; pendingPath = path; pendingCar = CarGarageUI.me.car;
-                warning.Title = LegacyLocalizer.Text("VinylPort — compatibility", "VinylPort — совместимость");
-                warning.Rect = new Rect((Screen.width - 550f) / 2f, (Screen.height - 340f) / 2f, 550, 340);
-                warning.Visible = true;
-                GUI.FocusControl(null);
+                Flash(LegacyLocalizer.Text("Invalid pack", "Некорректный пак"));
                 return;
             }
-            ApplyValidatedPack(pack, path, false);
-        }
-        catch (Exception error) { ImportError(error); }
-    }
 
-    private void DrawWarning(Rect content)
-    {
-        if (pendingPack == null) { CancelPending(); return; }
-        var ui = new LegacyUILayout(content, 8f);
-        LegacyUI.Title(ui.Row(24f), LegacyLocalizer.Text("EnhancedCarTuning is required", "Нужен EnhancedCarTuning"));
-        bool textFallback = pendingPack.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText;
-        bool partsFallback = pendingPack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts;
-        string text = textFallback ? LegacyLocalizer.Text(
-            "Text layers: ", "Текстовых слоёв: ") + pendingPack.TextCount + LegacyLocalizer.Text(
-            ". The tuning plugin is unavailable.\nLoad stock primitives instead?\nPosition, size and color will be preserved.",
-            ". Плагин тюнинга недоступен.\nЗагрузить вместо текста штатные примитивы?\nПоложение, размер и цвет сохранятся.") : LegacyLocalizer.Text(
-            "This pack contains individual body part colors.\nInstall or update EnhancedCarTuning to display them.",
-            "В паке есть цвета отдельных деталей кузова.\nДля их отображения установи или обнови EnhancedCarTuning.");
-        if (partsFallback) text += LegacyLocalizer.Text(
-            "\nWithout the plugin, only the stock body color is visible.",
-            "\nБез плагина виден только штатный цвет кузова.");
-        LegacyUI.HintBox(ui.Row(132f), text);
-        LegacyUI.HintBoxAlt(ui.Row(38f), LegacyLocalizer.Text(
-            "The original .vinyl file will remain unchanged.", "Исходный файл .vinyl останется без изменений."));
-        Rect buttons = ui.Row(34f);
-        if (LegacyUI.GreenButton(new Rect(buttons.x, buttons.y, buttons.width - 118, buttons.height),
-            textFallback ? LegacyLocalizer.Text("Load with primitives", "Загрузить с примитивами") :
-            LegacyLocalizer.Text("Load stock color", "Загрузить общий цвет")))
-        {
-            var pack = pendingPack; string path = pendingPath; var car = pendingCar;
-            CancelPending();
-            if (!CarGarageUI.me || CarGarageUI.me.car != car) return;
-            ApplyValidatedPack(pack, path, true);
-        }
-        if (LegacyUI.Button(new Rect(buttons.xMax - 110, buttons.y, 110, buttons.height),
-            LegacyLocalizer.Text("Cancel", "Отмена"))) CancelPending();
-    }
-
-    private void ApplyValidatedPack(LegacyVinylPack pack, string path, bool allowFallback)
-    {
-        var garage = CarGarageUI.me;
-        var saveLoad = FindGarageSaveLoad();
-        string original = null, previous = null;
-        bool applied = false, wrote = false, hadSave = false;
-        string key = "CarSaved_" + curCar;
-        try
-        {
-            if (!garage || saveLoad == null || !string.Equals(pack.Car, garage.car.prefabName, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException(LegacyLocalizer.Text("Garage car changed", "Машина в гараже изменилась"));
-            bool missingText = pack.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText;
-            bool missingParts = pack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts;
-            CheckPaintCompatibility(pack);
-            if ((missingText || missingParts) && !allowFallback) throw new InvalidOperationException(
-                LegacyLocalizer.Text("Tuning plugin is unavailable", "Плагин тюнинга недоступен"));
-            string primitive = missingText ? LegacyVinylPortRuntime.Primitive() : null;
-            if (missingText && primitive == null) throw new LegacyVinylPackException("Primitive");
-            hadSave = PlayerPrefs.HasKey(key);
-            previous = hadSave ? PlayerPrefs.GetString(key) : null;
-            original = CaptureCurrentGarageXml();
-            if (string.IsNullOrEmpty(original)) throw new InvalidOperationException(
-                LegacyLocalizer.Text("Failed to capture car state", "Не удалось получить состояние машины"));
-            string xml = LegacyVinylPackCodec.Merge(pack, string.IsNullOrEmpty(previous) ? original : previous, primitive).OuterXml;
-            applied = true;
-            LegacyVinylPortRuntime.Apply(garage, saveLoad, xml);
-            SyncGarageMaterialControls(saveLoad.car);
-            wrote = true;
-            PlayerPrefs.SetString(key, xml); PlayerPrefs.Save();
-            Flash(LegacyLocalizer.Text("Applied pack: ", "Применён пак: ") + Path.GetFileNameWithoutExtension(path));
-        }
-        catch (Exception error)
-        {
-            if (applied && !string.IsNullOrEmpty(original) && garage && saveLoad && garage.car == saveLoad.car)
+            XmlNode paint = packRoot.SelectSingleNode("CarPaint");
+            if (paint == null)
             {
-                try { LegacyVinylPortRuntime.Apply(garage, saveLoad, original); SyncGarageMaterialControls(saveLoad.car); }
-                catch (Exception rollback) { Debug.LogError("VinylPort: runtime rollback failed: " + rollback.GetType().Name); }
+                Flash(LegacyLocalizer.Text("No CarPaint", "Нет CarPaint"));
+                return;
             }
-            if (wrote)
+
+            string packCar = packRoot.GetAttribute("car");
+            if (!string.Equals(packCar, curCar, StringComparison.OrdinalIgnoreCase))
             {
-                try { if (hadSave) PlayerPrefs.SetString(key, previous); else PlayerPrefs.DeleteKey(key); PlayerPrefs.Save(); }
-                catch (Exception rollback) { Debug.LogError("VinylPort: save rollback failed: " + rollback.GetType().Name); }
+                Flash(LegacyLocalizer.Text("This pack is for another car", "Пак не для этой машины"));
+                return;
             }
-            ImportError(error);
+
+            string xml = GetOrCreateCarSaveXml();
+            if (string.IsNullOrEmpty(xml))
+            {
+                Flash(LegacyLocalizer.Text("Failed to create car save", "Не удалось создать сохранение машины"));
+                return;
+            }
+
+            XmlDocument save = new XmlDocument();
+            save.LoadXml(xml);
+            if (save.DocumentElement == null)
+            {
+                Flash(LegacyLocalizer.Text("Invalid car save", "Некорректное сохранение машины"));
+                return;
+            }
+
+            XmlNode oldPaint = save.DocumentElement.SelectSingleNode("CarPaint");
+            XmlNode importedPaint = save.ImportNode(paint, true);
+            if (oldPaint != null)
+                save.DocumentElement.ReplaceChild(importedPaint, oldPaint);
+            else
+                save.DocumentElement.AppendChild(importedPaint);
+
+            XmlNode mat = packRoot.SelectSingleNode("CarMaterial");
+            if (mat != null)
+            {
+                XmlNode oldMat = save.DocumentElement.SelectSingleNode("CarMaterial");
+                XmlNode importedMat = save.ImportNode(mat, true);
+                if (oldMat != null)
+                    save.DocumentElement.ReplaceChild(importedMat, oldMat);
+                else
+                    save.DocumentElement.AppendChild(importedMat);
+            }
+
+            PlayerPrefs.SetString(carSaveKey, save.OuterXml);
+            PlayerPrefs.Save();
+
+            CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+            if (targetSaveLoad != null)
+            {
+                targetSaveLoad.LoadXml(save.OuterXml);
+
+                SyncGarageMaterialControls(targetSaveLoad.car);
+            }
+
+            if (CarGarageUI.me)
+                CarGarageUI.me.CarPaint_Finish();
+
+            LegacyLocalizedText packApplied = new LegacyLocalizedText("Applied pack: ", "Применен пак: ");
+            Flash(packApplied + Path.GetFileNameWithoutExtension(path));
         }
-    }
-
-    private static void CheckPaintCompatibility(LegacyVinylPack pack)
-    {
-        if (pack.Document.DocumentElement["CarMaterial"] != null && LegacyVinylPortRuntime.NeedsPaintUpdate)
-            throw new InvalidOperationException(LegacyLocalizer.Text(
-                "Update EnhancedCarTuning to import paint colors safely", "Для переноса цветов обнови EnhancedCarTuning"));
-    }
-
-    private void ImportError(Exception error)
-    {
-        var invalid = error as LegacyVinylPackException;
-        string message = invalid == null ? error is XmlException ? LegacyLocalizer.Text("Invalid XML", "Некорректный XML") :
-            error.Message : PackError(invalid.Code);
-        Flash(LegacyLocalizer.Text("Import error: ", "Ошибка импорта: ") + message);
-    }
-
-    private static string PackError(string code)
-    {
-        switch (code)
+        catch (Exception ex)
         {
-            case "MissingVersion": return LegacyLocalizer.Text("Pack version is missing", "В паке не указана версия");
-            case "Version": return LegacyLocalizer.Text("Invalid pack version", "Некорректная версия пака");
-            case "UnsupportedVersion": return LegacyLocalizer.Text("Unsupported pack version (supported: 1–4)", "Версия пака не поддерживается (доступны 1–4)");
-            case "Car": return LegacyLocalizer.Text("Pack or save is for another car", "Пак или сохранение от другой машины");
-            case "Text": return LegacyLocalizer.Text("Invalid text, font, style or symmetry fields", "Некорректные поля текста, шрифта, стиля или симметрии");
-            case "Parts": return LegacyLocalizer.Text("Invalid body part colors", "Некорректные цвета деталей кузова");
-            case "Geometry": return LegacyLocalizer.Text("Invalid vinyl coordinates, size or color", "Некорректные координаты, размер или цвет винила");
-            case "Material": return LegacyLocalizer.Text("Invalid stock paint fields", "Некорректные поля штатной покраски");
-            case "Primitive": return LegacyLocalizer.Text("Stock primitive is unavailable; pack was not loaded", "Штатный примитив недоступен; пак не загружен");
-            case "Size": return LegacyLocalizer.Text("Pack is too large", "Пак слишком большой");
-            default: return LegacyLocalizer.Text("Invalid vinyl pack structure", "Некорректная структура пака винилов");
+            LegacyLocalizedText importErr = new LegacyLocalizedText("Import error: ", "Ошибка импорта: ");
+            Flash(importErr + ex.Message);
         }
     }
 
     private CarSaveLoad FindGarageSaveLoad()
     {
-        var garage = CarGarageUI.me;
-        return garage && garage.car && string.Equals(garage.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase)
-            ? garage.car.GetComponent<CarSaveLoad>() : null;
+        if (CarGarageUI.me != null && CarGarageUI.me.car != null &&
+            string.Equals(CarGarageUI.me.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase))
+        {
+            CarSaveLoad direct = CarGarageUI.me.car.GetComponent<CarSaveLoad>();
+            if (direct != null)
+                return direct;
+        }
+
+        foreach (CarSaveLoad sl in Resources.FindObjectsOfTypeAll<CarSaveLoad>())
+        {
+            if (sl != null && sl.car != null &&
+                string.Equals(sl.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase))
+            {
+                return sl;
+            }
+        }
+
+        return null;
+    }
+
+    private string GetOrCreateCarSaveXml()
+    {
+        string xml = CarSaveLoad.GetXmlForCar(curCar);
+        if (!string.IsNullOrEmpty(xml))
+            return xml;
+
+        CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+        if (targetSaveLoad == null)
+            return string.Empty;
+
+        XmlDocument current = targetSaveLoad.SaveXml();
+        if (current == null || current.DocumentElement == null)
+            return string.Empty;
+
+        xml = current.OuterXml;
+
+        PlayerPrefs.SetString(carSaveKey, xml);
+        PlayerPrefs.Save();
+
+        return xml;
     }
 
     private string CaptureCurrentGarageXml()
     {
-        var saveLoad = FindGarageSaveLoad();
-        return saveLoad == null ? string.Empty : LegacyVinylPortRuntime.Capture(CarGarageUI.me, saveLoad);
+        CarSaveLoad targetSaveLoad = FindGarageSaveLoad();
+        if (targetSaveLoad == null)
+            return string.Empty;
+
+        XmlDocument current = targetSaveLoad.SaveXml();
+        if (current == null || current.DocumentElement == null)
+            return string.Empty;
+
+        return current.OuterXml;
     }
 
     private void SyncGarageMaterialControls(CarControl car)
@@ -470,23 +449,88 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void Export()
     {
+        bool playerPrefsSwapped = false;
+        bool hadPreviousSave = false;
+        string previousSaveXml = null;
+
         try
         {
-            string xml = CaptureCurrentGarageXml();
-            if (curCar == "" || string.IsNullOrEmpty(xml))
-                throw new InvalidOperationException(LegacyLocalizer.Text("No car in garage", "Нет машины в гараже"));
-            XmlDocument pack = LegacyVinylPackCodec.Export(LegacyVinylPackCodec.ReadXml(xml), curCar);
+            if (curCar == "")
+            {
+                Flash(LegacyLocalizer.Text("No car in garage", "Нет машины в гараже"));
+                return;
+            }
+
+            string currentGarageXml = CaptureCurrentGarageXml();
+            if (string.IsNullOrEmpty(currentGarageXml))
+            {
+                Flash(LegacyLocalizer.Text("Failed to get current car state", "Не удалось получить текущее состояние машины"));
+                return;
+            }
+
+            hadPreviousSave = PlayerPrefs.HasKey(carSaveKey);
+            if (hadPreviousSave)
+                previousSaveXml = PlayerPrefs.GetString(carSaveKey);
+
+            PlayerPrefs.SetString(carSaveKey, currentGarageXml);
+            playerPrefsSwapped = true;
+
+            string xml = CarSaveLoad.GetXmlForCar(curCar);
+            if (string.IsNullOrEmpty(xml))
+            {
+                Flash(LegacyLocalizer.Text("Failed to prepare car state for export", "Не удалось подготовить состояние машины для экспорта"));
+                return;
+            }
+
+            XmlDocument save = new XmlDocument();
+            save.LoadXml(xml);
+            if (save.DocumentElement == null)
+            {
+                Flash(LegacyLocalizer.Text("Invalid car state", "Некорректное состояние машины"));
+                return;
+            }
+
+            XmlNode paint = save.DocumentElement.SelectSingleNode("CarPaint");
+            if (paint == null)
+            {
+                Flash(LegacyLocalizer.Text("No CarPaint", "Нет CarPaint"));
+                return;
+            }
+
+            XmlDocument pack = new XmlDocument();
+            XmlElement root = pack.CreateElement("VinylPack");
+            root.SetAttribute("version", "3");
+            root.SetAttribute("car", curCar);
+            pack.AppendChild(root);
+            root.AppendChild(pack.ImportNode(paint, true));
+
+            XmlNode mat = save.DocumentElement.SelectSingleNode("CarMaterial");
+            if (mat != null)
+                root.AppendChild(pack.ImportNode(mat, true));
+
             Directory.CreateDirectory(carDir);
+
             string outputPath = Path.Combine(carDir, Sanitize(packName) + ".vinyl");
             pack.Save(outputPath);
+
             packName = "";
             RefreshPacks(false);
             Flash(LegacyLocalizer.Text("Export done!", "Экспорт готов!"));
         }
-        catch (Exception error)
+        catch (Exception ex)
         {
-            string message = error is LegacyVinylPackException invalid ? PackError(invalid.Code) : error.Message;
-            Flash(LegacyLocalizer.Text("Export error: ", "Ошибка экспорта: ") + message);
+            LegacyLocalizedText exportErr = new LegacyLocalizedText("Export error: ", "Ошибка экспорта: ");
+            Flash(exportErr + ex.Message);
+        }
+        finally
+        {
+            if (playerPrefsSwapped)
+            {
+                if (hadPreviousSave)
+                    PlayerPrefs.SetString(carSaveKey, previousSaveXml ?? string.Empty);
+                else
+                    PlayerPrefs.DeleteKey(carSaveKey);
+            }
         }
     }
 
