@@ -3,7 +3,7 @@
 
 <div align="center">
   <picture>
-    <img alt="bcl" src="./img/bcl-logo.png" style="max-width:256px;width:100%">
+    <img alt="bcl" src="./img/bcl-logo-256.png" style="max-width:256px;width:100%">
   </picture>
   <h1>BigCityLegacy</h1>
   <h3>适用于 Steam 版 <b>MadOut2 BigCityOnline</b> 的 BepInEx 插件，可全面恢复在线和离线功能。</h3>
