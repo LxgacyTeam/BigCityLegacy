@@ -3,7 +3,7 @@
 
 <div align="center">
   <picture>
-    <img alt="bcl" src="./img/bcl-logo.png" style="max-width:256px;width:100%">
+    <img alt="bcl" src="./img/bcl-logo-256.png" style="max-width:256px;width:100%">
   </picture>
   <h1>BigCityLegacy</h1>
   <h3>BepInEx плагин для Steam-версии игры <b>MadOut2 BigCityOnline</b>, полностью восстанавливающий онлайн и офлайн функционал.</h3>
