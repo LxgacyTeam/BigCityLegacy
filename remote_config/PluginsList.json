@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "name": "EnhancedCarTuning",
+      "version": "1.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/EnhancedCarTuning",
+      "githubDl": "https://github.com/LxgacyTeam/EnhancedCarTuning/releases/download/1.0.0/BigCityEnhancedCarTuning_1.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning/releases/download/1.0.0/BigCityEnhancedCarTuning_1.0.0.zip"
+    },
+    {
+      "name": "YetAnotherPlugin",
+      "version": "2.3.5",
+      "githubRepo": "https://github.com/LxgacyTeam/YetAnotherPlugin",
+      "githubDl": "https://github.com/LxgacyTeam/YetAnotherPlugin/releases/download/1.0.0/BigCityEnhancedCarTuning_1.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/YetAnotherPlugin",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/YetAnotherPlugin/releases/download/1.0.0/BigCityEnhancedCarTuning_1.0.0.zip"
+    }
+  ]
+}
