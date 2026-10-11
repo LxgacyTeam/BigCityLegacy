@@ -1,4 +1,4 @@
-### [Русский](./README_RU.md) | [> English <](./README.md)
+### [Русский](./README_RU.md) | [> English <](./README.md) | [简体中文](./README_ZH.md)
 ---
 
 <div align="center">
@@ -65,4 +65,4 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 ## Terms and conditions
 
-### For detailed terms of use for the project and applicable legal provisions, please refer to [NOTICE](https://github.com/LxgacyTeam/BigCityLegacy/blob/main/docs/NOTICE.md).
+### For detailed terms of use for the project and applicable legal provisions, please refer to [NOTICE](./NOTICE.md).
