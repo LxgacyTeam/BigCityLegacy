@@ -8,7 +8,7 @@
   <h1>BigCityLegacy</h1>
   <h3>A BepInEx plugin for the Steam version of <b>MadOut2 BigCityOnline</b> that fully restores online and offline functionality.</h3>
   <h3>
-    <a href="https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe">Download installer</a>
+    <a href="https://github.com/LxgacyTeam/BCL-installer/releases/latest/download/BigCityLegacy_Installer.exe">Download installer</a>
      | <a href="https://github.com/LxgacyTeam/BigCityLegacy/wiki#-documentation-on-english">Visit Wiki</a>
      | <a href="https://t.me/BigCityLegacy">Our Telegram</a>
   </h3>
@@ -32,7 +32,7 @@ Earlier versions (`4.9 - 9.2`) can run in Compatibility Mode, which provides off
 ## Installation
 
 * Download the latest **original** version of the game from Steam. Modified game builds are **not supported**.
-* Download [**official online installer**](https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe) and install mod on a clean game.
+* Download [**official online installer**](https://github.com/LxgacyTeam/BCL-installer/releases/latest/download/BigCityLegacy_Installer.exe) and install mod on a clean game.
 
 *or install manually:*
 

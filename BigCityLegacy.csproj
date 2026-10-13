@@ -6,7 +6,7 @@
     <AssemblyName>BigCityLegacy</AssemblyName>
 	<Authors>LegacyTeam</Authors>
 	<VersionPrefix>1.4.0</VersionPrefix>
-	<VersionSuffix>beta1</VersionSuffix>
+	<VersionSuffix></VersionSuffix>
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <RootNamespace>BigCityLegacy</RootNamespace>
     <OutputPath>bin\$(Configuration)\</OutputPath>
@@ -57,6 +57,10 @@
     <Compile Remove="libs\LegacyUIFramework\**" />
     <EmbeddedResource Remove="libs\LegacyUIFramework\**" />
     <None Remove="libs\LegacyUIFramework\**" />
+    <None Remove="src\BigCityLegacy\Resources\about-bcl-logo.png" />
+    <EmbeddedResource Include="src\BigCityLegacy\Resources\about-bcl-logo.png">
+	  <LogicalName>bcl-logo.png</LogicalName>
+	</EmbeddedResource>
 	<Folder Include="libs\" />
   </ItemGroup>
 	
@@ -65,8 +69,7 @@
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj"
-					  SetConfiguration="Configuration=$(Configuration)"/>
+	<ProjectReference Include="libs\LegacyUIFramework\src\LegacyUIFramework\LegacyUIFramework.csproj" SetConfiguration="Configuration=$(Configuration)" />
 	  
     <Reference Include="BepInEx">
       <HintPath>$(BepInExDir)\BepInEx.dll</HintPath>
@@ -172,6 +175,10 @@
       <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+	<Reference Include="UnityEngine.ImageConversionModule">
+	  <HintPath>$(ManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
+	  <Private>false</Private>
+	</Reference>
     <Reference Include="UnityEngine.AssetBundleModule">
       <HintPath>$(ManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>false</Private>

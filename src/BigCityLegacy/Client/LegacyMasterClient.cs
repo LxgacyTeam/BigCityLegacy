@@ -6,6 +6,46 @@ using UnityEngine;
 
 public class LegacyMasterClient
 {
+    internal const string StartupModeKey = "ModMaster_StartupMode";
+    private static bool officialSelected;
+    internal static void EnsureStartupMode()
+    {
+        if (PlayerPrefs.HasKey(StartupModeKey)) return;
+        PlayerPrefs.SetInt(StartupModeKey, PlayerPrefs.HasKey("ModMaster_AutoResolve") &&
+            PlayerPrefs.GetInt("ModMaster_AutoResolve") == 0 ? 0 : 1);
+        PlayerPrefs.Save();
+    }
+    internal static int StartupMode
+    {
+        get { EnsureStartupMode(); return Mathf.Clamp(PlayerPrefs.GetInt(StartupModeKey, 1), 0, 2); }
+    }
+    internal static void UseOfficial()
+    {
+        LoadFromPrefsAndArgs();
+        officialSelected = true;
+        useMasterList = true;
+        UpdateOfficialAddress();
+    }
+    internal static bool IsOfficialSelected
+    {
+        get { LoadFromPrefsAndArgs(); return officialSelected; }
+    }
+    private static void UpdateOfficialAddress()
+    {
+        if (!officialSelected) return;
+        var official = LegacyPublicMirror.Address;
+        if (masterHost != official.Host || masterPort != official.Port)
+        {
+            masterHost = official.Host; masterPort = official.Port; cachedEndPoint = null;
+        }
+    }
+    internal static async Task PrepareStartupAddress()
+    {
+        LoadFromPrefsAndArgs();
+        var deadline = DateTime.UtcNow.AddSeconds(12);
+        while (officialSelected && !LegacyPublicMirror.StartupComplete && DateTime.UtcNow < deadline) await Task.Delay(50);
+        UpdateOfficialAddress();
+    }
     internal static void LoadFromPrefsAndArgs()
     {
         if (LegacyMasterClient.loaded)
@@ -15,19 +55,23 @@ public class LegacyMasterClient
         LegacyMasterClient.loaded = true;
         LegacyMasterClient.masterHost = PlayerPrefs.GetString("ModMaster_Host", "127.0.0.1");
         LegacyMasterClient.masterPort = PlayerPrefs.GetInt("ModMaster_Port", 35000);
-        LegacyMasterClient.autoResolve = PlayerPrefs.GetInt("ModMaster_AutoResolve", 1) == 1;
+        LegacyMasterClient.autoResolve = StartupMode != 0;
         LegacyMasterClient.useMasterList = LegacyMasterClient.autoResolve;
+        officialSelected = StartupMode == 1;
+        UpdateOfficialAddress();
         string masterHostArg = LegacyCommandLine.GetArgValue("-masterHost");
         if (!string.IsNullOrEmpty(masterHostArg))
         {
             LegacyMasterClient.masterHost = masterHostArg;
             LegacyMasterClient.useMasterList = true;
+            officialSelected = false;
         }
         string masterIpArg = LegacyCommandLine.GetArgValue("-masterIP");
         if (!string.IsNullOrEmpty(masterIpArg))
         {
             LegacyMasterClient.masterHost = masterIpArg;
             LegacyMasterClient.useMasterList = true;
+            officialSelected = false;
         }
         string masterPortArg = LegacyCommandLine.GetArgValue("-masterPort");
         int masterPortValue;
@@ -35,10 +79,16 @@ public class LegacyMasterClient
         {
             LegacyMasterClient.masterPort = masterPortValue;
             LegacyMasterClient.useMasterList = true;
+            officialSelected = false;
         }
         if (ArgParcer.GetArgValue("-useMaster").isExists)
         {
             LegacyMasterClient.useMasterList = true;
+        }
+        if (LegacyCommandLine.AutoConnectFromArgs && officialSelected)
+        {
+            officialSelected = false;
+            LegacyMasterClient.useMasterList = false;
         }
         LegacyMasterClient.DebugLog(string.Concat(new string[]
         {
@@ -62,15 +112,13 @@ public class LegacyMasterClient
     internal static void SetMaster(string host, int port, bool auto, bool useNow)
     {
         LegacyMasterClient.LoadFromPrefsAndArgs();
+        officialSelected = false;
         LegacyMasterClient.masterHost = (host ?? string.Empty).Trim();
         LegacyMasterClient.masterPort = port;
         LegacyMasterClient.autoResolve = auto;
         LegacyMasterClient.useMasterList = useNow;
         LegacyMasterClient.cachedEndPoint = null;
-        PlayerPrefs.SetString("ModMaster_Host", LegacyMasterClient.masterHost);
-        PlayerPrefs.SetInt("ModMaster_Port", LegacyMasterClient.masterPort);
-        PlayerPrefs.SetInt("ModMaster_AutoResolve", LegacyMasterClient.autoResolve ? 1 : 0);
-        PlayerPrefs.Save();
+        RememberMaster(LegacyMasterClient.masterHost, LegacyMasterClient.masterPort);
         LegacyMasterClient.DebugLog(string.Concat(new string[]
         {
             "SetMaster: host=",
@@ -84,11 +132,26 @@ public class LegacyMasterClient
         }));
     }
 
+    internal static void RememberMaster(string host, int port)
+    {
+        if (string.IsNullOrWhiteSpace(host) || port < 1 || port > 65535) return;
+        PlayerPrefs.SetString("ModMaster_Host", host.Trim());
+        PlayerPrefs.SetInt("ModMaster_Port", port);
+        PlayerPrefs.Save();
+    }
+    internal static void UseDirectConnection()
+    {
+        LoadFromPrefsAndArgs();
+        officialSelected = false;
+        useMasterList = false;
+    }
+
     internal static string MasterHost
     {
         get
         {
             LegacyMasterClient.LoadFromPrefsAndArgs();
+            UpdateOfficialAddress();
             return LegacyMasterClient.masterHost;
         }
     }
@@ -98,6 +161,7 @@ public class LegacyMasterClient
         get
         {
             LegacyMasterClient.LoadFromPrefsAndArgs();
+            UpdateOfficialAddress();
             return LegacyMasterClient.masterPort;
         }
     }
@@ -114,6 +178,7 @@ public class LegacyMasterClient
     internal static IPEndPoint GetMasterEndPoint()
     {
         LegacyMasterClient.LoadFromPrefsAndArgs();
+        UpdateOfficialAddress();
         if (LegacyMasterClient.cachedEndPoint != null)
         {
             return LegacyMasterClient.cachedEndPoint;

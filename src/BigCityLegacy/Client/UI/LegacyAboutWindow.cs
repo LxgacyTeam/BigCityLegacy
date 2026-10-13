@@ -6,8 +6,12 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
 {
     private static LegacyAboutWindow instance;
     private LegacyUIWindow window;
+    private LegacyUIDropdown repositoryDropdown;
+    private string sourceError;
 
     internal static bool SuppressReporterGesture;
+
+    private Texture2D logo = LegacyHelpers.LoadEmbeddedTexture("bcl-logo.png");
 
     internal static void Show()
     {
@@ -32,8 +36,14 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
     private void Awake()
     {
         instance = this;
+        repositoryDropdown = new LegacyUIDropdown(new[] { "GitHub", "Codeberg" }, (int)LegacyRepository.Current);
+        repositoryDropdown.SelectionChanged += index =>
+        {
+            try { LegacyRepository.SetSource((LegacyRepositorySource)index); sourceError = null; }
+            catch (Exception ex) { sourceError = ex.Message; repositoryDropdown.SelectedIndex = (int)LegacyRepository.Current; }
+        };
         window = new LegacyUIWindow(
-            LegacyLocalizer.Text("About", "О моде"),
+            LegacyLocalizer.Text("About", "Рћ РјРѕРґРµ"),
             GetStartRect(),
             new LegacyUIWindowOptions
             {
@@ -53,6 +63,7 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         {
             enabled = false;
             SuppressReporterGesture = false;
+            repositoryDropdown.IsOpen = false;
         };
         enabled = false;
     }
@@ -66,11 +77,11 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
 
         using (new LegacyUIGuiScope(-21000))
         {
+            repositoryDropdown.HandlePopupInput();
             window.Draw(DrawContent);
+            repositoryDropdown.DrawPopup();
         }
     }
-
-    private static bool isUpdaterEnabled = PlayerPrefs.GetInt("BigCityLegacy.Updater.Enabled") == 0 ? false : true;
 
     private void DrawContent(Rect content)
     {
@@ -82,6 +93,13 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         nameTitle.fontSize = 24;
 
         GUI.Label(new Rect(x, y, w, 24f), LegacyLocalizer.Text("BigCityLegacy", "BigCityLegacy"), nameTitle);
+
+        float logoW = 62.5f;
+        if (logo != null)
+        {
+            GUI.DrawTexture(new Rect(x + w - logoW, y - 2f, logoW, 52.5f), logo);
+        }
+
         y += 25f;
 
         GUIStyle author = new GUIStyle(LegacyUI.Styles.Title);
@@ -90,26 +108,33 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         GUI.Label(new Rect(x, y, w, 24f), LegacyLocalizer.Text("by LegacyTeam", "by LegacyTeam"), author);
         y += 32f;
 
-        string versionsLine = LegacyLocalizer.Text("<b>Mod version:</b>", "<b>Версия мода:</b>") + $" {VersionInfo.ModVersionName}\n" +
-                              LegacyLocalizer.Text("<b>Game version:</b>", "<b>Версия игры:</b>") + $" {Application.version} (build {LegacyHelpers.GetBuildVersion})\n" +
-                              LegacyLocalizer.Text("<b>UI Framework version:</b>", "<b>Версия UI Framework:</b>") + $" {LegacyUI.Version}";
+        string versionsLine = LegacyLocalizer.Text("<b>Mod version:</b>", "<b>Р’РµСЂСЃРёСЏ РјРѕРґР°:</b>") + $" {VersionInfo.ModVersionName}\n" +
+                              LegacyLocalizer.Text("<b>Game version:</b>", "<b>Р’РµСЂСЃРёСЏ РёРіСЂС‹:</b>") + $" {Application.version} (build {LegacyHelpers.GetBuildVersion})\n" +
+                              LegacyLocalizer.Text("<b>UI Framework version:</b>", "<b>Р’РµСЂСЃРёСЏ UI Framework:</b>") + $" {LegacyUI.Version}";
 
         #if DEBUG
             versionsLine += $"\n<b>Debug Build Timestamp:</b> {VersionInfo.BuildTimestamp}";
         #endif
 
         LegacyUI.HintBox(new Rect(x, y, w, 72f), versionsLine);
-        y += 80f;
+        y += 85f;
 
-        bool checkUpdates = LegacyUI.Toggle(new Rect(x, y, content.width, 20f), isUpdaterEnabled,
-                            LegacyLocalizer.Text("Check updates on startup", "Проверять наличие обновлений при запуске"));
+        LegacyUI.Separator(new Rect(x, y, w, 1f));
+        y += 15f;
 
-        if (checkUpdates != isUpdaterEnabled)
+        bool checkUpdates = LegacyUI.Toggle(new Rect(x, y, content.width, 20f), LegacyUpdateChecker.IsEnabled,
+                            LegacyLocalizer.Text("Check updates on startup", "РџСЂРѕРІРµСЂСЏС‚СЊ РЅР°Р»РёС‡РёРµ РѕР±РЅРѕРІР»РµРЅРёР№ РїСЂРё Р·Р°РїСѓСЃРєРµ"));
+
+        if (checkUpdates != LegacyUpdateChecker.IsEnabled)
         {
-            isUpdaterEnabled = checkUpdates;
-            PlayerPrefs.SetInt("BigCityLegacy.Updater.Enabled", isUpdaterEnabled ? 1 : 0);
-            PlayerPrefs.Save();
+            LegacyUpdateChecker.IsEnabled = checkUpdates;
         }
+        y += 28f;
+        LegacyUI.Label(new Rect(x, y, w, 20f), LegacyLocalizer.Text("Repository source", "РСЃС‚РѕС‡РЅРёРє РґР°РЅРЅС‹С…"));
+        y += 23f;
+        repositoryDropdown.SelectedIndex = (int)LegacyRepository.Current;
+        repositoryDropdown.Draw(new Rect(x, y, w, 28f));
+        if (!string.IsNullOrEmpty(sourceError)) LegacyUI.Status(new Rect(x, y + 31f, w, 28f), sourceError);
 
         float btnY = content.yMax - 30f;
         float gap = 8f;
@@ -117,26 +142,26 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         float lnkBtnW = 78f;
         float btnH = 28f;
 
-        if (LegacyUI.GreenButton(new Rect(x, btnY, chkBtnW, btnH), LegacyLocalizer.Text("Check updates", "Проверить обновления")))
+        if (LegacyUI.GreenButton(new Rect(x, btnY, chkBtnW, btnH), LegacyLocalizer.Text("Check updates", "РџСЂРѕРІРµСЂРёС‚СЊ РѕР±РЅРѕРІР»РµРЅРёСЏ")))
         {
             LegacyUpdateChecker.CheckNow(this);
         }
 
-        if (LegacyUI.Button(new Rect(x + chkBtnW + gap, btnY, lnkBtnW, btnH), "GitHub"))
+        if (LegacyUI.Button(new Rect(x + chkBtnW + gap, btnY, lnkBtnW, btnH), LegacyRepository.Name))
         {
-            Application.OpenURL($"https://github.com/{BigCityLegacyPlugin.GitHubOwner}/{BigCityLegacyPlugin.GitHubRepo}");
+            Application.OpenURL(LegacyRepository.WebUrl(LegacyRepository.ModRepo));
         }
 
         if (LegacyUI.Button(new Rect(x + chkBtnW + lnkBtnW + gap * 2, btnY, lnkBtnW, btnH), "Telegram"))
         {
-            Application.OpenURL($"https://t.me/{BigCityLegacyPlugin.GitHubRepo}");
+            Application.OpenURL($"https://t.me/{LegacyRepository.ModRepo}");
         }
     }
 
     private static Rect GetStartRect()
     {
         const float width = 360f;
-        const float height = 260f;
+        const float height = 340f;
         if (Screen.width <= 0 || Screen.height <= 0)
         {
             return new Rect(180f, 120f, width, height);

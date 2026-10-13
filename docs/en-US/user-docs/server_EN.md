@@ -1,8 +1,68 @@
 # Server
 
+Game server settings are stored in `BigCityLegacy/config/ServerConfig.toml`. The template is `config_example/ServerConfig.toml`; the server creates the standard file when it is missing.
+
+```text
+game.exe -bend_GameServer -batchmode -nographics
+game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.toml"
+```
+
+The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serverConfig` selects a file without enabling server mode. A regular game client does not read the server config. Explicit command-line options override TOML values and aliases. Empty paths use default files; relative paths resolve from the game root. Single quotes are convenient for Windows paths.
+
+`masterServer = true` starts the mirror alongside the game server and is the default. Set `masterServer = false` for a game server without a mirror. The mirror port is configured by `masterPort` in TOML or `-masterPort:<port>`; `ServersList.json` contains the server list and polling intervals.
+
+| Section | Options |
+| --- | --- |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
+| `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
+| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noLogFile`, `noUpdCheck` |
+| `repository` | `repositorySource`: `GitHub`, `Codeberg`, or an empty string to use the saved PlayerPrefs choice |
+
+Example configuration:
+
+```toml
+# BigCityLegacy server configuration. CLI arguments override these values. 
+# Keys match launch options without the leading '-'.
+
+[server]
+port = 7800
+maxConn = 16
+Mode = "None"
+lang = "en"
+maxCars = 100
+maxCarsByPlayer = 15
+CarSpawnTimeout = 1000
+maxNikLength = 20
+idleKickTimeout = "120s"
+noChatEvents = false
+noKillChat = false
+noCsDamageCooldown = false
+useVanillaRespawn = false
+
+[mirror]
+masterServer = true
+masterPort = 35000
+masterDebug = false
+
+[files]
+# Relative paths resolve from the game directory. Empty values use defaults.
+serversList = ''
+eventsDir = ''
+respawnPoints = ''
+banList = ''
+
+[console]
+noServerConsole = false
+noServerCli = false
+verboseServerConsole = false
+noLogFile = true
+noUpdCheck = false
+```
+
 The game server can generally work in 2 modes: **Master** and **Base**.
 
-**Base** means launching only the game server (Game Server), provided by the basic `-bend_GameServer` flag.
+**Base** runs the game server without a mirror (`masterServer = false`).
 **Master** means Mirror + Game Server: in addition to the game server, a mirror is launched as well. In this case, the Master server should become the main server in an architecture with several game servers, connecting all of them together.
 
 ---
@@ -20,7 +80,7 @@ Game Server has 5 modes: `None`, `RP`, `Race`, `CS`, `CS_Sur`.
 - **CS** - None mode, but with periodically launched Cops vs Bandits events, effectively team deathmatch.
 - **CS_Sur** - None mode, but with periodically launched Survival events, effectively deathmatch/FFA.
 
-Game Server is configured with launch arguments. See Launch arguments. It also supports administration through an interactive CLI interface. See below.
+Game Server is configured with TOML settings and launch arguments. See Launch arguments. It also supports administration through an interactive CLI interface. See below.
 
 There is no hard practical limit on the number of players on the server, but the game is designed for **no more than 100 players**.
 
@@ -30,12 +90,11 @@ There is no hard practical limit on the number of players on the server, but the
 
 **Mirror server** is the server that handles the list of game servers and their state. It sends the game client the list of available servers, their settings, and current online count. In other words, it determines what the game shows in the server list in the **Online** section. Mirror can receive and send the server name, maximum player count, language, game mode, group placement, and some other parameters. It also provides the automatic server selection feature used when pressing the green Connect button in the game.
 
-Mirror server configuration is stored in a separate JSON config. By default, it is stored in `BigCityLegacy/ServersList.json`. Example config:
+Mirror server configuration is stored in a separate JSON config. By default, it is stored in `BigCityLegacy/config/ServersList.json`. Example config:
 
 ```json
   {
   "version": 1,
-  "masterPort": 35000,
   "pollIntervalMs": 1500,
   "staleAfterMs": 6000,
   "servers": [
@@ -59,8 +118,6 @@ Mirror server configuration is stored in a separate JSON config. By default, it 
 ```
 
 **Parameter meanings:**
-
-`masterPort` - port used by the master server.
 
 `pollIntervalMs` - interval for polling game servers to check whether they are online.
 
@@ -115,6 +172,7 @@ While the game server is running, it can be controlled through the interactive C
 | cleardrop | Clear all drops on the server: medkits and weapons. |
 | delcars all | Delete all cars on the server. |
 | delcars {PlayerID} | Delete all cars of a specific player. |
+| stats | Display resource consumption and utilization statistics. |
 | stop | Stop the server. |
 
 > [!WARNING]

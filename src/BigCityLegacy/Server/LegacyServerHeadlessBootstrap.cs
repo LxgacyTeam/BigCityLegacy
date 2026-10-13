@@ -43,7 +43,7 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
                 }
                 else
                 {
-                    string[] commandLineArgs = Environment.GetCommandLineArgs();
+                    string[] commandLineArgs = LegacyServerConfig.Apply(LegacyCommandLine.GetRawProcessArgs());
                     for (int i = 0; i < commandLineArgs.Length; i++)
                     {
                         if (string.Equals(commandLineArgs[i], "-nographics", StringComparison.OrdinalIgnoreCase))
@@ -99,7 +99,10 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
         Logger = BigCityLegacyPlugin.Log;
         host.GetOrAddComponent<LegacyServerHeadlessBootstrap>();
         installed = true;
-        Debug.Log("[BigCityLegacy] Headless pre-/mid-load object stripping enabled. Use -noServerObjectStripping to disable it.");
+
+        #if DEBUG
+            Debug.Log("[DEBUG] Headless pre-/mid-load object stripping enabled. Use -noServerObjectStripping to disable it.");
+        #endif
     }
 
     private void OnEnable()
@@ -489,7 +492,7 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
         {
 
             #if DEBUG
-                Debug.Log("[BigCityLegacy] Headless map loaded; unloading client-only visual assets.");
+                Debug.Log("[DEBUG] Headless map loaded; unloading client-only visual assets.");
             #endif
 
             Material[] materials = Resources.FindObjectsOfTypeAll<Material>();
@@ -600,7 +603,7 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
     internal static void LogSummary(string phase)
     {
         Debug.Log(
-            "[BigCityLegacy] Headless stripping (" + phase + "): " +
+            "[DEBUG] Headless stripping (" + phase + "): " +
             "map templates=" + mapTemplatesPrepared.ToString() +
             ", map components=" + mapTemplateComponentsRemoved.ToString() +
             ", ground components=" + groundComponentsRemoved.ToString() +

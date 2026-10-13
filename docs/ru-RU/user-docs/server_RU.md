@@ -1,8 +1,69 @@
 # Сервер
 
+Настройки игрового сервера задаются в `BigCityLegacy/config/ServerConfig.toml`. Шаблон находится в `config_example/ServerConfig.toml`; при отсутствии стандартного файла сервер создаёт его автоматически.
+
+```text
+game.exe -bend_GameServer -batchmode -nographics
+game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.toml"
+```
+
+Флаг `-bend_GameServer` обязателен для запуска сервера и не является параметром TOML. `-serverConfig` выбирает файл, но не включает серверный режим. Обычный игровой клиент не читает серверный конфиг. Явные аргументы запуска имеют приоритет над значениями TOML и их алиасами. Пустые пути используют стандартные файлы; относительные пути вычисляются от корневой папки игры. Для Windows-путей удобно использовать одинарные кавычки.
+
+`masterServer = true` включает mirror вместе с игровым сервером и является значением по умолчанию. Для отдельного игрового сервера без mirror укажите `masterServer = false`. Порт mirror задаётся через `masterPort` в TOML либо `-masterPort:<порт>`. В `ServersList.json` хранятся список серверов и интервалы опроса.
+
+| Секция | Параметры |
+| --- | --- |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `mirror` | `masterServer` (по умолчанию `true`), `masterPort` (по умолчанию `35000`), `masterDebug` |
+| `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
+| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noLogFile`, `noUpdCheck` |
+
+
+Пример конфигурации:
+
+```toml
+# BigCityLegacy server configuration. CLI arguments override these values. 
+# Keys match launch options without the leading '-'.
+
+[server]
+port = 7800
+maxConn = 16
+Mode = "None"
+lang = "en"
+maxCars = 100
+maxCarsByPlayer = 15
+CarSpawnTimeout = 1000
+maxNikLength = 20
+idleKickTimeout = "120s"
+noChatEvents = false
+noKillChat = false
+noCsDamageCooldown = false
+useVanillaRespawn = false
+
+[mirror]
+masterServer = true
+masterPort = 35000
+masterDebug = false
+
+[files]
+# Relative paths resolve from the game directory. Empty values use defaults.
+serversList = ''
+eventsDir = ''
+respawnPoints = ''
+banList = ''
+
+[console]
+noServerConsole = false
+noServerCli = false
+verboseServerConsole = false
+noLogFile = true
+noUpdCheck = false
+```
+
+
 Сервер игры глобально умеет работать в 2 режимах: **Master** и **Base**
 
-**Base** - это запуск только игрового сервера (Game Server), обеспечивается базовым `-bend_GameServer`.
+**Base** — игровой сервер без mirror (`masterServer = false`).
 **Master** - это Mirror + Game Server, то есть помимо игрового сервера, запускается еще и mirror. Master сервер в таком случае должен стать главным в архитектуре из нескольких игровых серверов, связывающий их всех.
 
 ---
@@ -20,7 +81,7 @@ Game Server имеет 5 режимов: `None`, `RP`, `Race`, `CS`, `CS_Sur`
 - **CS** - режим None, но с периодически запускаемыми ивентами "Копы против Бандитов" (фактически team deathmatch)
 - **CS_Sur** - режим None, но с периодически запускаемыми ивентами "Survival" (фактически deathmatch, FFA)
 
-Game Server настраивается параметрами запуска (см. Параметры запуска) и поддерживает администрирование через интерактивный CLI интерфейс (см. ниже)
+Game Server настраивается через TOML и параметры запуска (см. Параметры запуска) и поддерживает администрирование через интерактивный CLI интерфейс (см. ниже)
 
 Фактического ограничения на кол-во игроков на сервере нет, но игра расчитана на **не более чем 100 игроков**
 
@@ -30,12 +91,11 @@ Game Server настраивается параметрами запуска (с
 
 **Mirror сервер** - сервер, обрабатывающий список игровых серверов и их состояние. Он отдает клиенту игры список доступных серверов, их настройки и текущий онлайн. То есть именно он определяет что игра покажет в списке серверов в разделе "**Онлайн**". Mirror умеет принимать и отдавать клиенту название сервера, макс кол-во игроков, язык, режим игры, расположение в группе и некоторые другие параметры. Также именно mirror обеспечивает функцию автоматического выбора сервера (при нажатии на зеленую кнопку Connect в игре).
 
-Настройка Mirror сервера осуществляется в отдельном JSON конфиге. По умолчанию он хранится в `BigCityLegacy/ServersList.json`. Пример конфига выглядит так:
+Настройка Mirror сервера осуществляется в отдельном JSON конфиге. По умолчанию он хранится в `BigCityLegacy/config/ServersList.json`. Пример конфига выглядит так:
 
 ```json
   {
   "version": 1,
-  "masterPort": 35000,
   "pollIntervalMs": 1500,
   "staleAfterMs": 6000,
   "servers": [
@@ -59,8 +119,6 @@ Game Server настраивается параметрами запуска (с
 ```
 
 **Рассмотрим назначение параметров:**
-
-`masterPort` - порт на котором будет работать master сервер
 
 `pollIntervalMs` - интервал опроса игровых серверов (онлайн ли)
 
@@ -115,6 +173,7 @@ Master сервер необходим, если вы хотите запуст�
 | cleardrop             | Отчистить весь дроп на сервере (аптечки и оружие)         |
 | delcars all           | Удалить все автомобили на сервере                                    |
 | delcars {PlayerID}    | Удалить все автомобили отдельного игрока                      |
+| stats                  | Вывести статистику потребления и загрузки ресурсов  
 | stop                  | Завершить работу сервера                                                    |
 
 > [!WARNING]

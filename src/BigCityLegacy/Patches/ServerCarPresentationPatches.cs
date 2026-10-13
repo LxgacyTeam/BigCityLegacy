@@ -4,6 +4,9 @@ using HarmonyLib;
 using UnityEngine;
 
 /// <summary>
+/// DISABLED IN FINAL BUILD
+/// NEED TO REWORK
+/// 
 /// Dedicated headless-server presentation-only car update pruning.
 /// No change to CarPh, collision physics, network state, AI or damage handlers.
 /// Rollback: -noServerCarPresentationOptimization

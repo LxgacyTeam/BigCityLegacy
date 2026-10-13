@@ -28,7 +28,7 @@ internal static class ServerCarSleepPatches
     private const float DrivenCarSleepThreshold = 0.003f;
     // Do not sleep just because the body was created some time ago. Require
     // low angular/linear movement continuously for at least 1.5 seconds.
-    private const float DefaultSleepDelayMs = 1500f;
+    private const float DefaultSleepDelayMs = 500f;
     private static float? cachedSleepDelayMs;
 
     internal static float SleepDelayMs
@@ -114,11 +114,13 @@ internal static class ServerCarSleepPatches
         }
 
         aggressiveSleepLogWritten = true;
+        #if DEBUG
         Debug.Log(
-            "[BigCityLegacy] Legacy 4.9-style aggressive car sleep enabled. " +
+            "[DEBUG] Legacy 4.9-style aggressive car sleep enabled. " +
             "Recursive nearby-body sleep checks are disabled; quiet period=" + SleepDelayMs + "ms. " +
             "Use -noServerCarAggressiveSleep to restore vanilla 9.4 behavior."
         );
+        #endif
     }
 
     private static void LogSleepFastPathOnce()
@@ -129,10 +131,12 @@ internal static class ServerCarSleepPatches
         }
 
         sleepFastPathLogWritten = true;
+        #if DEBUG
         Debug.Log(
-            "[BigCityLegacy] Sleeping server-car fixed-update fast path enabled. " +
+            "[DEBUG] Sleeping server-car fixed-update fast path enabled. " +
             "Use -noServerCarSleepFastPath to disable it."
         );
+        #endif
     }
 
     private static void LogClientPhysicsBypassOnce()
@@ -143,11 +147,13 @@ internal static class ServerCarSleepPatches
         }
 
         clientPhysicsBypassLogWritten = true;
+        #if DEBUG
         Debug.Log(
-            "[BigCityLegacy] Client-owned car CarPh bypass enabled. " +
+            "[DEBUG] Client-owned car CarPh bypass enabled. " +
             "SmoothSync remains the server movement source for owned cars. " +
             "Use -noServerClientCarPhysicsBypass to disable it."
         );
+        #endif
     }
 
     internal static bool IsClientOwnedCar(CarControl car)

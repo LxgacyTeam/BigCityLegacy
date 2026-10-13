@@ -30,11 +30,12 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
+        PatchClass(typeof(ServerConfigPatches));
         PatchClass(typeof(NetworkPatches));
         PatchClass(typeof(ServerHeadlessOptimizationPatches));
         PatchClass(typeof(ServerPerformancePatches));
         PatchClass(typeof(ServerCarSleepPatches));
-        PatchClass(typeof(ServerCarPresentationPatches));
+        //PatchClass(typeof(ServerCarPresentationPatches)); NEEDS TO REWORK
         PatchClass(typeof(ServerNetworkBufferPatches));
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(RuntimeQualityAndCursorPatches));

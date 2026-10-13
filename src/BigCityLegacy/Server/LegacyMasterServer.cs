@@ -183,14 +183,14 @@ public class LegacyMasterServer : MonoBehaviour
 
     private static string GetExampleConfigText()
     {
-        return "{\n  \"version\": 1,\n  \"masterPort\": 35000,\n  \"pollIntervalMs\": 1500,\n  \"staleAfterMs\": 6000,\n  \"servers\": [\n    {\n      \"id\": \"master-self\",\n      \"name\": \"Local FreeRoam\",\n      \"connectIp\": \"127.0.0.1\",\n      \"queryIp\": \"127.0.0.1\",\n      \"port\": 7800,\n      \"maxPlayers\": 16,\n      \"lang\": \"ru\",\n      \"menuGroup\": \"FreeRoam\",\n      \"serverMode\": \"None\",\n      \"onlineProtocolVersion\": 0,\n      \"showIfOffline\": true,\n      \"self\": true\n    }\n  ]\n}\n";
+        return "{\n  \"version\": 1,\n  \"pollIntervalMs\": 1500,\n  \"staleAfterMs\": 6000,\n  \"servers\": [\n    {\n      \"id\": \"master-self\",\n      \"name\": \"Local FreeRoam\",\n      \"connectIp\": \"127.0.0.1\",\n      \"queryIp\": \"127.0.0.1\",\n      \"port\": 7800,\n      \"maxPlayers\": 16,\n      \"lang\": \"ru\",\n      \"menuGroup\": \"FreeRoam\",\n      \"serverMode\": \"None\",\n      \"onlineProtocolVersion\": 0,\n      \"showIfOffline\": true,\n      \"self\": true\n    }\n  ]\n}\n";
     }
 
     private void NormalizeConfig()
     {
         string masterPortArg = LegacyCommandLine.GetArgValue("-masterPort");
         int masterPortValue;
-        this.masterPort = ((!string.IsNullOrEmpty(masterPortArg) && int.TryParse(masterPortArg, out masterPortValue) && masterPortValue > 0) ? masterPortValue : this.config.masterPort);
+        this.masterPort = ((!string.IsNullOrEmpty(masterPortArg) && int.TryParse(masterPortArg, out masterPortValue) && masterPortValue > 0) ? masterPortValue : 35000);
         bool flag = this.masterPort <= 0;
         if (flag)
         {
@@ -1059,7 +1059,6 @@ public class LegacyMasterServer : MonoBehaviour
     {
         public int version;
 
-        public int masterPort = 35000;
 
         public int pollIntervalMs = 1500;
 

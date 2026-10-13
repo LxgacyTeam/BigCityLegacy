@@ -180,10 +180,12 @@ internal static class ServerNetworkBufferPatches
 
         // Read the *effective* value inside each ChannelBuffer; do not confuse
         // successful SetChannelOption calls with proof of final configuration.
-        Debug.Log("[BigCityLegacy] UNet " + phase + " connection=" + conn.connectionId +
+        #if DEBUG
+        Debug.Log("[DEBUG] UNet " + phase + " connection=" + conn.connectionId +
                   ", reliable channels configured=" + configured + "/" + channelCount +
                   ", requested=" + PendingLimit +
                   ", effective: " + InspectChannelBuffers(conn));
+        #endif
 
         if (configured == 0)
             LogWarningOnce("UNet did not accept MaxPendingBuffers on any server channel. " +

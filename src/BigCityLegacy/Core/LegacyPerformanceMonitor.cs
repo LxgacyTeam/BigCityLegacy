@@ -344,7 +344,7 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
         // after a scheduled sample into a noisy millisecond-sized CPU interval.
         Snapshot s = current;
 
-#if DEBUG
+        #if DEBUG
         LegacyServerConsole.WriteAdminLine(
             "[Stats] BCL optimizations: objectStripping=" +
             (LegacyServerHeadlessBootstrap.IsOptimizationEnabled ? "ON" : "OFF") +
@@ -353,7 +353,7 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             ", carSleep=" +
             (ServerCarSleepPatches.Enabled ? "4.9-style" : "vanilla")
         );
-#endif
+        #endif
 
         LegacyServerConsole.WriteAdminLine(
             "[Stats] Uptime: " +
@@ -393,13 +393,13 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             FormatFloat(s.WorstFrameMs, 2) + " ms max, " + FormatFloat(s.FramesPerSecond, 1) + " FPS"
         );
 
-        //#if DEBUG
-        //LegacyServerConsole.WriteAdminLine(
-        //    "[Stats] GC: last ~1s gen0/gen1/gen2=" + s.GcGen0Delta.ToString() + "/" +
-        //    s.GcGen1Delta.ToString() + "/" + s.GcGen2Delta.ToString() +
-        //    ", totals=" + s.GcGen0.ToString() + "/" + s.GcGen1.ToString() + "/" + s.GcGen2.ToString()
-        //);
-        //#endif
+        #if DEBUG
+        LegacyServerConsole.WriteAdminLine(
+            "[Stats] GC: last ~1s gen0/gen1/gen2=" + s.GcGen0Delta.ToString() + "/" +
+            s.GcGen1Delta.ToString() + "/" + s.GcGen2Delta.ToString() +
+            ", totals=" + s.GcGen0.ToString() + "/" + s.GcGen1.ToString() + "/" + s.GcGen2.ToString()
+        );
+        #endif
 
         LegacyServerConsole.WriteAdminLine(
             "[Stats] Textures: total=" + FormatOptionalBytes(s.TextureMemoryBytes) +
@@ -428,22 +428,24 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             ", sleepFastPath=" + s.CarsSleepFastPath.ToString()
         );
 
+        #if DEBUG
         LegacyServerConsole.WriteAdminLine(
             "[Stats] Server car optimization: sleepDelay=" +
-            ServerCarSleepPatches.SleepDelayMs.ToString("0") + "ms, presentation=" +
-            (ServerCarPresentationPatches.Enabled ? "ON" : "OFF") +
+            ServerCarSleepPatches.SleepDelayMs.ToString("0") + "ms" +
+            //", presentation= " + (ServerCarPresentationPatches.Enabled ? "ON" : "OFF") +
             ", UNet pendingBuffers=" + (ServerNetworkBufferPatches.Enabled
                 ? ServerNetworkBufferPatches.PendingLimit.ToString() : "vanilla") +
             ", connectionsConfigured=" + ServerNetworkBufferPatches.ConfiguredConnections.ToString()
         );
+        #endif
 
-        string gpu = string.IsNullOrEmpty(s.GpuName) ? "N/A" : s.GpuName;
-        LegacyServerConsole.WriteAdminLine(
-            "[Stats] GPU: " + gpu +
-            ", API=" + (string.IsNullOrEmpty(s.GpuApi) ? "N/A" : s.GpuApi) +
-            ", VRAM=" + (s.GpuMemoryMb > 0 ? s.GpuMemoryMb.ToString() + " MB" : "N/A") +
-            ", driverAllocated=" + FormatOptionalBytes(s.GraphicsDriverAllocatedBytes)
-        );
+        //string gpu = string.IsNullOrEmpty(s.GpuName) ? "N/A" : s.GpuName;
+        //LegacyServerConsole.WriteAdminLine(
+        //    "[Stats] GPU: " + gpu +
+        //    ", API=" + (string.IsNullOrEmpty(s.GpuApi) ? "N/A" : s.GpuApi) +
+        //    ", VRAM=" + (s.GpuMemoryMb > 0 ? s.GpuMemoryMb.ToString() + " MB" : "N/A") +
+        //    ", driverAllocated=" + FormatOptionalBytes(s.GraphicsDriverAllocatedBytes)
+        //);
     }
 
     private void SampleNow(bool initializeCpuBaseline)

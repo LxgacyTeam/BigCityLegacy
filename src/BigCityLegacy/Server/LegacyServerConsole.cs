@@ -211,7 +211,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
         WriteLinuxServerConsoleLog(message, stackTrace, type);
     }
 
-    internal static void LogAfterConsoleInit(string text, LogType type)
+    public static void LogAfterConsoleInit(string text, LogType type)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -336,6 +336,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
         }
 
         commandReaderStarted = true;
+        WriteAdminLine("\n");
         WriteAdminLine("[CLI] Type 'help' for the command list.");
 
         commandReaderThread = new Thread(ReadCommandsLoop);

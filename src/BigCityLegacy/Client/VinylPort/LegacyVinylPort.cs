@@ -327,8 +327,8 @@ public class LegacyVinylPort : MonoBehaviour
         bool partsFallback = pendingPack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts;
         string text = textFallback ? LegacyLocalizer.Text(
             "Text layers: ", "Текстовых слоёв: ") + pendingPack.TextCount + LegacyLocalizer.Text(
-            ". The tuning plugin is unavailable.\nLoad stock primitives instead?\nPosition, size and color will be preserved.",
-            ". Плагин тюнинга недоступен.\nЗагрузить вместо текста штатные примитивы?\nПоложение, размер и цвет сохранятся.") : LegacyLocalizer.Text(
+            ". The tuning plugin is unavailable.\nLoad with text layers hidden?\nOther vinyl layers will remain visible.",
+            ". Плагин тюнинга недоступен.\nЗагрузить, скрыв текстовые слои?\nОстальные слои винилов останутся видимыми.") : LegacyLocalizer.Text(
             "This pack contains individual body part colors.\nInstall or update EnhancedCarTuning to display them.",
             "В паке есть цвета отдельных деталей кузова.\nДля их отображения установи или обнови EnhancedCarTuning.");
         if (partsFallback) text += LegacyLocalizer.Text(
@@ -339,7 +339,7 @@ public class LegacyVinylPort : MonoBehaviour
             "The original .vinyl file will remain unchanged.", "Исходный файл .vinyl останется без изменений."));
         Rect buttons = ui.Row(34f);
         if (LegacyUI.GreenButton(new Rect(buttons.x, buttons.y, buttons.width - 118, buttons.height),
-            textFallback ? LegacyLocalizer.Text("Load with primitives", "Загрузить с примитивами") :
+            textFallback ? LegacyLocalizer.Text("Load without text", "Загрузить без текста") :
             LegacyLocalizer.Text("Load stock color", "Загрузить общий цвет")))
         {
             var pack = pendingPack; string path = pendingPath; var car = pendingCar;

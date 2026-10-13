@@ -4,7 +4,17 @@
 
 For that reason, the mod implements a mechanism for loading a custom event database from a JSON file. This makes it possible to create events manually.
 
-By default, events are loaded by the server from `BigCityLegacy/Events.json`. See the file template.
+Events are stored by category in `BigCityLegacy/events`: one JSON file contains one event object. Its directory must match the `mode` field:
+
+| Directory | Event mode |
+| --- | --- |
+| `Race` | `Race`, `RaceParcur` (also `Parkur`) |
+| `CS` | `CS` |
+| `CS_Sur` | `CS_Sur` (also `Survival`) |
+
+For example: `BigCityLegacy/events/Race/airport_01.json`, `BigCityLegacy/events/CS/CopsVsBandits_airport.json`, `BigCityLegacy/events/CS_Sur/Survival_01.json`. The filename may differ from the JSON `name`. Files in the `events` root are not loaded; an event in the wrong category is skipped with a warning.
+
+Use `-eventsDir:path` or `files.eventsDir` in the server configuration to select another root directory with the same three categories.
 
 At the moment, the mod only ships with a few ready-made events as templates for creating new ones. A larger database is planned soon and will be distributed together with the mod so the experience for regular players is as pleasant as possible. If you want to help create events and submit your work, send it to the corresponding topic in the Discussions section.
 

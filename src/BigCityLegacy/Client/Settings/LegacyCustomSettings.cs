@@ -7,14 +7,21 @@ internal static class LegacyCustomSettings
 
     internal static void Register()
     {
-        LegacySettingsMenuHelper.RegisterToggle(
+        LegacyMasterClient.EnsureStartupMode();
+        LegacySettingsMenuHelper.RegisterTextChoice(
             id: "user.master_autoresolve",
             group: "User",
             position: new Vector2(0f, -312f),
             label: new LegacyLocalizedText("Resolve servers list on startup", "Получать список серверов при запуске"),
-            binding: LegacyBoolSettingBinding.PlayerPrefs(
-                key: "ModMaster_AutoResolve",
-                defaultValue: true));
+            binding: LegacyTextChoiceSettingBinding.PlayerPrefs(
+                key: LegacyMasterClient.StartupModeKey,
+                defaultIndex: 1,
+                values: new[]
+                {
+                    new LegacyLocalizedText("No", "Нет"),
+                    new LegacyLocalizedText("Official", "Официальный"),
+                    new LegacyLocalizedText("Last", "Последний")
+                }));
 
         if (!PlayerPrefs.HasKey(F6SpawnModeKey))
         {

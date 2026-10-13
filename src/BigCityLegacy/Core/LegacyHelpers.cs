@@ -232,7 +232,8 @@ public static class LegacyHelpers
             }
         }
 
-        return LegacyCommandLine.StripQuotes(text);
+        text = LegacyCommandLine.StripQuotes(text);
+        return Path.IsPathRooted(text) ? text : Path.Combine(Paths.GameRootPath, text);
     }
 
     public static bool CheckFileExistence(string path)
@@ -385,6 +386,36 @@ public static class LegacyHelpers
         }
 
         PlayerPrefs.Save();
+    }
+
+    public static Texture2D LoadEmbeddedTexture(string resourceName)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+
+        using Stream stream = assembly.GetManifestResourceStream(resourceName);
+
+        if (stream == null)
+        {
+            Debug.LogError($"Embedded resource not found: {resourceName}");
+            return null;
+        }
+
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+
+        byte[] data = ms.ToArray();
+
+        var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+
+        if (!texture.LoadImage(data))
+        {
+            UnityEngine.Object.Destroy(texture);
+            Debug.LogError($"Failed to load texture: {resourceName}");
+            return null;
+        }
+
+        texture.name = resourceName;
+        return texture;
     }
 }
 

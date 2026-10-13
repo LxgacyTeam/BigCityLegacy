@@ -111,7 +111,7 @@ internal static class LegacyVinylPackCodec
                 if (!name.StartsWith("ect.text.v1:", StringComparison.Ordinal) || name.Length > 360) Fail("Text");
                 string[] tokens = name.Substring("ect.text.v1:".Length).Split(':');
                 if (tokens.Length != 3) Fail("Text");
-                font = Index(tokens[0], 2); style = Index(tokens[1], 3);
+                font = FontIndex(tokens[0]); style = Index(tokens[1], 3);
                 try
                 {
                     byte[] bytes = Convert.FromBase64String(tokens[2]);
@@ -120,13 +120,13 @@ internal static class LegacyVinylPackCodec
                 }
                 catch (Exception error) when (error is FormatException || error is ArgumentException) { throw new LegacyVinylPackException("Text"); }
                 if (fields && (!Complete(item) || item.GetAttribute("ect.text") != text ||
-                    Index(item.GetAttribute("ect.font"), 2) != font || Index(item.GetAttribute("ect.style"), 3) != style)) Fail("Text");
+                    FontIndex(item.GetAttribute("ect.font")) != font || Index(item.GetAttribute("ect.style"), 3) != style)) Fail("Text");
             }
             else
             {
                 if (!Complete(item)) Fail("Text");
                 text = item.GetAttribute("ect.text");
-                font = Index(item.GetAttribute("ect.font"), 2); style = Index(item.GetAttribute("ect.style"), 3);
+                font = FontIndex(item.GetAttribute("ect.font")); style = Index(item.GetAttribute("ect.style"), 3);
             }
             if (text.Length > 80) Fail("Text");
             foreach (char c in text) if (char.IsControl(c)) Fail("Text");
@@ -151,6 +151,13 @@ internal static class LegacyVinylPackCodec
     }
 
     private static bool Complete(XmlElement item) => item.HasAttribute("ect.text") && item.HasAttribute("ect.font") && item.HasAttribute("ect.style");
+    private static int FontIndex(string text)
+    {
+        if (text.Length == 0 || text.Length > 10 ||
+            !int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int value) ||
+            value.ToString(CultureInfo.InvariantCulture) != text) Fail("Text");
+        return int.Parse(text, CultureInfo.InvariantCulture);
+    }
     private static int Index(string text, int max)
     {
         if (text.Length != 1 || text[0] < '0' || text[0] > '0' + max) Fail("Text");
@@ -215,6 +222,11 @@ internal static class LegacyVinylPackCodec
                 if (item.GetAttribute("sprite.name") == "ECT.Text")
                 {
                     item.SetAttribute("sprite.name", primitive);
+                    var rgba = item.HasAttribute("color")
+                        ? item.GetAttribute("color").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                        : new[] { "1", "1", "1", "1" };
+                    rgba[3] = "0";
+                    item.SetAttribute("color", string.Join(" ", rgba));
                     foreach (string field in new[] { "ect.text", "ect.font", "ect.style", "ect.symmetry" }) item.RemoveAttribute(field);
                 }
         }

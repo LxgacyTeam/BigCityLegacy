@@ -1,0 +1,36 @@
+# BigCityLegacy server configuration. CLI arguments override these values. 
+# Keys match launch options without the leading '-'.
+
+[server]
+port = 7800
+maxConn = 16
+Mode = "None"
+lang = "en"
+maxCars = 100
+maxCarsByPlayer = 15
+CarSpawnTimeout = 1000
+maxNikLength = 20
+idleKickTimeout = "120s"
+noChatEvents = false
+noKillChat = false
+noCsDamageCooldown = false
+useVanillaRespawn = false
+
+[mirror]
+masterServer = true
+masterPort = 35000
+masterDebug = false
+
+[files]
+# Relative paths resolve from the game directory. Empty values use defaults.
+serversList = ''
+eventsDir = ''
+respawnPoints = ''
+banList = ''
+
+[console]
+noServerConsole = false
+noServerCli = false
+verboseServerConsole = false
+noLogFile = true
+noUpdCheck = false

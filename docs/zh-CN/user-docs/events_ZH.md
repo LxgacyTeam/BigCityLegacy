@@ -4,7 +4,17 @@
 
 为此，模组实现了从 JSON 文件加载自定义活动数据库的机制，使手动创建活动成为可能。
 
-默认情况下，服务器从 `BigCityLegacy/Events.json` 加载活动。请参阅文件模板。
+活动按类别存储在 `BigCityLegacy/events` 中，每个 JSON 文件只包含一个活动对象。文件所在目录必须与 `mode` 字段匹配：
+
+| 目录 | 活动模式 |
+| --- | --- |
+| `Race` | `Race`、`RaceParcur`（也支持 `Parkur`） |
+| `CS` | `CS` |
+| `CS_Sur` | `CS_Sur`（也支持 `Survival`） |
+
+例如：`BigCityLegacy/events/Race/airport_01.json`、`BigCityLegacy/events/CS/CopsVsBandits_airport.json`、`BigCityLegacy/events/CS_Sur/Survival_01.json`。文件名可以与 JSON 中的 `name` 不同。不会加载 `events` 根目录中的文件；类别与模式不匹配的文件会被跳过并记录警告。
+
+可通过 `-eventsDir:path` 或服务器配置中的 `files.eventsDir` 指定其他根目录，其中同样需要包含这三个类别目录。
 
 目前，模组仅附带少量现成活动，作为创建新活动的模板。计划近期提供更大的数据库，并随模组一起分发，尽可能改善普通玩家的体验。如果你愿意协助创建活动并提交作品，请将其发送到 Discussions 区的相应主题。
 
