@@ -35,6 +35,7 @@ internal static class LegacyCommandLine
 
         LegacyServerLimits.UpdateFromArgs(args);
         LegacyIdleKickTimeout.UpdateFromArgs(args);
+        LegacyCarSpawnTimeout.UpdateFromArgs(args);
 
         if (AutoConnectFromArgs)
         {
@@ -137,6 +138,10 @@ internal static class LegacyCommandLine
     }
 
     private static string[] GetProcessArgs()
+    {
+        return LegacyServerConfig.Apply(GetRawProcessArgs());
+    }
+    internal static string[] GetRawProcessArgs()
     {
         if (cachedProcessArgs != null)
         {

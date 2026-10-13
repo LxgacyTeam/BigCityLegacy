@@ -20,6 +20,10 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
         instance.window.Visible = true;
         instance.enabled = true;
     }
+    internal static void Hide()
+    {
+        if (instance) instance.Close();
+    }
 
     private static void EnsureInstance()
     {
@@ -85,6 +89,9 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
         string versionLine = LegacyLocalizer.Text("<b>Current version:</b>", "<b>Текущая версия:</b>") + " " + update.CurrentVersion + "\n" +
                              LegacyLocalizer.Text("<b>Latest release:</b>", "<b>Последний релиз:</b>") + " " + update.LatestVersion;
         LegacyUI.HintBox(new Rect(x, y, w, 56f), versionLine);
+        if (!string.IsNullOrEmpty(LegacyInstallerUpdater.Status))
+            LegacyUI.Status(new Rect(x, y + 52f, w, 38f), LegacyInstallerUpdater.Status +
+                (LegacyInstallerUpdater.Busy ? " " + (LegacyInstallerUpdater.Progress * 100f).ToString("0") + "%" : ""));
 
         float btnY = content.yMax - 30f;
         float gap = 8f;
@@ -92,12 +99,13 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
 
         if (LegacyUI.GreenButton(new Rect(x, btnY, btnW, 28f), LegacyLocalizer.Text("Download", "Скачать")))
         {
-            Application.OpenURL(update.DownloadUrl);
+            LegacyInstallerUpdater.DownloadUpdate(BigCityLegacyPlugin.Instance, update);
         }
 
         if (LegacyUI.Button(new Rect(x + btnW + gap, btnY, btnW, 28f), LegacyLocalizer.Text("Changelog", "Изменения")))
         {
-            Application.OpenURL(update.ReleaseUrl);
+            Application.OpenURL(LegacyRepository.WebUrl(LegacyRepository.ModRepo) +
+                "/releases/tag/" + System.Uri.EscapeDataString(update.TagName));
         }
 
         if (LegacyUI.Button(new Rect(x + (btnW + gap) * 2f, btnY, btnW, 28f), LegacyLocalizer.Text("Later", "Позже")))
@@ -118,7 +126,7 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
     private static Rect GetStartRect()
     {
         const float width = 460f;
-        const float height = 190f;
+        const float height = 215f;
         if (Screen.width <= 0 || Screen.height <= 0)
         {
             return new Rect(180f, 120f, width, height);

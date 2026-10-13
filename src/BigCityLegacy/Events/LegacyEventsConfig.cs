@@ -29,18 +29,12 @@ public class LegacyEventsConfig
         {
             return false;
         }
-        string configPath = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
+        string configPath = LegacyEventFiles.DirectoryPath;
         LegacyEventsConfig.loadedConfigPath = configPath;
-        if (!File.Exists(configPath))
-        {
-            LegacyEventsConfig.TryCreateExampleConfig(configPath);
-            Debug.LogWarning("Events config not found: " + configPath + ". Example file was created. Event modes will work after you fill it.");
-            return false;
-        }
         bool flag;
         try
         {
-            LegacyEventsConfig.Config config = LegacyJsonConfig.FromJson<LegacyEventsConfig.Config>(File.ReadAllText(configPath), configPath);
+            LegacyEventsConfig.Config config = LegacyEventFiles.Load(configPath, LegacyHelpers.GetJsonPath("-eventsList", "Events.json"));
             if (config == null || config.events == null || config.events.Length == 0)
             {
                 Debug.LogWarning("Events config is empty: " + configPath);
@@ -68,31 +62,6 @@ public class LegacyEventsConfig
             flag = false;
         }
         return flag;
-    }
-
-    private static void TryCreateExampleConfig(string path)
-    {
-        try
-        {
-            string directoryName = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directoryName) && !Directory.Exists(directoryName))
-            {
-                Directory.CreateDirectory(directoryName);
-            }
-            if (!File.Exists(path))
-            {
-                File.WriteAllText(path, LegacyEventsConfig.GetExampleConfigText());
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning("Failed to create example events config: " + ex.Message);
-        }
-    }
-
-    private static string GetExampleConfigText()
-    {
-        return "{\n  \"version\": 1,\n  \"events\": [\n    {\n      \"mode\": \"Race\",\n      \"name\": \"example_race\",\n      \"displayName\": \"Example Race\",\n      \"isSprint\": true,\n      \"useRespawn\": false,\n      \"laps\": 3,\n      \"start\": [\n        { \"x\": 0, \"y\": 0, \"z\": 0, \"yaw\": 0 },\n        { \"x\": 1, \"y\": 1, \"z\": 1, \"yaw\": 0 }\n      ],\n      \"points\": [\n        { \"x\": 1, \"y\": 1, \"z\": 1, \"yaw\": 0 },\n        { \"x\": 2, \"y\": 2, \"z\": 2, \"yaw\": 90 },\n        { \"x\": 3, \"y\": 3, \"z\": 3, \"yaw\": 180 }\n      ]\n    },\n    {\n      \"mode\": \"CS\",\n      \"name\": \"example_cs\",\n      \"displayName\": \"Example CS\",\n      \"counter\": [ { \"x\": 1, \"y\": 1, \"z\": 1, \"yaw\": 90 } ],\n      \"terror\": [ { \"x\": 2, \"y\": 2, \"z\": 2, \"yaw\": -90 } ]\n    }\n  ]\n}\n";
     }
 
     private static void BuildRuntimeEventLists(LegacyEventsConfig.Config config)

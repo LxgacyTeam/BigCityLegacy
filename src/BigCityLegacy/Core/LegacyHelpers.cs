@@ -4,10 +4,8 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using BepInEx;
-using BepInEx.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
-using static InputBut;
 using Debug = UnityEngine.Debug;
 
 public static class LegacyHelpers
@@ -33,6 +31,32 @@ public static class LegacyHelpers
 
             return path;
         }
+    }
+
+    public static string GetCurTimestamp
+    {
+        get
+        {
+            DateTime now = DateTime.Now;
+            string timestamp = now.ToString("yyyy-MM-dd_HH-mm-ss-fff");
+            return timestamp;
+        }
+    }
+
+    public static string FormatSeconds(long seconds)
+    {
+        var time = TimeSpan.FromSeconds(seconds);
+
+        if (time.TotalDays >= 1)
+            return $"{(int)time.TotalDays} d. {time.Hours} h.";
+
+        if (time.TotalHours >= 1)
+            return $"{(int)time.TotalHours} h. {time.Minutes} min.";
+
+        if (time.TotalMinutes >= 1)
+            return $"{(int)time.TotalMinutes} min. {time.Seconds} sec.";
+
+        return $"{time.Seconds} sec.";
     }
 
     public static void OpenFolder(string folderPath)
@@ -208,7 +232,8 @@ public static class LegacyHelpers
             }
         }
 
-        return LegacyCommandLine.StripQuotes(text);
+        text = LegacyCommandLine.StripQuotes(text);
+        return Path.IsPathRooted(text) ? text : Path.Combine(Paths.GameRootPath, text);
     }
 
     public static bool CheckFileExistence(string path)
@@ -361,6 +386,36 @@ public static class LegacyHelpers
         }
 
         PlayerPrefs.Save();
+    }
+
+    public static Texture2D LoadEmbeddedTexture(string resourceName)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+
+        using Stream stream = assembly.GetManifestResourceStream(resourceName);
+
+        if (stream == null)
+        {
+            Debug.LogError($"Embedded resource not found: {resourceName}");
+            return null;
+        }
+
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+
+        byte[] data = ms.ToArray();
+
+        var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+
+        if (!texture.LoadImage(data))
+        {
+            UnityEngine.Object.Destroy(texture);
+            Debug.LogError($"Failed to load texture: {resourceName}");
+            return null;
+        }
+
+        texture.name = resourceName;
+        return texture;
     }
 }
 

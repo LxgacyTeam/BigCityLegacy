@@ -1,4 +1,4 @@
-﻿using BigCityLegacy.UI;
+using BigCityLegacy.UI;
 using UnityEngine;
 
 internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
@@ -10,6 +10,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
     private string status;
     private string masterHost;
     private string masterPort;
+    private bool followOfficialAddress;
     private bool autoMaster;
     private int tab;
 
@@ -21,7 +22,8 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         port = PlayerPrefs.GetString("DirectConnect_Port", "7800");
         masterHost = LegacyMasterClient.MasterHost;
         masterPort = LegacyMasterClient.MasterPort.ToString();
-        autoMaster = PlayerPrefs.GetInt("ModMaster_AutoResolve", 1) == 1;
+        followOfficialAddress = LegacyMasterClient.IsOfficialSelected;
+        autoMaster = LegacyMasterClient.StartupMode != 0;
         tab = LegacyMasterClient.IsMasterListEnabled() ? 0 : 1;
         status = string.Empty;
 
@@ -60,9 +62,13 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
             else
             {
                 GUIStyle showBtnStyle = new GUIStyle(LegacyUI.Styles.GreenButton);
-                showBtnStyle.fontSize = 16;
+                showBtnStyle.fontSize = 18;
+                
+                float showBtnW = 220f;
+                float showBtnH = 37f;
 
-                Rect showBtnRect = new Rect(Screen.width - 180f - 10f, Screen.height - 35f - 10f, 180f, 35f);
+                Vector2 screenSize = LegacyUI.VirtualScreenSize;
+                Rect showBtnRect = new Rect(screenSize.x - showBtnW - 15f, screenSize.y - showBtnH - 15f, showBtnW, showBtnH);
                 if (GUI.Button(showBtnRect, LegacyLocalizer.Text("Connection menu", "Меню подключения"), showBtnStyle))
                 {
                     SetVisible(!window.Visible);
@@ -81,12 +87,13 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
 
     private Rect GetStartRect()
     {
+        const float width = 390f;
         if (PlayerPrefs.HasKey("DirectConnect_WindowX") && PlayerPrefs.HasKey("DirectConnect_WindowY"))
-            return new Rect(PlayerPrefs.GetFloat("DirectConnect_WindowX", 230f), PlayerPrefs.GetFloat("DirectConnect_WindowY", 90f), 345f, 225f);
+            return new Rect(PlayerPrefs.GetFloat("DirectConnect_WindowX", 230f), PlayerPrefs.GetFloat("DirectConnect_WindowY", 90f), width, 225f);
 
         return (Screen.width <= 0 || Screen.height <= 0)
-            ? new Rect(230f, 90f, 345f, 225f)
-            : new Rect((Screen.width - 345f) * 0.5f, (Screen.height - 225f) * 0.5f, 345f, 225f);
+            ? new Rect(230f, 90f, width, 225f)
+            : new Rect((Screen.width - width) * 0.5f, (Screen.height - 225f) * 0.5f, width, 225f);
     }
 
     private void DrawContent(Rect content)
@@ -104,17 +111,29 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
 
     private void DrawTabContent(Rect content, float x, float y)
     {
+        if (followOfficialAddress && LegacyMasterClient.IsOfficialSelected)
+        {
+            masterHost = LegacyMasterClient.MasterHost;
+            masterPort = LegacyMasterClient.MasterPort.ToString();
+        }
         float inputW = content.width - 95f;
         bool isMaster = tab == 0;
 
         LegacyUI.Label(new Rect(x, y, 90f, 24f), isMaster ? "Master Host" : "Server IP");
         string hostInput = LegacyUI.TextField(new Rect(x + 95f, y, inputW, 24f), (isMaster ? masterHost : ip) ?? string.Empty);
+        bool masterEdited = isMaster && masterHost != hostInput;
         if (isMaster) masterHost = hostInput; else ip = hostInput;
 
         y += 30f;
         LegacyUI.Label(new Rect(x, y, 90f, 24f), isMaster ? "Master Port" : "Server Port");
         string portInput = LegacyUI.TextField(new Rect(x + 95f, y, 70f, 24f), (isMaster ? masterPort : port) ?? string.Empty);
+        masterEdited |= isMaster && masterPort != portInput;
         if (isMaster) masterPort = portInput; else port = portInput;
+        if (masterEdited)
+        {
+            followOfficialAddress = false;
+            LegacyMasterClient.RememberMaster(masterHost, GetMasterPortValue());
+        }
 
         y += 32f;
 
@@ -123,19 +142,23 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
 
         Rect win = window.Rect;
         float btnY = win.y + win.height - 40f;
-        float btnW = (win.width - 40f) / 2f;
+        float btnW = (content.width - (isMaster ? 20f : 10f)) / (isMaster ? 3f : 2f);
+        float mirrorResolveW = 119f;
+        float mirrorBtnW = 93f;
 
-        if (LegacyUI.GreenButton(new Rect(x, btnY, btnW, 26f), isMaster ? LegacyLocalizer.Text("Resolve List", "Получить список") : LegacyLocalizer.Text("Connect", "Подключиться")))
+        if (LegacyUI.GreenButton(new Rect(x, btnY, (isMaster ? mirrorResolveW : btnW), 26f), isMaster ? LegacyLocalizer.Text("Resolve List", "Получить список") : LegacyLocalizer.Text("Connect", "Подключиться")))
         {
             if (isMaster) ResolveMaster(); else ConnectDirect();
         }
 
-        if (LegacyUI.Button(new Rect(x + btnW + 10f, btnY, btnW, 26f), isMaster ? LegacyLocalizer.Text("Set Local Master", "Localhost") : LegacyLocalizer.Text("Set Localhost", "Localhost")))
+        if (LegacyUI.Button(new Rect(isMaster ? x + mirrorResolveW + 5f : (x + btnW + 10f), btnY, (isMaster ? mirrorBtnW : btnW), 26f), "Localhost"))
         {
             if (isMaster)
             {
                 masterHost = "127.0.0.1";
+                followOfficialAddress = false;
                 masterPort = "35000";
+                LegacyMasterClient.RememberMaster(masterHost, 35000);
                 status = LegacyLocalizer.Text("Local master selected", "Выбран локальный Master");
             }
             else
@@ -144,6 +167,16 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
                 port = "7800";
                 status = LegacyLocalizer.Text("Localhost selected", "Выбран localhost");
             }
+        }
+        if (isMaster && LegacyUI.Button(new Rect(x + mirrorResolveW + mirrorBtnW + 10f, btnY, mirrorBtnW, 26f),
+            LegacyLocalizer.Text("Official", "Официальный")))
+        {
+            LegacyMasterClient.UseOfficial();
+            followOfficialAddress = true;
+            masterHost = LegacyMasterClient.MasterHost;
+            masterPort = LegacyMasterClient.MasterPort.ToString();
+            status = LegacyLocalizer.Text("Official mirror selected", "Выбран официальный mirror");
+            NetUIPatches.RefreshServerListNow(owner);
         }
     }
 
@@ -159,7 +192,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
         PlayerPrefs.SetString("DirectConnect_IP", ipText);
         PlayerPrefs.SetString("DirectConnect_Port", portText);
         PlayerPrefs.Save();
-        LegacyMasterClient.SetMaster(masterHost, GetMasterPortValue(), autoMaster, false);
+        LegacyMasterClient.UseDirectConnection();
         NetUIPatches.RefreshServerListNow(owner);
 
         if (NetManager.me == null) { status = "NetManager is null"; return; }

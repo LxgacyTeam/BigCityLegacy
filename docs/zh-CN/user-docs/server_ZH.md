@@ -1,8 +1,70 @@
 # 服务器
 
+游戏服务器设置保存在 `BigCityLegacy/config/ServerConfig.toml`。模板位于 `config_example/ServerConfig.toml`；标准文件不存在时，服务器会自动创建它。
+
+```text
+game.exe -bend_GameServer -batchmode -nographics
+game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.toml"
+```
+
+启动服务器必须使用 `-bend_GameServer`，该标志不属于 TOML 配置。`-serverConfig` 仅选择配置文件，不启用服务器模式。普通客户端不读取服务器配置。明确指定的命令行参数优先于 TOML 值及其别名。空路径使用默认文件；相对路径以游戏根目录为基准。Windows 路径可使用单引号。
+
+`masterServer = true` 是默认值，表示同时启动游戏服务器和 Mirror。仅启动游戏服务器时，设置 `masterServer = false`。Mirror 端口通过 TOML 的 `masterPort` 或 `-masterPort:<端口>` 设置。`ServersList.json` 保存服务器列表和轮询间隔。
+
+
+| 节 | 参数 |
+| --- | --- |
+| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
+| `mirror` | `masterServer`（默认 `true`）、`masterPort`（默认 `35000`）、`masterDebug` |
+| `files` | `serversList`、`eventsDir`、`respawnPoints`、`banList` |
+| `console` | `noServerConsole`、`noServerCli`、`verboseServerConsole`、`noLogFile`、`noUpdCheck` |
+| `repository` | `repositorySource`：`GitHub`、`Codeberg`，或留空以使用 PlayerPrefs 保存的选择 |
+
+配置示例：
+
+```toml
+# BigCityLegacy server configuration. CLI arguments override these values. 
+# Keys match launch options without the leading '-'.
+
+[server]
+port = 7800
+maxConn = 16
+Mode = "None"
+lang = "en"
+maxCars = 100
+maxCarsByPlayer = 15
+CarSpawnTimeout = 1000
+maxNikLength = 20
+idleKickTimeout = "120s"
+noChatEvents = false
+noKillChat = false
+noCsDamageCooldown = false
+useVanillaRespawn = false
+
+[mirror]
+masterServer = true
+masterPort = 35000
+masterDebug = false
+
+[files]
+# Relative paths resolve from the game directory. Empty values use defaults.
+serversList = ''
+eventsDir = ''
+respawnPoints = ''
+banList = ''
+
+[console]
+noServerConsole = false
+noServerCli = false
+verboseServerConsole = false
+noLogFile = true
+noUpdCheck = false
+```
+
+
 游戏服务器通常可在两种模式下运行：**Master** 和 **Base**。
 
-**Base** 表示仅启动游戏服务器（Game Server），通过基本的 `-bend_GameServer` 标志启用。
+**Base** 仅启动游戏服务器，不启动 Mirror（`masterServer = false`）。
 **Master** 表示 Mirror + Game Server：除游戏服务器外，同时启动一个 Mirror。此时，Master 服务器应作为包含多个游戏服务器的架构中的主服务器，将它们连接在一起。
 
 ---
@@ -20,7 +82,7 @@ Game Server 有五种模式：`None`、`RP`、`Race`、`CS`、`CS_Sur`。
 - **CS** - 在 None 模式的基础上定期启动警匪对抗活动，实质上是团队死斗。
 - **CS_Sur** - 在 None 模式的基础上定期启动生存（Survival）活动，实质上是死斗/自由混战（FFA）。
 
-Game Server 通过启动参数配置。请参阅[启动参数](overview_ZH.md#启动参数)。它也支持通过交互式 CLI 进行管理，详见下文。
+Game Server 通过 TOML 设置和启动参数配置。请参阅[启动参数](overview_ZH.md#启动参数)。它也支持通过交互式 CLI 进行管理，详见下文。
 
 服务器玩家数量在实际使用中没有硬性上限，但游戏设计面向**不超过 100 名玩家**。
 
@@ -30,12 +92,11 @@ Game Server 通过启动参数配置。请参阅[启动参数](overview_ZH.md#�
 
 **Mirror 服务器**负责管理游戏服务器列表及其状态。它向游戏客户端发送可用服务器列表、服务器设置及当前在线人数。换言之，它决定游戏在**在线（Online）**区域的服务器列表中显示什么。Mirror 可以接收和发送服务器名称、最大玩家数、语言、游戏模式、分组位置及其他一些参数。它还提供自动选择服务器的功能，供玩家点击游戏中的绿色连接（Connect）按钮时使用。
 
-Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径为 `BigCityLegacy/ServersList.json`。配置示例：
+Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径为 `BigCityLegacy/config/ServersList.json`。配置示例：
 
 ```json
   {
   "version": 1,
-  "masterPort": 35000,
   "pollIntervalMs": 1500,
   "staleAfterMs": 6000,
   "servers": [
@@ -59,8 +120,6 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 ```
 
 **参数含义：**
-
-`masterPort` - 主服务器使用的端口。
 
 `pollIntervalMs` - 轮询游戏服务器、检查其是否在线的时间间隔。
 
@@ -114,6 +173,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | cleardrop | 清理服务器上的所有掉落物：医疗包和武器。 |
 | delcars all | 删除服务器上的所有车辆。 |
 | delcars {PlayerID} | 删除指定玩家的所有车辆。 |
+| stats | 显示资源消耗和加载统计信息。 |
 | stop | 停止服务器。 |
 
 > [!WARNING]

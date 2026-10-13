@@ -1,5 +1,7 @@
 # 概览
 
+在 About 窗口中可选择 GitHub 或 Codeberg，所有仓库请求都会使用所选来源。选择保存在 PlayerPrefs 中。首次启动时，如果操作系统语言为中文或地区为中国，默认使用 Codeberg。在线安装程序也提供来源选择；选择中文界面时默认使用 Codeberg。更新窗口的 Download 按钮在 Windows 上下载并启动在线安装程序；在其他平台上打开模组 ZIP 下载链接。启动时获取服务器列表的选项为 No、Official（默认）和 Last。Official 保留上次手动输入的地址。
+
 **BigCityLegacy** 项目旨在全面恢复 Steam 版 MadOut2 BigCityOnline 的在线功能，以保留原有的游戏体验和游戏历史。
 
 本项目是以 BepInEx 5 插件形式分发的游戏模组。
@@ -21,12 +23,16 @@
 * 模组包含 Point Tool v2，方便创建自定义活动所需的检查点或位置坐标序列。
 * 模组添加了以下快捷键：
   - `F5` - 快速切换天气。
-  - `F6` - 立即生成上次选择的车辆，无需等待冷却时间。
+  - `F6` - 快速生成上次选择的车辆；在线请求遵守服务器的 `CarSpawnTimeout`。
   - `F12` - 紧急断开服务器连接，适用于游戏卡在黑屏的情况。
 * 模组可将帧率上限设为 10000，从而解除 FPS 限制。
 * 模组添加了启用玩家角色阴影的选项，默认开启。
 
 # 启动参数
+
+> [!WARNING]
+> 从 1.4.0 版本开始，默认服务器设置由位于 `BigCityLegacy\config` 目录下的 `ServerConfig.toml` 文件控制。
+> 详情请参阅相关章节：[服务器配置说明](./server_ZH.md)
 
 模组提供多种传递给游戏可执行文件的启动参数。它们主要用于启动服务器，也包含一些客户端参数。
 
@@ -55,6 +61,7 @@ game.exe -arg1 -arg2 -arg3
 | -forceFullMode | 在低于 9.4 的游戏版本上强制以完整模式运行模组。 | - |
 | -forceCompatMode | 强制以兼容模式运行模组。 | - |
 | -noUpdCheck | 禁用游戏或服务器启动时的自动更新检查。 | - |
+| -perfmon | 启用性能监视器（显示已用和已加载资源统计信息的叠加层）。 | - |
 
 #### 服务器参数
 
@@ -67,13 +74,16 @@ game.exe -arg1 -arg2 -arg3
 | -Mode:[value] | 服务器上的游戏模式。 | None / RP / Race / CS / CS_Sur |
 | -maxCars:[value] | 服务器上允许存在的最大车辆数。<br />默认值：100 | 车辆数；0 = 无限制。 |
 | -maxCarsByPlayer:[value] | 每位玩家允许拥有的最大车辆数。<br />默认值：15 | 车辆数；0 = 无限制。 |
+| -CarSpawnTimeout:[value] | 同一玩家生成车辆的最短间隔。默认值：1000 毫秒。 | 整数毫秒；0 = 无延迟。 |
 | -maxNikLength:[value] | 服务器上允许的最大玩家昵称长度。<br />默认值：20 | 昵称长度；0 = 无限制。 |
 | -noChatEvents | 禁用服务器事件的聊天通知，目前包括玩家连接和断开连接的消息。 | - |
 | -idleKickTimeout:[value] | 玩家无操作后被踢出的等待时间（闲置踢出）。<br /><br />默认值：120 秒 | `{n}` 或 `{n}s` - 秒数；`{n}ms` - 毫秒数。示例：120、60s、90000ms；0 = 禁用闲置踢出。 |
 | -useVanillaRespawn | 启用原版的死亡后重生系统，禁用 RespawnPoints.json。 | - |
 | -masterServer | 启动 Mirror 服务器。 | - |
-| -serversList:[path] | 手动指定 Mirror 服务器配置的路径。默认从 BigCityLegacy/ServersList.json 读取。仅在需要指定其他文件时使用。 | Mirror 服务器配置文件的路径。 |
-| -eventsList:[path] | 手动指定活动列表文件的路径。默认从 BigCityLegacy/Events.json 读取。仅在需要指定其他文件时使用。 | 活动列表文件的路径。 |
+| -serversList:[path] | 手动指定 Mirror 服务器配置的路径。默认从 BigCityLegacy/config/ServersList.json 读取。仅在需要指定其他文件时使用。 | Mirror 服务器配置文件的路径。 |
+| -serverConfig:[path] | ServerConfig.toml | BigCityLegacy/config/ServerConfig.toml |
+| -eventsDir:[path] | 独立活动 JSON 文件的目录。 | BigCityLegacy/events |
+| -eventsList:[path] | 仅用于将旧活动集合迁移到独立文件。 | 旧 Events.json 的路径。 |
 | -respawnPoints:[path] | 手动指定重生点列表文件的路径。默认从 BigCityLegacy/RespawnPoints.json 读取。仅在需要指定其他文件时使用。 | 重生点文件的路径。 |
 | -banList:[path] | 手动指定封禁玩家列表的路径。默认从 BigCityLegacy/BanList.json 读取。仅在需要指定其他文件时使用。 | 封禁玩家列表的路径。 |
 | -masterDebug | 输出 Mirror 服务器运行的详细日志。 | - |
@@ -100,6 +110,9 @@ game.exe -useMaster -masterIP:1.2.3.4 -masterPort:35000
 ```
 game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Race
 ```
+
+此 Base 服务器示例要求在 TOML 中设置 `masterServer = false`。参数说明请参阅[服务器配置](./server_ZH.md)。
+
 
 以 Master 模式启动**服务器**，同时运行游戏服务器和 Mirror：
 

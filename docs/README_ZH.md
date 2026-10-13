@@ -8,7 +8,7 @@
   <h1>BigCityLegacy</h1>
   <h3>适用于 Steam 版 <b>MadOut2 BigCityOnline</b> 的 BepInEx 插件，可全面恢复在线和离线功能。</h3>
   <h3>
-    <a href="https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe">下载安装程序</a>
+    <a href="https://github.com/LxgacyTeam/BCL-installer/releases/latest/download/BigCityLegacy_Installer.exe">下载安装程序</a>
      | <a href="https://github.com/LxgacyTeam/BigCityLegacy/wiki">访问 Wiki</a>
      | <a href="https://t.me/BigCityLegacy">我们的 Telegram</a>
   </h3>
@@ -32,7 +32,7 @@
 ## 安装
 
 * 从 Steam 下载最新的**原版**游戏。**不支持**经过修改的游戏版本。
-* 下载[**官方在线安装程序**](https://github.com/LxgacyTeam/BCL-installer/releases/download/1.0/BigCityLegacy_Installer.exe)，并将模组安装到未修改的游戏中。
+* 下载[**官方在线安装程序**](https://github.com/LxgacyTeam/BCL-installer/releases/latest/download/BigCityLegacy_Installer.exe)，并将模组安装到未修改的游戏中。
 
 *或手动安装：*
 

@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 using Newtonsoft.Json.Linq;
 
 /// <summary>
-/// GitHub release checker for both client and dedicated-server modes.
+/// Release checker using the globally selected repository source.
 /// </summary>
 internal static class LegacyUpdateChecker
 {
@@ -16,6 +16,7 @@ internal static class LegacyUpdateChecker
     private const int RequestTimeoutSeconds = 10;
 
     private static bool started;
+    private static MonoBehaviour coroutineOwner;
     private static bool requestInProgress;
     private static LegacyUpdateInfo latestAvailableUpdate;
 
@@ -29,9 +30,6 @@ internal static class LegacyUpdateChecker
         }
     }
 
-    internal static string GitHubOwner = BigCityLegacyPlugin.GitHubOwner;
-    internal static string GitHubRepo = BigCityLegacyPlugin.GitHubRepo;
-
     internal static void StartIfNeeded(MonoBehaviour owner)
     {
         if (started || owner == null)
@@ -40,7 +38,15 @@ internal static class LegacyUpdateChecker
         }
 
         started = true;
+        coroutineOwner = owner;
+        LegacyRepository.Changed += SourceChanged;
         owner.StartCoroutine(CheckOnStartup());
+    }
+    private static void SourceChanged()
+    {
+        latestAvailableUpdate = null;
+        LegacyUpdateWindow.Hide();
+        if (IsEnabled && !LegacyCommandLine.HasNoUpdateCheck()) CheckNow(coroutineOwner);
     }
 
     internal static void CheckNow(MonoBehaviour owner)
@@ -94,61 +100,48 @@ internal static class LegacyUpdateChecker
 
         requestInProgress = true;
 
-        string owner = (GitHubOwner ?? string.Empty).Trim();
-        string repo = (GitHubRepo ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
+        const string repo = LegacyRepository.ModRepo;
+        try
         {
-            LogWarning("[BCL Updater] GitHub updater skipped: repository owner/repo is not configured.");
-            requestInProgress = false;
-            yield break;
+            LegacyRepositorySource source;
+            do
+            {
+                source = LegacyRepository.Current;
+                using (UnityWebRequest request = UnityWebRequest.Get(LegacyRepository.LatestReleaseUrl(repo, source)))
+                {
+                    LegacyRepository.ConfigureRequest(request, RequestTimeoutSeconds);
+                    yield return request.SendWebRequest();
+                    if (source != LegacyRepository.Current) continue;
+                    if (IsRequestError(request))
+                    {
+                        LogWarning("[BCL Updater] " + source + " update check failed: " + GetRequestError(request));
+                        yield break;
+                    }
+                    string json = request.downloadHandler != null ? request.downloadHandler.text : null;
+                    LegacyReleaseResponse release;
+                    string parseError;
+                    if (!TryParseRelease(json, out release, out parseError))
+                    {
+                        LogWarning("[BCL Updater] Release JSON parse failed: " + parseError);
+                        yield break;
+                    }
+                    if (release == null || string.IsNullOrEmpty(release.tag_name))
+                    {
+                        LogWarning("[BCL Updater] Latest release response has no tag_name.");
+                        yield break;
+                    }
+                    LegacyUpdateInfo update;
+                    if (TryCreateUpdateInfo(repo, release, source, out update))
+                    {
+                        latestAvailableUpdate = update;
+                        ShowUpdateNotification(update);
+                    }
+                    else if (showNoUpdateLog)
+                        LogInfo("[BCL Updater] No stable BigCityLegacy update found. Current=" + VersionInfo.ModVersionName + ", latest tag=" + release.tag_name);
+                }
+            } while (source != LegacyRepository.Current);
         }
-
-        string url = "https://api.github.com/repos/" + owner + "/" + repo + "/releases/latest";
-        using (UnityWebRequest request = UnityWebRequest.Get(url))
-        {
-            request.timeout = RequestTimeoutSeconds;
-            request.SetRequestHeader("Accept", "application/vnd.github+json");
-            request.SetRequestHeader("User-Agent", BigCityLegacyPlugin.PluginName + "/" + VersionInfo.ModVersionName);
-
-            yield return request.SendWebRequest();
-
-            if (IsRequestError(request))
-            {
-                LogWarning("[BCL Updater] GitHub update check failed: " + GetRequestError(request));
-                requestInProgress = false;
-                yield break;
-            }
-
-            string json = request.downloadHandler != null ? request.downloadHandler.text : null;
-            LegacyGitHubReleaseResponse release;
-            string parseError;
-            if (!TryParseGitHubRelease(json, out release, out parseError))
-            {
-                LogWarning("[BCL Updater] GitHub update check JSON parse failed: " + parseError);
-                requestInProgress = false;
-                yield break;
-            }
-
-            if (release == null || string.IsNullOrEmpty(release.tag_name))
-            {
-                LogWarning("[BCL Updater] GitHub update check failed: latest release response has no tag_name.");
-                requestInProgress = false;
-                yield break;
-            }
-
-            LegacyUpdateInfo update;
-            if (TryCreateUpdateInfo(owner, repo, release, out update))
-            {
-                latestAvailableUpdate = update;
-                ShowUpdateNotification(update);
-            }
-            else if (showNoUpdateLog)
-            {
-                LogInfo("[BCL Updater] No stable BigCityLegacy update found. Current=" + VersionInfo.ModVersionName + ", latest tag=" + release.tag_name);
-            }
-        }
-
-        requestInProgress = false;
+        finally { requestInProgress = false; }
     }
 
     private static void ShowUpdateNotification(LegacyUpdateInfo update)
@@ -197,7 +190,7 @@ internal static class LegacyUpdateChecker
         LegacyServerConsole.LogAfterConsoleInit(text, LogType.Warning);
     }
 
-    private static bool TryParseGitHubRelease(string json, out LegacyGitHubReleaseResponse release, out string error)
+    internal static bool TryParseRelease(string json, out LegacyReleaseResponse release, out string error)
     {
         release = null;
         error = null;
@@ -212,10 +205,12 @@ internal static class LegacyUpdateChecker
         {
             JObject root = JObject.Parse(json);
 
-            release = new LegacyGitHubReleaseResponse
+            release = new LegacyReleaseResponse
             {
                 tag_name = ReadString(root, "tag_name"),
                 html_url = ReadString(root, "html_url"),
+                draft = (bool?)root["draft"] ?? false,
+                prerelease = (bool?)root["prerelease"] ?? false,
                 assets = ReadAssets(root["assets"])
             };
 
@@ -228,15 +223,15 @@ internal static class LegacyUpdateChecker
         }
     }
 
-    private static LegacyGitHubReleaseAsset[] ReadAssets(JToken assetsToken)
+    private static LegacyReleaseAsset[] ReadAssets(JToken assetsToken)
     {
         JArray assetsArray = assetsToken as JArray;
         if (assetsArray == null || assetsArray.Count == 0)
         {
-            return new LegacyGitHubReleaseAsset[0];
+            return new LegacyReleaseAsset[0];
         }
 
-        List<LegacyGitHubReleaseAsset> assets = new List<LegacyGitHubReleaseAsset>();
+        List<LegacyReleaseAsset> assets = new List<LegacyReleaseAsset>();
         for (int i = 0; i < assetsArray.Count; i++)
         {
             JObject assetObject = assetsArray[i] as JObject;
@@ -251,7 +246,7 @@ internal static class LegacyUpdateChecker
                 continue;
             }
 
-            assets.Add(new LegacyGitHubReleaseAsset
+            assets.Add(new LegacyReleaseAsset
             {
                 browser_download_url = browserDownloadUrl,
                 name = ReadString(assetObject, "name"),
@@ -273,14 +268,15 @@ internal static class LegacyUpdateChecker
         return token != null && token.Type != JTokenType.Null ? token.ToString() : null;
     }
 
-    private static bool TryCreateUpdateInfo(string owner, string repo, LegacyGitHubReleaseResponse release, out LegacyUpdateInfo update)
+    private static bool TryCreateUpdateInfo(string repo, LegacyReleaseResponse release, LegacyRepositorySource source, out LegacyUpdateInfo update)
     {
         update = null;
+        if (release.draft || release.prerelease) return false;
 
         LegacySemanticVersion remoteVersion;
         if (!LegacySemanticVersion.TryParseStableTag(release.tag_name, out remoteVersion))
         {
-            LogInfo("[BCL Updater] GitHub latest release tag is not a stable X.Y.Z tag, skipped: " + release.tag_name);
+            LogInfo("[BCL Updater] Repository latest release tag is not a stable X.Y.Z tag, skipped: " + release.tag_name);
             return false;
         }
 
@@ -300,7 +296,7 @@ internal static class LegacyUpdateChecker
 
         string releaseUrl = !string.IsNullOrEmpty(release.html_url)
             ? release.html_url
-            : "https://github.com/" + owner + "/" + repo + "/releases/tag/" + release.tag_name;
+            : LegacyRepository.WebUrl(repo, source) + "/releases/tag/" + release.tag_name;
 
         string downloadUrl = GetDownloadUrlFallback(release, releaseUrl);
 
@@ -316,14 +312,19 @@ internal static class LegacyUpdateChecker
         return true;
     }
 
-    private static string GetDownloadUrlFallback(LegacyGitHubReleaseResponse release, string releaseUrl)
+    private static string GetDownloadUrlFallback(LegacyReleaseResponse release, string releaseUrl)
     {
         if (release != null && release.assets != null)
         {
             for (int i = 0; i < release.assets.Length; i++)
             {
-                LegacyGitHubReleaseAsset asset = release.assets[i];
-                if (asset != null && !string.IsNullOrEmpty(asset.browser_download_url))
+                LegacyReleaseAsset asset = release.assets[i];
+                if (asset != null && !string.IsNullOrEmpty(asset.name) &&
+                    asset.name.StartsWith("BigCityLegacy", StringComparison.OrdinalIgnoreCase) &&
+                    asset.name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                    !System.Text.RegularExpressions.Regex.IsMatch(asset.name, @"src|source|offline", System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
+                    Uri.IsWellFormedUriString(asset.browser_download_url, UriKind.Absolute) &&
+                    asset.browser_download_url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
                     return asset.browser_download_url;
                 }
@@ -351,15 +352,17 @@ internal static class LegacyUpdateChecker
 }
 
 [Serializable]
-internal sealed class LegacyGitHubReleaseResponse
+internal sealed class LegacyReleaseResponse
 {
     public string tag_name;
     public string html_url;
-    public LegacyGitHubReleaseAsset[] assets;
+    public bool draft;
+    public bool prerelease;
+    public LegacyReleaseAsset[] assets;
 }
 
 [Serializable]
-internal sealed class LegacyGitHubReleaseAsset
+internal sealed class LegacyReleaseAsset
 {
     public string browser_download_url;
     public string name;

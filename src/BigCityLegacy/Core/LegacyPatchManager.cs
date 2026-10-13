@@ -27,10 +27,17 @@ internal static class LegacyPatchManager
     private static void PatchFullMode()
     {
         PatchClass(typeof(GeneralPatches));
+        PatchClass(typeof(CarSaveIdentityPatches));
         PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
+        PatchClass(typeof(ServerConfigPatches));
         PatchClass(typeof(NetworkPatches));
+        PatchClass(typeof(ServerHeadlessOptimizationPatches));
+        PatchClass(typeof(ServerPerformancePatches));
+        PatchClass(typeof(ServerCarSleepPatches));
+        //PatchClass(typeof(ServerCarPresentationPatches)); NEEDS TO REWORK
+        PatchClass(typeof(ServerNetworkBufferPatches));
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(RuntimeQualityAndCursorPatches));
         PatchClass(typeof(ChatEventsPatches));
@@ -38,7 +45,8 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SettingsMenuPatches));
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));
-        PatchClass(typeof(CsDamageCooldownPatches));
+        PatchClass(typeof(CsPatches));
+        PatchClass(typeof(CsKillZonePatches));
         PatchClass(typeof(AsyncRequestString_Patch));
         PatchClass(typeof(NetManagerTools_OnEnable_Patch));
     }

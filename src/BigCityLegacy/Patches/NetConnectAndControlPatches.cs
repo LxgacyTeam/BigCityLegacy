@@ -77,12 +77,15 @@ internal static class NetConnectAndControlPatches
 
     [HarmonyPatch(typeof(NetInputControl), "DeliveryCar")]
     [HarmonyPrefix]
-    private static bool NetInputControl_DeliveryCar_Prefix(NetInputControl __instance, string fileName)
+    private static bool NetInputControl_DeliveryCar_Prefix(NetInputControl __instance, string fileName, out bool __state)
     {
+        __state = false;
         if (!NetManager.isServer)
         {
             return true;
         }
+
+        if (!LegacyCarSpawnTimeout.CanSpawn(__instance)) return false;
 
         Net_BaseEvent curEvent = __instance.curEvent;
         if (curEvent is Net_CS && curEvent.state != Net_BaseEvent.CurState.Lobbi && curEvent.state != Net_BaseEvent.CurState.Complite)
@@ -108,7 +111,15 @@ internal static class NetConnectAndControlPatches
         }
 
         LegacyServerAdminService.RegisterCarSpawnRequest(__instance);
+        __state = true;
         return true;
+    }
+
+    [HarmonyPatch(typeof(NetInputControl), "DeliveryCar")]
+    [HarmonyPostfix]
+    private static void NetInputControl_DeliveryCar_Postfix(NetInputControl __instance, bool __state, bool __runOriginal)
+    {
+        if (__state && __runOriginal && NetManager.isServer) LegacyCarSpawnTimeout.Spawned(__instance);
     }
 
     [HarmonyPatch(typeof(NetConnect), "InitInputControl")]
@@ -420,4 +431,17 @@ internal static class NetConnectAndControlPatches
         return false; 
     }
 
+    [HarmonyPatch(typeof(WeatherManager), "UpdateSwitchByTime")]
+    [HarmonyPrefix]
+    private static bool WeatherManager_UpdateSwitchByTime_Prefix()
+    {
+        return !LegacyWeatherLock.IsEnabled;
+    }
+
+    [HarmonyPatch(typeof(WeatherManager), "RandomIfNeed")]
+    [HarmonyPrefix]
+    private static bool WeatherManager_RandomIfNeed_Prefix()
+    {
+        return !LegacyWeatherLock.IsEnabled;
+    }
 }

@@ -6,18 +6,21 @@ After=network.target
 
 [Service]
 Type=simple
-
 User=root
 Group=root
+WorkingDirectory=/opt/MadOut2_server
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/bin/bash /opt/MadOut2_server/systemd-wrapper.sh %i
 
-WorkingDirectory=/opt/MadOut2_linux
-
-ExecStart=/opt/MadOut2_linux/systemd-wrapper.sh %i
-
-ExecStop=/usr/bin/tmux send-keys -t madoutserver-%i C-c
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=35
 
 Restart=on-failure
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=madoutserver-%i
 
 [Install]
 WantedBy=multi-user.target

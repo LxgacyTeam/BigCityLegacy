@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "masterPort": 35000,
   "pollIntervalMs": 1500,
   "staleAfterMs": 6000,
   "servers": [
@@ -32,7 +31,7 @@
       "onlineProtocolVersion": 93,
       "includeInAuto": true,
       "showIfOffline": false,
-      "self": true
+      "self": false
     }
   ]
 }

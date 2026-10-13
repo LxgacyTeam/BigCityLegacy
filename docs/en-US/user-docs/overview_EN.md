@@ -1,5 +1,7 @@
 # Overview
 
+In About, select GitHub or Codeberg for all repository requests. The choice is saved in PlayerPrefs. On first launch, a Chinese OS language or China region defaults to Codeberg. The online installer also offers a source selector and defaults to Codeberg when its Chinese UI language is selected. The updater Download button downloads and launches the online installer on Windows; on other platforms it opens the mod ZIP download. Startup server-list choices are No, Official (default), and Last. Official preserves the last manually entered mirror.
+
 **BigCityLegacy** is a project aimed at fully restoring online functionality for the Steam version of MadOut2 BigCityOnline in order to preserve the original gameplay experience and the history of the game.
 
 The project is a game modification distributed as a BepInEx 5 plugin.
@@ -21,12 +23,16 @@ The project is a game modification distributed as a BepInEx 5 plugin.
 * The mod includes Point Tool v2 for convenient creation of custom events: coordinate chains for checkpoints or positions.
 * The mod adds several hotkeys:
   - `F5` - quick weather switch.
-  - `F6` - instant spawn of the last selected car, without timeouts.
+  - `F6` - quickly spawn the last selected car; online requests respect the server `CarSpawnTimeout`.
   - `F12` - emergency disconnect from the server, useful when the game gets stuck on a black screen.
 * The mod can remove the FPS limit by setting the limit to 10000.
 * The mod adds an option to enable player character shadows. This is enabled by default.
 
 # Launch arguments
+
+> [!WARNING]
+> Starting with version 1.4.0, default server settings are managed by the `ServerConfig.toml` file located in `BigCityLegacy\config`.
+> See the relevant section for details: [Server Configuration Description](./server_EN.md)
 
 The mod has many launch parameters, or launch arguments, passed to the game executable. They are used mostly for launching the server, but there are also client-side parameters.
 
@@ -56,6 +62,7 @@ Arguments with values use a strict colon syntax:
 | -forceFullMode | Force the mod to run in full mode on game versions below 9.4. | - |
 | -forceCompatMode | Force the mod to run in Compatibility Mode. | - |
 | -noUpdCheck | Disable automatic update checking on game or server startup. | - |
+| -perfmon | Enable the performance monitor (an overlay displaying statistics on resource usage and load). | - |
 
 #### Server arguments
 
@@ -69,13 +76,16 @@ Arguments with values use a strict colon syntax:
 | -Mode:[value] | Game mode on the server. | None / RP / Race / CS / CS_Sur |
 | -maxCars:[value] | Maximum possible number of cars on the server.<br />Default: 100 | Number of cars; 0 = unlimited. |
 | -maxCarsByPlayer:[value] | Maximum possible number of cars per player.<br />Default: 15 | Number of cars; 0 = unlimited. |
+| -CarSpawnTimeout:[value] | Minimum interval between car spawns by the same player. Default: 1000 ms. | Integer milliseconds; 0 = no delay. |
 | -maxNikLength:[value] | Maximum possible player nickname length on the server.<br />Default: 20 | Nickname length; 0 = unlimited. |
 | -noChatEvents | Disables chat notifications about server events, currently player connect/disconnect messages. | - |
 | -idleKickTimeout:[value] | Timeout before kicking a player for inactivity, idle-kick.<br /><br />Default: 120s | `{n}` or `{n}s` - value in seconds; `{n}ms` - value in milliseconds. Examples: 120, 60s, 90000ms; 0 = disables idle-kick. |
 | -useVanillaRespawn | Enables the original respawn system after death, disabling RespawnPoints.json. | - |
 | -masterServer | Launch the mirror server. | - |
-| -serversList:[path] | Manually specify the path to the mirror server config. By default, the config is read from BigCityLegacy/ServersList.json. Use only if you want to specify another file. | Path to the Mirror server config file. |
-| -eventsList:[path] | Manually specify the path to the event list file. By default, the list is read from BigCityLegacy/Events.json. Use only if you want to specify another file. | Path to the event list file. |
+| -serversList:[path] | Manually specify the path to the mirror server config. By default, the config is read from BigCityLegacy/config/ServersList.json. Use only if you want to specify another file. | Path to the Mirror server config file. |
+| -serverConfig:[path] | ServerConfig.toml | BigCityLegacy/config/ServerConfig.toml |
+| -eventsDir:[path] | Directory of individual event JSON files. | BigCityLegacy/events |
+| -eventsList:[path] | Legacy collection used only for migration into individual event files. | Path to the old Events.json. |
 | -respawnPoints:[path] | Manually specify the path to the respawn point list file. By default, the list is read from BigCityLegacy/RespawnPoints.json. Use only if you want to specify another file. | Path to the respawn point file. |
 | -banList:[path] | Manually specify the path to the list of banned players. By default, the list is read from BigCityLegacy/BanList.json. Use only if you want to specify another file. | Path to the list of banned players. |
 | -masterDebug | Print detailed logs about mirror server operation. | - |
@@ -103,6 +113,9 @@ Launch the **server** in base mode, game server only:
 game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Race
 ```
 
+Set `masterServer = false` in TOML for this base server example. [Server configuration](./server_EN.md) describes the options.
+
+
 Launch the **server** in master mode, game server + mirror:
 
 ```
@@ -122,7 +135,7 @@ game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Ra
 ```
 
 > [!NOTE]
-> The mod package includes `runServer.cmd` and `runServer.sh` scripts for quickly launching a server. They provide convenient parameter configuration inside the files.
+> The mod package includes `runServer.cmd` and `runServer.sh` scripts for quickly launching a server. Server parameters are configured in `BigCityLegacy/config/ServerConfig.toml`.
 
 # Compatibility Mode
 

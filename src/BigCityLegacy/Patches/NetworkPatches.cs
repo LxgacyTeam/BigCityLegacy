@@ -62,6 +62,7 @@ internal static class NetworkPatches
         LegacyServerDropCleanup.ResetForServerStart();
         Debug.Log("DIRECT CONNECT -> " + LegacyCommandLine.ConnectIP + ":" + LegacyCommandLine.ConnectPort.ToString());
         __instance.StartServer();
+        LegacyServerHeadlessBootstrap.Install(__instance.gameObject);
 
         if (!Application.isEditor || NetManager.me.enableMapInEditor)
         {
@@ -104,104 +105,7 @@ internal static class NetworkPatches
     {
     }
 
-    [HarmonyPatch(typeof(Nuligine), "Start")]
-    [HarmonyPostfix]
-    private static void Nuligine_Start_Postfix(Nuligine __instance)
-    {
-        if (LegacyServerHeadlessBootstrap.IsHeadlessServer)
-        {
-            LegacyServerHeadlessBootstrap.Install(__instance.gameObject);
-        }
-    }
 
-    [HarmonyPatch(typeof(GameUI), "Init")]
-    [HarmonyPrefix]
-    private static bool GameUI_Init_Prefix(GameUI __instance)
-    {
-        if (!LegacyServerHeadlessBootstrap.IsHeadlessServer)
-        {
-            return true;
-        }
-        GameUI.me = __instance;
-        if (__instance.ui)
-        {
-            UnityEngine.Object.Destroy(__instance.ui.gameObject);
-        }
-        __instance.ui = UnityEngine.Object.Instantiate<GameObject>(__instance.SplitScreenUI, __instance.transform);
-        __instance.ui.name = "Canvas";
-        __instance.ui.transform.ResetGlobal();
-        __instance.img = __instance.ui.transform.GetChild(0).GetComponent<RawImage>();
-        __instance.fadeUI = __instance.img.gameObject.GetOrAddComponent<FadeUI>();
-        __instance.img.enabled = false;
-        return false;
-    }
-
-    [HarmonyPatch(typeof(GroundLoader), "CreateLod")]
-    [HarmonyPrefix]
-    private static bool GroundLoader_CreateLod_Prefix()
-    {
-        return !LegacyServerHeadlessBootstrap.IsHeadlessServer;
-    }
-
-    [HarmonyPatch(typeof(NetChat), "Awake")]
-    [HarmonyPrefix]
-    private static bool NetChat_Awake_Prefix(NetChat __instance)
-    {
-        if (!IsHeadlessServerChat())
-        {
-            return true;
-        }
-        NetChat.me = __instance;
-        __instance.isNeedFill = 0;
-        return false;
-    }
-
-    [HarmonyPatch(typeof(NetChat), "LateUpdateManual")]
-    [HarmonyPrefix]
-    private static bool NetChat_LateUpdateManual_Prefix(NetChat __instance)
-    {
-        if (IsHeadlessServerChat())
-        {
-            __instance.RemoveUnusedLiveTimeMessages();
-            return false;
-        }
-        if (!__instance.inputField || !__instance.inputImage || !__instance.root)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    [HarmonyPatch(typeof(NetChat), "UpTxts")]
-    [HarmonyPrefix]
-    private static bool NetChat_UpTxts_Prefix()
-    {
-        return !NetManager.isServer || NetManager.isServerWithGraphics;
-    }
-
-    [HarmonyPatch(typeof(NetChat), "OnDestroy")]
-    [HarmonyPostfix]
-    private static void NetChat_OnDestroy_Postfix(NetChat __instance)
-    {
-        if (NetChat.me == __instance)
-        {
-            NetChat.me = null;
-        }
-    }
-
-    //[HarmonyPatch(typeof(RequestUDP), "get_ip_MainServer")]
-    //public static class Patch_ip_MainServer
-    //{
-    //    static void Postfix(ref IPEndPoint __result)
-    //    {
-    //        __result = new IPEndPoint(IPAddress.Parse("127.0.0.1"), __result.Port);
-    //    }
-    //}
-
-    private static bool IsHeadlessServerChat()
-    {
-        return NetManagerTools.isCommandLineArgHaveServerStr() && (NetManagerTools.isCommandLineArgBatchmode() || LegacyCommandLine.HasNoGraphics());
-    }
 }
 
 // disables 'Connection Error, post: /mirror/hand_shake' log spamming

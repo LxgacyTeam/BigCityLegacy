@@ -62,6 +62,8 @@ internal static class NetUIPatches
         }
         if (LegacyMasterClient.IsMasterListEnabled())
         {
+            await LegacyMasterClient.PrepareStartupAddress();
+            if (!owner || !owner.gameObject.activeInHierarchy || !LegacyMasterClient.IsMasterListEnabled()) return;
             IPEndPoint endpoint = LegacyMasterClient.GetMasterEndPoint();
             MasterDebugLog("UpdateServerListReq: master enabled, endpoint=" + (endpoint != null ? endpoint.ToString() : "null") + ", selectedMode=" + owner.selectMode.ToString());
             if (endpoint != null && !RequestUDP.isInRequest(endpoint, "/match/list/", 2000f))

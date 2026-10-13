@@ -103,6 +103,16 @@ internal static class LegacyNearestPointRespawn
 
     internal static bool TryGetNearestRespawnPoint(Vector3 currentPlayerPos, out Vector3 respawnPoint)
     {
+        return TryGetNearestRespawnPoint(currentPlayerPos, false, out respawnPoint);
+    }
+
+    internal static bool TryGetNearestSafeRespawnPoint(Vector3 currentPlayerPos, out Vector3 respawnPoint)
+    {
+        return TryGetNearestRespawnPoint(currentPlayerPos, true, out respawnPoint);
+    }
+
+    private static bool TryGetNearestRespawnPoint(Vector3 currentPlayerPos, bool avoidArenas, out Vector3 respawnPoint)
+    {
         respawnPoint = Vector3.zero;
 
         if (!IsReady)
@@ -110,21 +120,21 @@ internal static class LegacyNearestPointRespawn
             return false;
         }
 
-        RespawnPoint nearest = points[0];
-        float minDistanceSqr = (currentPlayerPos - nearest.position).sqrMagnitude;
-
-        for (int i = 1; i < points.Length; i++)
+        float minDistanceSqr = float.PositiveInfinity;
+        bool found = false;
+        for (int i = 0; i < points.Length; i++)
         {
             float distanceSqr = (currentPlayerPos - points[i].position).sqrMagnitude;
-            if (distanceSqr < minDistanceSqr)
+            if (!float.IsNaN(distanceSqr) && !float.IsInfinity(distanceSqr) &&
+                distanceSqr < minDistanceSqr &&
+                (!avoidArenas || LegacyCsKillZone.IsSafeRespawnPosition(points[i].position)))
             {
                 minDistanceSqr = distanceSqr;
-                nearest = points[i];
+                respawnPoint = points[i].position;
+                found = true;
             }
         }
-
-        respawnPoint = nearest.position;
-        return true;
+        return found;
     }
 
 
