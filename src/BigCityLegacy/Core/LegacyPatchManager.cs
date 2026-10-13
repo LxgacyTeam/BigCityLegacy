@@ -27,6 +27,7 @@ internal static class LegacyPatchManager
     private static void PatchFullMode()
     {
         PatchClass(typeof(GeneralPatches));
+        PatchClass(typeof(CarSaveIdentityPatches));
         PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
