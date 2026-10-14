@@ -1,7 +1,5 @@
 # Overview
 
-In About, select GitHub or Codeberg for all repository requests. The choice is saved in PlayerPrefs. On first launch, a Chinese OS language or China region defaults to Codeberg. The online installer also offers a source selector and defaults to Codeberg when its Chinese UI language is selected. The updater Download button downloads and launches the online installer on Windows; on other platforms it opens the mod ZIP download. Startup server-list choices are No, Official (default), and Last. Official preserves the last manually entered mirror.
-
 **BigCityLegacy** is a project aimed at fully restoring online functionality for the Steam version of MadOut2 BigCityOnline in order to preserve the original gameplay experience and the history of the game.
 
 The project is a game modification distributed as a BepInEx 5 plugin.
@@ -19,7 +17,7 @@ The project is a game modification distributed as a BepInEx 5 plugin.
   The original so-called events, meaning tracks and zones, were fully lost because they were loaded from the server and are not stored in the game client. Therefore, loading custom events is required for these modes to work. The current release includes only a few events as templates for creating your own. See the Event creation section.
 * The mod uses LegacyUIFramework, a custom framework for creating draggable windows and styled UI elements.
 * All mod UI elements support localization and react to language changes in the game settings.
-* The mod has a notification system for new updates.
+* The mod features an auto-update system (on Windows, an external installer handles auto-updates; on other platforms, a ZIP file is downloaded for manual installation).
 * The mod includes Point Tool v2 for convenient creation of custom events: coordinate chains for checkpoints or positions.
 * The mod adds several hotkeys:
   - `F5` - quick weather switch.
@@ -151,6 +149,8 @@ Compatibility Mode and support for older game versions are planned to be improve
 
 # Connecting to a server
 
+The mod provides several official public servers available immediately after entering the game.
+
 You can connect to a server through the **Server Connection** window.
 
 There are 2 tabs: **Master Connection** and **Direct Connection**.
@@ -158,3 +158,9 @@ There are 2 tabs: **Master Connection** and **Direct Connection**.
 When connecting to a Master, the game receives the server list from it and displays it in the menu. The address and port are saved.
 
 When using direct connection, the game immediately connects to the game server by IP and port. In this case, the online status will not be shown in the menu.
+
+# Data Source
+While running, the mod retrieves certain data from its Git repository (used for public server operations and the update system).
+If GitHub is inaccessible (e.g., in China), the data source can be switched to the Codeberg mirror.
+
+This switch is made in the "About Mod" window and applies globally to all functions.
