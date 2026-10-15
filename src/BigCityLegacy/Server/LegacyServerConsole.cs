@@ -11,8 +11,6 @@ using Debug = UnityEngine.Debug;
 
 public sealed class LegacyServerConsole : MonoBehaviour
 {
-    private const int MaxLogLinesCount = 1000000;
-
     private const uint AttachParentProcess = 0xFFFFFFFFU;
     private const int ErrorAccessDenied = 5;
     private const string AttachParentConsoleArg = "-attachParentConsole";
@@ -68,7 +66,6 @@ public sealed class LegacyServerConsole : MonoBehaviour
     private static bool readyStatusPrinted;
     private static IntPtr cachedBatchWindow = IntPtr.Zero;
 
-    private int logLinesCount;
     private bool batchWindowHideLogged;
     private bool batchWindowHideStopped;
     private int batchWindowHideAttempts;
@@ -191,15 +188,10 @@ public sealed class LegacyServerConsole : MonoBehaviour
         TryHideBatchModeWindow();
         ProcessPendingCommands();
 
-        if (logLinesCount > MaxLogLinesCount)
-        {
-            LegacyServerShutdown.Request("log line limit exceeded (" + logLinesCount.ToString() + ")");
-        }
     }
 
     private void HandleLog(string message, string stackTrace, LogType type)
     {
-        logLinesCount++;
         TryPrintServerReadyStatus(message);
 
         if (ShouldSuppressServerConsoleLog(message, stackTrace, type))
@@ -252,6 +244,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         if (WriteServerConsoleText(false, text + Environment.NewLine))
         {
+            LegacyServerLog.Record(LegacyServerLogLevel.Log, "Console", text);
             return;
         }
 
@@ -368,6 +361,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
             try
             {
+                LegacyServerLog.Record(LegacyServerLogLevel.Log, "Console", "> " + command);
                 LegacyServerCli.Execute(command);
             }
             catch (Exception ex)
@@ -1027,7 +1021,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
         }
 
         readyStatusPrinted = true;
-        WriteServerConsoleText(false, "[Status] Server ready. World loaded successfully." + Environment.NewLine);
+        WriteAdminLine("[Status] Server ready. World loaded successfully.");
         StartCommandReaderIfNeeded();
     }
 

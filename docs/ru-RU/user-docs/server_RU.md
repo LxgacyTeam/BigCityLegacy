@@ -16,7 +16,8 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 | `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (по умолчанию `true`), `masterPort` (по умолчанию `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
-| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noLogFile`, `noUpdCheck` |
+| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
+| `logging` | `logsDir`, `noLogging`, `logLevel`, `serverDiagnostics` |
 
 
 Пример конфигурации:
@@ -56,8 +57,13 @@ banList = ''
 noServerConsole = false
 noServerCli = false
 verboseServerConsole = false
-noLogFile = true
 noUpdCheck = false
+
+[logging]
+logsDir = ''
+noLogging = false
+logLevel = "Log"
+serverDiagnostics = false
 ```
 
 
@@ -209,3 +215,28 @@ GUID - уникальный идентификатор игрового проф
 Пример команды для бана игрока по IP с PlayerID 52: `ban 52 2`
 
 Пример разбана игрока с BanID 37: `unban 37`
+
+## Логирование и диагностика
+
+При каждом запуске сервера создаётся отдельный файл `BigCityLegacy/logs/yyyy-MM-dd_HH-mm-ss-fff.log`. Время в именах и записях — UTC. Файл содержит сообщения Unity из всех потоков, логи BepInEx без повторного копирования Unity и логический вывод консоли BCL, включая введённые CLI-команды. Записи содержат уровень, источник и номер потока; переданный Unity stack trace сохраняется. Записи сбрасываются в файловую систему сразу, история в памяти BCL не накапливается. Файлы создаются атомарно и не перезаписываются при совпадении времени запуска нескольких экземпляров. Старые файлы сохраняются без автоматического удаления.
+
+Параметры секции `[logging]` доступны также как аргументы запуска:
+
+| TOML | Аргумент | Назначение |
+| --- | --- | --- |
+| `logsDir = ''` | `-logsDir:"server-logs/instance-1"` | Папка логов. Пустое значение использует `BigCityLegacy/logs`. Относительный путь отсчитывается от папки игры; поддерживаются абсолютные пути. Папка создаётся автоматически. |
+| `noLogging = false` | `-noLogging` | Отключить файловый лог BCL; по умолчанию он включён. |
+| `logLevel = "Log"` | `-logLevel:Warning` | Минимальный уровень: `Log`, `Warning`, `Error`, `Exception`, от менее к более серьёзному. `Assert` записывается как `Error`. |
+| `serverDiagnostics = false` | `-serverDiagnostics` | Включить подробную диагностическую трассировку. Для полного следа используйте `logLevel = "Log"`. |
+
+Диагностика пишет `ENTER`/`EXIT`/`THROW` с ID операции, родительским ID и глубиной вложенности вокруг получения сетевых буферов, диспетчеризации UNet, подключения игроков, спавна автомобилей, загрузки XML и назначения родительских объектов. Указываются размеры строк/буферов, позиции чтения, тип сообщения, канал, ID соединения и сетевого объекта, когда доступны. Трассировка не читает и не изменяет пакет, не сохраняет его содержимое и содержимое XML. При глубине 32 и 64 сохраняется текущий managed stack trace; каждые 30 секунд — сведения о памяти, GC и числе игроков. Диагностика повышает нагрузку на диск и включается для расследования. При `noLogging = true` она отключена; в обычном режиме её сетевые патчи не устанавливаются.
+
+На сервере отключено накопление GUI-истории Reporter, захваченные до инициализации записи очищаются. Счётчики NetManagerTools ограничиваются, остановки по миллиону сообщений нет. Эта защита действует и при отключённом файловом логировании. Поведение Reporter на клиенте сохраняется.
+
+Штатный `m_log_<port>.log` по умолчанию отключён. Аргумент **`-mlog`**, переданный при запуске, включает его независимо от лога BCL; параметр `mlog` в TOML не допускается. Unity `Player.log` не переименовывается. Лог BCL начинается с инициализации плагина; сообщения до этого момента в него не попадают. Ошибка доступа к файлу сообщается один раз в stderr, без обратной записи в Unity.
+
+Пример запуска для расследования:
+
+```text
+game.exe -bend_GameServer -batchmode -nographics -serverDiagnostics -logLevel:Log
+```

@@ -48,7 +48,8 @@ internal static class LegacyPatchManager
         PatchClass(typeof(CsPatches));
         PatchClass(typeof(CsKillZonePatches));
         PatchClass(typeof(AsyncRequestString_Patch));
-        PatchClass(typeof(NetManagerTools_OnEnable_Patch));
+        PatchClass(typeof(ServerLoggingPatches));
+        if (LegacyServerLog.DiagnosticsEnabled) PatchClass(typeof(ServerDiagnosticsPatches));
     }
 
     private static void PatchCompatibilityMode()

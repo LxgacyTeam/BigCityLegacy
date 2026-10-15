@@ -32,5 +32,10 @@ banList = ''
 noServerConsole = false
 noServerCli = false
 verboseServerConsole = false
-noLogFile = true
 noUpdCheck = false
+
+[logging]
+# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.
+logsDir = ''
+noLogging = false
+logLevel = "Log"

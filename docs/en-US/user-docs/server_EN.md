@@ -16,7 +16,8 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 | `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
-| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noLogFile`, `noUpdCheck` |
+| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
+| `logging` | `logsDir`, `noLogging`, `logLevel`, `serverDiagnostics` |
 | `repository` | `repositorySource`: `GitHub`, `Codeberg`, or an empty string to use the saved PlayerPrefs choice |
 
 Example configuration:
@@ -56,8 +57,13 @@ banList = ''
 noServerConsole = false
 noServerCli = false
 verboseServerConsole = false
-noLogFile = true
 noUpdCheck = false
+
+[logging]
+logsDir = ''
+noLogging = false
+logLevel = "Log"
+serverDiagnostics = false
 ```
 
 The game server can generally work in 2 modes: **Master** and **Base**.
@@ -208,3 +214,28 @@ Each ban entry is stored in the following format:
 Example command to ban a player by IP with PlayerID 52: `ban 52 2`.
 
 Example command to unban a player with BanID 37: `unban 37`.
+
+## Logging and diagnostics
+
+Each server start creates a separate `BigCityLegacy/logs/yyyy-MM-dd_HH-mm-ss-fff.log` file. Filenames and record timestamps use UTC. It captures Unity messages from all threads, BepInEx logs without duplicating Unity messages, and BCL console output including entered CLI commands. Records include severity, source, thread ID and any stack trace supplied by Unity. Each record is flushed immediately; BCL retains no in-memory history. Atomic file creation prevents overwriting another instance's log when startup timestamps coincide. Existing logs are retained without automatic deletion.
+
+The `[logging]` options also accept launch arguments:
+
+| TOML | Argument | Purpose |
+| --- | --- | --- |
+| `logsDir = ''` | `-logsDir:"server-logs/instance-1"` | Log directory. An empty value uses `BigCityLegacy/logs`. Relative paths resolve from the game directory; absolute paths are supported. The directory is created automatically. |
+| `noLogging = false` | `-noLogging` | Disable the BCL file log, which is enabled by default. |
+| `logLevel = "Log"` | `-logLevel:Warning` | Minimum severity: `Log`, `Warning`, `Error`, `Exception`, from least to most severe. `Assert` maps to `Error`. |
+| `serverDiagnostics = false` | `-serverDiagnostics` | Enable detailed diagnostic tracing. Use `logLevel = "Log"` for a complete trace. |
+
+Diagnostics writes `ENTER`/`EXIT`/`THROW` records with operation ID, parent ID and nesting depth around network buffer reception, UNet dispatch, player initialization, car spawning, XML loading and parent assignment. It records string/buffer sizes, reader positions, message type, channel, connection ID and network object ID when available. It does not consume or modify packets or save packet/XML contents. Managed stacks are recorded at nesting depths 32 and 64; memory, GC and player counts are sampled every 30 seconds. Tracing increases disk traffic and is intended for investigations. `noLogging = true` disables diagnostics; ordinary runs do not install its network patches.
+
+Servers do not accumulate Reporter's GUI history; records captured before initialization are cleared. NetManagerTools counters are bounded and reaching one million messages does not stop the server. This protection remains active with file logging disabled. Client Reporter behavior is preserved.
+
+The native `m_log_<port>.log` is disabled by default. The launch-only **`-mlog`** flag enables it independently of BCL logging; `mlog` is not accepted in TOML. Unity's `Player.log` is not renamed. BCL captures messages starting at plugin initialization, not earlier startup output. File access failures are reported once to stderr without logging back into Unity.
+
+Example investigation launch:
+
+```text
+game.exe -bend_GameServer -batchmode -nographics -serverDiagnostics -logLevel:Log
+```
