@@ -13,7 +13,7 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 
 | Section | Options |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
 | `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
@@ -36,6 +36,7 @@ maxCarsByPlayer = 15
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
+disconnectedKickTimeout = "30s"
 noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
@@ -163,6 +164,8 @@ A Master server is required if you want to run several game servers at once and 
 
 # Administration and CLI interface
 
+In an interactive Linux console (including tmux), ↑/↓ browse up to 100 recent nonempty commands. Consecutive duplicates are omitted. Moving down past the newest entry restores the unfinished input. ←/→, Home/End, Backspace/Delete and Ctrl+U (clear line) are supported. Long input scrolls horizontally; the line limit is 4096 characters. History lasts for the current process only. Log output preserves the input text. Redirected input and `TERM=dumb` use ordinary line input without interactive history.
+
 While the game server is running, it can be controlled through the interactive CLI interface in the server console window. The following commands are supported:
 
 
@@ -217,7 +220,7 @@ Example command to unban a player with BanID 37: `unban 37`.
 
 ## Logging and diagnostics
 
-Each server start creates a separate `BigCityLegacy/logs/yyyy-MM-dd_HH-mm-ss-fff.log` file. Filenames and record timestamps use UTC. It captures Unity messages from all threads, BepInEx logs without duplicating Unity messages, and BCL console output including entered CLI commands. Records include severity, source, thread ID and any stack trace supplied by Unity. Each record is flushed immediately; BCL retains no in-memory history. Atomic file creation prevents overwriting another instance's log when startup timestamps coincide. Existing logs are retained without automatic deletion.
+Each server start creates a separate `BigCityLegacy/logs/port_yyyy-MM-dd_HH-mm-ss-fff.log` file. Filenames and record timestamps use UTC. It captures Unity messages from all threads, BepInEx logs without duplicating Unity messages, and BCL console output including entered CLI commands. Records include severity, source, thread ID and any stack trace supplied by Unity. Each record is flushed immediately; BCL retains no in-memory history. Atomic file creation prevents overwriting another instance's log when startup timestamps coincide. Existing logs are retained without automatic deletion.
 
 The `[logging]` options also accept launch arguments:
 
@@ -230,12 +233,4 @@ The `[logging]` options also accept launch arguments:
 
 Diagnostics writes `ENTER`/`EXIT`/`THROW` records with operation ID, parent ID and nesting depth around network buffer reception, UNet dispatch, player initialization, car spawning, XML loading and parent assignment. It records string/buffer sizes, reader positions, message type, channel, connection ID and network object ID when available. It does not consume or modify packets or save packet/XML contents. Managed stacks are recorded at nesting depths 32 and 64; memory, GC and player counts are sampled every 30 seconds. Tracing increases disk traffic and is intended for investigations. `noLogging = true` disables diagnostics; ordinary runs do not install its network patches.
 
-Servers do not accumulate Reporter's GUI history; records captured before initialization are cleared. NetManagerTools counters are bounded and reaching one million messages does not stop the server. This protection remains active with file logging disabled. Client Reporter behavior is preserved.
-
-The native `m_log_<port>.log` is disabled by default. The launch-only **`-mlog`** flag enables it independently of BCL logging; `mlog` is not accepted in TOML. Unity's `Player.log` is not renamed. BCL captures messages starting at plugin initialization, not earlier startup output. File access failures are reported once to stderr without logging back into Unity.
-
-Example investigation launch:
-
-```text
-game.exe -bend_GameServer -batchmode -nographics -serverDiagnostics -logLevel:Log
-```
+The native `m_log_<port>.log` is disabled by default. The launch-only **`-mlog`** flag enables it independently of BCL logging

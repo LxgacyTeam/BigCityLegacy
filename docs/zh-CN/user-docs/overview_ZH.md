@@ -78,6 +78,7 @@ game.exe -arg1 -arg2 -arg3
 | -maxNikLength:[value] | 服务器上允许的最大玩家昵称长度。<br />默认值：20 | 昵称长度；0 = 无限制。 |
 | -noChatEvents | 禁用服务器事件的聊天通知，目前包括玩家连接和断开连接的消息。 | - |
 | -idleKickTimeout:[value] | 玩家无操作后被踢出的等待时间（闲置踢出）。<br /><br />默认值：120 秒 | `{n}` 或 `{n}s` - 秒数；`{n}ms` - 毫秒数。示例：120、60s、90000ms；0 = 禁用闲置踢出。 |
+| -disconnectedKickTimeout:[value] | 断线后的会话保留时间，与挂机计时器独立。默认 30 秒。 | 30s; 0 = off |
 | -useVanillaRespawn | 启用原版的死亡后重生系统，禁用 RespawnPoints.json。 | - |
 | -masterServer | 启动 Mirror 服务器。 | - |
 | -serversList:[path] | 手动指定 Mirror 服务器配置的路径。默认从 BigCityLegacy/config/ServersList.json 读取。仅在需要指定其他文件时使用。 | Mirror 服务器配置文件的路径。 |

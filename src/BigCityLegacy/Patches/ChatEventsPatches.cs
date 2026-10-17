@@ -17,7 +17,9 @@ internal static class ChatEventsPatches
     [HarmonyPostfix]
     private static void NetConnect_InitInputControl_Postfix(NetConnect __instance)
     {
-        LegacyChatEventQueue.Enqueue(__instance.netInput, " + connected");
+        NetInputControl input = __instance.netInput;
+        if (input == null) return;
+        LegacyChatEventQueue.Enqueue(input, input.connectionCreateCount > 1 ? " + reconnected" : " + connected");
     }
 
     [HarmonyPatch(typeof(NetManager), "OnServerDisconnect")]

@@ -16,14 +16,15 @@ internal sealed class LegacyServerLogWriter : IDisposable
     internal LegacyServerLogLevel Minimum { get; private set; }
     internal string Failure { get; private set; }
 
-    internal LegacyServerLogWriter(string directory, LegacyServerLogLevel minimum)
+    internal LegacyServerLogWriter(string directory, LegacyServerLogLevel minimum, int serverPort)
     {
+        if (serverPort < 1 || serverPort > 65535) throw new ArgumentOutOfRangeException(nameof(serverPort));
         Directory.CreateDirectory(directory);
         Minimum = minimum;
         DateTime timestamp = DateTime.UtcNow;
         for (int attempt = 0; ; attempt++)
         {
-            string path = Path.Combine(directory, timestamp.AddMilliseconds(attempt).ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".log");
+            string path = Path.Combine(directory, serverPort.ToString(CultureInfo.InvariantCulture) + "_" + timestamp.AddMilliseconds(attempt).ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".log");
             FileStream stream;
             try { stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read); }
             catch (IOException) { if (attempt < 9999 && File.Exists(path)) continue; throw; }

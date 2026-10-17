@@ -14,7 +14,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 
 | 节 | 参数 |
 | --- | --- |
-| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
+| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
 | `mirror` | `masterServer`（默认 `true`）、`masterPort`（默认 `35000`）、`masterDebug` |
 | `files` | `serversList`、`eventsDir`、`respawnPoints`、`banList` |
 | `console` | `noServerConsole`、`noServerCli`、`verboseServerConsole`、`noUpdCheck` |
@@ -37,6 +37,7 @@ maxCarsByPlayer = 15
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
+disconnectedKickTimeout = "30s"
 noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
@@ -165,6 +166,8 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 # 管理与 CLI
 
+在交互式 Linux 控制台（包括 tmux）中，↑/↓ 可浏览最近最多 100 条非空命令，连续重复的命令只保留一条。在最新记录后按 ↓ 可恢复尚未提交的输入。支持 ←/→、Home/End、Backspace/Delete 和 Ctrl+U（清空输入）。长命令会水平滚动，输入上限为 4096 个字符。历史仅保留到当前进程结束；日志输出会保留正在输入的文本。重定向输入和 `TERM=dumb` 使用普通的逐行输入，不提供交互式历史。
+
 游戏服务器运行期间，可以通过服务器控制台窗口中的交互式 CLI 进行控制。支持以下命令：
 
 | 命令 | 操作 |
@@ -219,7 +222,7 @@ GUID 是存储在 PlayerPrefs 中的唯一游戏档案标识符，每次游戏�
 
 ## 日志与诊断
 
-服务器每次启动都会创建独立文件 `BigCityLegacy/logs/yyyy-MM-dd_HH-mm-ss-fff.log`。文件名和记录时间均使用 UTC。日志收集所有线程的 Unity 消息、BepInEx 日志（避免重复记录 Unity 消息），以及 BCL 控制台输出和输入的 CLI 命令。每条记录包含级别、来源、线程 ID 及 Unity 提供的堆栈信息。记录会立即刷新到文件系统，BCL 不在内存中保留历史列表。采用原子文件创建方式，即使多个实例同时启动也不会覆盖彼此的文件。旧日志不会自动删除。
+服务器每次启动都会创建独立文件 `BigCityLegacy/logs/port_yyyy-MM-dd_HH-mm-ss-fff.log`。文件名和记录时间均使用 UTC。日志收集所有线程的 Unity 消息、BepInEx 日志（避免重复记录 Unity 消息），以及 BCL 控制台输出和输入的 CLI 命令。每条记录包含级别、来源、线程 ID 及 Unity 提供的堆栈信息。记录会立即刷新到文件系统，BCL 不在内存中保留历史列表。采用原子文件创建方式，即使多个实例同时启动也不会覆盖彼此的文件。旧日志不会自动删除。
 
 `[logging]` 配置项也可通过启动参数设置：
 
@@ -232,12 +235,5 @@ GUID 是存储在 PlayerPrefs 中的唯一游戏档案标识符，每次游戏�
 
 诊断会在网络缓冲区接收、UNet 消息分发、玩家初始化、车辆生成、XML 加载和父对象设置前后记录 `ENTER`、`EXIT` 或 `THROW`，包含操作 ID、父操作 ID 和嵌套深度。还会记录字符串/缓冲区大小、读取位置、消息类型、通道，以及可用的连接 ID 和网络对象 ID。诊断不会读取或修改数据包，也不会保存数据包或 XML 的内容。嵌套深度达到 32 和 64 时记录托管堆栈；每 30 秒记录内存、GC 和玩家数量。诊断会增加磁盘负载，适合排查故障时启用。`noLogging = true` 会禁用诊断；普通启动不会安装诊断所用的网络补丁。
 
-服务器不再积累 Reporter 的 GUI 日志历史，并会清理初始化前已收集的记录。NetManagerTools 计数器受到限制，达到一百万条消息不会导致服务器退出。禁用文件日志时仍保留此保护。客户端 Reporter 的行为保持不变。
+原生 `m_log_<port>.log` 默认禁用，只能通过启动参数 **`-mlog`** 单独启用；
 
-原生 `m_log_<port>.log` 默认禁用，只能通过启动参数 **`-mlog`** 单独启用；TOML 不接受 `mlog`。Unity 的 `Player.log` 不会重命名。BCL 日志从插件初始化开始收集，不包含更早的启动输出。文件访问失败只向 stderr 报告一次，不会回写 Unity 日志。
-
-排查启动示例：
-
-```text
-game.exe -bend_GameServer -batchmode -nographics -serverDiagnostics -logLevel:Log
-```

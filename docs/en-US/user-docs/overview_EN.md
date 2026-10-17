@@ -80,6 +80,7 @@ Arguments with values use a strict colon syntax:
 | -maxNikLength:[value] | Maximum possible player nickname length on the server.<br />Default: 20 | Nickname length; 0 = unlimited. |
 | -noChatEvents | Disables chat notifications about server events, currently player connect/disconnect messages. | - |
 | -idleKickTimeout:[value] | Timeout before kicking a player for inactivity, idle-kick.<br /><br />Default: 120s | `{n}` or `{n}s` - value in seconds; `{n}ms` - value in milliseconds. Examples: 120, 60s, 90000ms; 0 = disables idle-kick. |
+| -disconnectedKickTimeout:[value] | Session retention after disconnection, independent of AFK. Default: 30 seconds. | 30s; 0 = off |
 | -useVanillaRespawn | Enables the original respawn system after death, disabling RespawnPoints.json. | - |
 | -masterServer | Launch the mirror server. | - |
 | -serversList:[path] | Manually specify the path to the mirror server config. By default, the config is read from BigCityLegacy/config/ServersList.json. Use only if you want to specify another file. | Path to the Mirror server config file. |

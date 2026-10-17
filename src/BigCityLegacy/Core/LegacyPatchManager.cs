@@ -36,6 +36,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(ServerHeadlessOptimizationPatches));
         PatchClass(typeof(ServerPerformancePatches));
         PatchClass(typeof(ServerCarSleepPatches));
+        PatchClass(typeof(ServerCarAudioPatches));
         //PatchClass(typeof(ServerCarPresentationPatches)); NEEDS TO REWORK
         PatchClass(typeof(ServerNetworkBufferPatches));
         PatchClass(typeof(RaceAndWorldPatches));

@@ -11,6 +11,7 @@ maxCarsByPlayer = 15
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
+disconnectedKickTimeout = "30s"
 noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false

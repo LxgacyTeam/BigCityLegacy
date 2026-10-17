@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using BepInEx.Logging;
 using UnityEngine;
@@ -52,10 +53,13 @@ internal static class LegacyServerLog
                     string directory = Value(args, "-logsDir");
                     if (string.IsNullOrWhiteSpace(directory)) directory = Path.Combine(LegacyHelpers.ModDataPath, "logs");
                     else if (!Path.IsPathRooted(directory)) directory = Path.Combine(BepInEx.Paths.GameRootPath, directory);
-                    writer = new LegacyServerLogWriter(Path.GetFullPath(directory), level);
+                    int port;
+                    if (!int.TryParse(Value(args, "-port"), NumberStyles.Integer, CultureInfo.InvariantCulture, out port) || port < 1 || port > 65535)
+                        port = 7800;
+                    writer = new LegacyServerLogWriter(Path.GetFullPath(directory), level, port);
                     using (var process = Process.GetCurrentProcess())
                         writer.Write(LegacyServerLogLevel.Log, "Lifecycle", "BCL " + VersionInfo.ModVersionName + "; pid=" + process.Id +
-                            "; serverConfig=" + LegacyServerConfig.LoadedPath + "; diagnostics=" + DiagnosticsEnabled + "; mlog=" + NativeMLogEnabled, null, true);
+                            "; port=" + port + "; serverConfig=" + LegacyServerConfig.LoadedPath + "; diagnostics=" + DiagnosticsEnabled + "; mlog=" + NativeMLogEnabled, null, true);
                 }
                 catch (Exception ex) { ReportFailure(ex.GetType().Name + ": " + ex.Message); }
             }

@@ -350,7 +350,16 @@ internal static class ServerCarSleepPatches
             return;
         }
 
-        car.UpBodyInfo();
+        car.body_pos = car.body.position;
+        car.body_rot = car.body.rotation;
+        car.body_rot_inv = Quaternion.Inverse(car.body_rot);
+        car.body_dir = car.body_rot * Consts.vec3_forward;
+        car.body_linearW = car.body.velocity;
+        car.body_angularW = car.body.angularVelocity;
+        car.body_linear_diff = Vector3.zero;
+        car.body_linear = car.body_rot_inv * car.body_linearW;
+        car.linM = car.body_linearW.magnitude;
+        car.angM = car.body_angularW.magnitude;
         car.ph_car.WasMovedResetForces();
 
         car.CheckBodySleep();

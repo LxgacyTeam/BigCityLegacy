@@ -14,7 +14,7 @@ internal static class NetConnectAndControlPatches
     [HarmonyPrefix]
     private static bool NetInputControl_CheckDisconnect_Prefix(NetInputControl __instance)
     {
-        if (!NetManager.isServer || !LegacyIdleKickTimeout.HasOverride)
+        if (!NetManager.isServer)
         {
             return true;
         }
