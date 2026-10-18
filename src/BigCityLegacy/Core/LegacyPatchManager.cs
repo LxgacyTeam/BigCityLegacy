@@ -44,6 +44,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(ChatEventsPatches));
         PatchClass(typeof(PlayerPropertiesPatches));
         PatchClass(typeof(ShadowFixPatches));
+        PatchClass(typeof(RemoteLookPatches));
         PatchClass(typeof(SettingsMenuPatches));
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));

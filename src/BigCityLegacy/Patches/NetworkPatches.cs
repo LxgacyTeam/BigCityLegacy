@@ -60,6 +60,7 @@ internal static class NetworkPatches
         LegacyBanList.TryLoad();
         LegacyServerAdminService.ResetForServerStart();
         LegacyServerDropCleanup.ResetForServerStart();
+        LegacyRespawnHistory.Clear();
         Debug.Log("DIRECT CONNECT -> " + LegacyCommandLine.ConnectIP + ":" + LegacyCommandLine.ConnectPort.ToString());
         __instance.StartServer();
         LegacyServerHeadlessBootstrap.Install(__instance.gameObject);
@@ -103,6 +104,14 @@ internal static class NetworkPatches
     [HarmonyPostfix]
     private static void NetManager_NowStoped_Postfix()
     {
+        LegacyRespawnHistory.Clear();
+    }
+
+    [HarmonyPatch(typeof(NetInputControl), "OnDestroy")]
+    [HarmonyPrefix]
+    private static void NetInputControl_OnDestroy_Prefix(NetInputControl __instance)
+    {
+        LegacyRespawnHistory.Forget(__instance);
     }
 
 

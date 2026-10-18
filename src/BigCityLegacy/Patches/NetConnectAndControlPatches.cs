@@ -380,8 +380,17 @@ internal static class NetConnectAndControlPatches
         }
 
         Quaternion identity = Quaternion.identity;
-        Net_BaseEvent.isNeedAutoRespaumWhenDeadStatic(__instance.netInput, ref spawnPos, ref identity);
+        bool eventSpawn = Net_BaseEvent.isNeedAutoRespaumWhenDeadStatic(__instance.netInput, ref spawnPos, ref identity);
+        bool rotate = !eventSpawn && !LegacyCsKillZone.IsParticipant(__instance.netInput);
+        if (rotate)
+        {
+            Vector3 rotated;
+            if (LegacyNearestPointRespawn.TryGetRotatingRespawnPoint(__instance.netInput, currentPlayerPos, out rotated)) spawnPos = rotated;
+        }
+        else LegacyRespawnHistory.Forget(__instance.netInput);
+        float deathTime = currentPlayer.timeLiveZero;
         __instance.Spawn(spawnPos, identity, true, true);
+        if (rotate) LegacyNearestPointRespawn.RecordRespawn(__instance.netInput, __instance.pos, deathTime);
         return false;
     }
 
