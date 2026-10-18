@@ -95,6 +95,17 @@ internal static class LegacyCsDamageCooldown
         return false;
     }
 
+    internal static string DiagnosticState(PlayerControl player)
+    {
+        NetInputControl input = LegacyCsDiagnostics.Input(player);
+        Net_CS cs = input ? input.curEvent as Net_CS : null;
+        var member = cs && input ? cs.GetPlayerByInput(input) as Net_CS.CsBasePlayer : null;
+        int until = 0;
+        if (member != null) (NetManager.isServer ? ServerProtectionUntil : ClientProtectionUntil).TryGetValue(member, out until);
+        return "{enabled:" + ServerEnabled + ",respawn:" + (input && input.spawn && input.spawn.nowRespawn) +
+            ",until:" + until + ",timerActive:" + (until != 0 && IsBefore(NetworkTime.ServerTime, until)) + "}";
+    }
+
     internal static string AddServerStateToJson(Net_CS.CsBasePlayer player, string json)
     {
         if (!ServerEnabled || player == null || string.IsNullOrEmpty(json))

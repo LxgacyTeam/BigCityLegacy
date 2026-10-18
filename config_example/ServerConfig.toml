@@ -40,3 +40,7 @@ noUpdCheck = false
 logsDir = ''
 noLogging = false
 logLevel = "Log"
+
+# Optional CS/CS_Sur hit-registration trace; independent server/client files.
+csDiagnostics = false
+csDiagnosticsMaxShotsPerSecond = 60

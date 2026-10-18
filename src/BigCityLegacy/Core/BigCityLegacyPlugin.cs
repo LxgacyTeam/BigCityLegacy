@@ -47,6 +47,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             {
                 LegacyCommandLine.UpdateFromArgs();
                 _serverProcess = LegacyCommandLine.HasServerArg();
+                LegacyCsDiagnostics.Initialize();
 
                 LegacyServerConsole.PrepareForServerMode();
                 LegacyServerShutdown.Initialize();
@@ -82,6 +83,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 
     private void Update()
     {
+        LegacyCsDiagnostics.Tick();
         if (_serverProcess)
         {
             LegacyServerShutdown.Tick();
@@ -104,5 +106,6 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             Harmony = null;
         }
         LegacyServerLog.Shutdown();
+        LegacyCsDiagnostics.Shutdown();
     }
 }

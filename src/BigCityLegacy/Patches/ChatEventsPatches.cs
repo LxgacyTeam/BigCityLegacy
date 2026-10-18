@@ -6,6 +6,16 @@ using UnityEngine.Networking;
 [HarmonyPatch]
 internal static class ChatEventsPatches
 {
+    private static readonly HashSet<NetworkConnection> adminDisconnects = new HashSet<NetworkConnection>();
+
+    internal static void SendAdminDisconnect(NetConnect connect, string message)
+    {
+        if (!connect || connect.conn == null || !adminDisconnects.Add(connect.conn)) return;
+        SendChatMessage(connect.netInput, message);
+    }
+
+    internal static void ResetAdminDisconnects() { adminDisconnects.Clear(); }
+
     [HarmonyPatch(typeof(NetInputControl), "Cmd_InitNikName")]
     [HarmonyPostfix]
     private static void NetInputControl_CmdInitNikName_Postfix(NetInputControl __instance, string reasone)
@@ -26,6 +36,7 @@ internal static class ChatEventsPatches
     [HarmonyPrefix]
     private static void NetManager_OnServerDisconnect_Prefix(NetworkConnection conn)
     {
+        if (conn != null && adminDisconnects.Remove(conn)) return;
         if (conn == null || conn.clientOwnedObjects == null)
         {
             return;

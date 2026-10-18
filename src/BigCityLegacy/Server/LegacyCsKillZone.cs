@@ -42,6 +42,7 @@ internal static class LegacyCsKillZone
         if (now < state.LastCheckTime)
         {
             state.Intruders.Clear();
+            state.Cars.Clear();
         }
         state.LastCheckTime = now;
         state.Participants.Clear();
@@ -102,6 +103,10 @@ internal static class LegacyCsKillZone
                 continue;
             }
 
+            CarControl intrudingCar = current as CarControl;
+            if (intrudingCar && intrudingCar.net_control && !state.Cars.ContainsKey(intrudingCar.net_control))
+                state.Cars.Add(intrudingCar.net_control, now);
+
             state.Seen.Add(netInput);
             Exposure exposure;
             if (!state.Intruders.TryGetValue(netInput, out exposure) || exposure.Player != player)
@@ -120,6 +125,8 @@ internal static class LegacyCsKillZone
             Debug.Log("[CsKillZone] FreeRoam player '" + netInput.nikName +
                 "' killed after 5 seconds in arena '" + cs.name + "'.");
         }
+
+        CleanupIntrudingCars(cs, state, center, radiusSquared, now);
 
         state.Remove.Clear();
         foreach (NetInputControl netInput in state.Intruders.Keys)
@@ -149,6 +156,41 @@ internal static class LegacyCsKillZone
         state.Seen.Clear();
         state.Present.Clear();
         state.Participants.Clear();
+    }
+
+    private static void CleanupIntrudingCars(Net_CS cs, EventState state, Vector3 center, float radiusSquared, float now)
+    {
+        state.RemoveCars.Clear();
+        foreach (KeyValuePair<NetControl, float> pair in state.Cars)
+        {
+            NetControl netCar = pair.Key;
+            CarControl car = netCar ? netCar.control as CarControl : null;
+            if (!car || !IsFinite((car.body_pos - center).sqrMagnitude) || (car.body_pos - center).sqrMagnitude >= radiusSquared)
+            { state.RemoveCars.Add(netCar); continue; }
+            if (now - pair.Value < KillDelayMs) continue;
+            bool hasParticipant = false;
+            foreach (Control passenger in car.child_controls)
+                if (passenger && passenger.input && passenger.input.netInput &&
+                    (passenger.input.netInput.curEvent || state.Participants.Contains(passenger.input.netInput)))
+                { hasParticipant = true; break; }
+            if (hasParticipant) continue;
+            int ejected;
+            string error;
+            if (LegacyServerAdminService.TryDeleteCar(netCar, out ejected, out error))
+            {
+                state.RemoveCars.Add(netCar);
+                Debug.Log("[CsKillZone] Intruding car removed from arena '" + cs.name + "'; ejected=" + ejected + ".");
+            }
+            else
+            {
+                // Limit retries/logging for a malformed vehicle; never force-destroy attached passengers.
+                state.RetryCars.Add(netCar);
+                Debug.LogWarning("[CsKillZone] Could not remove intruding car: " + error);
+            }
+        }
+        foreach (NetControl car in state.RemoveCars) state.Cars.Remove(car);
+        foreach (NetControl car in state.RetryCars) state.Cars[car] = now;
+        state.RemoveCars.Clear(); state.RetryCars.Clear();
     }
 
     internal static bool IsInsideActiveZone(Vector3 position)
@@ -337,6 +379,9 @@ internal static class LegacyCsKillZone
     private sealed class EventState
     {
         internal float LastCheckTime;
+        internal readonly Dictionary<NetControl, float> Cars = new Dictionary<NetControl, float>();
+        internal readonly List<NetControl> RemoveCars = new List<NetControl>();
+        internal readonly List<NetControl> RetryCars = new List<NetControl>();
         internal readonly Dictionary<NetInputControl, Exposure> Intruders =
             new Dictionary<NetInputControl, Exposure>();
         internal readonly HashSet<NetInputControl> Participants = new HashSet<NetInputControl>();

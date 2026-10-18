@@ -29,6 +29,10 @@ internal static class CsPatches
             return true;
         }
 
+        if (LegacyCsDiagnostics.Enabled) LegacyCsDiagnostics.Safe(() => LegacyCsDiagnostics.Emit("COOLDOWN_BLOCK",
+            "target=" + LegacyCsDiagnostics.Id(__instance) + " damage=" + LegacyCsDiagnostics.F(val) +
+            " protection=" + LegacyCsDamageCooldown.DiagnosticState(__instance)));
+
         __result = __instance.isAlive;
         return false;
     }

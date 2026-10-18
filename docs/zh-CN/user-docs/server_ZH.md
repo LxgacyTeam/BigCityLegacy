@@ -65,7 +65,6 @@ noUpdCheck = false
 logsDir = ''
 noLogging = false
 logLevel = "Log"
-serverDiagnostics = false
 ```
 
 
@@ -175,8 +174,13 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | players | 显示服务器当前的玩家列表。 |
 | playerinfo {PlayerID} | 显示某位玩家的信息。 |
 | kick {PlayerID} | 踢出玩家。 |
-| ban {PlayerID} {1/2} | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
+| ban {PlayerID} {1/2} [time] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
 | unban {BanID} | 根据 BanID 解除封禁。 |
+| setprop {PlayerID} {prop} {0/1} [time] | 设置或移除属性；`help setprop` |
+| tp {PlayerID} {x y z/json} | 按坐标传送；`help tp` |
+| tpto {PlayerID} {to PlayerID} | 传送到玩家 |
+| clearchat | 清理聊天 |
+| help [setprop/tp] | 命令帮助 |
 | reloadcfg | 重新加载配置：EventsList、RespawnPoints、BanList。 |
 | msg {text} | 以服务器名义发送消息。详见下方说明。 |
 | cleardrop | 清理服务器上的所有掉落物：医疗包和武器。 |
@@ -192,33 +196,58 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 服务器会为每位玩家分配一个临时且唯一的 **PlayerID**，仅在该玩家当前的游戏会话中有效。每次有新玩家连接，PlayerID 计数器都会递增，且永不清零、永不递减。玩家重新连接服务器时会获得新的 PlayerID，旧 ID 不会再次使用。PlayerID 显示在 `players` 命令输出的玩家列表中。
 
-#### 封禁系统
+#### 封禁与玩家属性
 
-可通过两种方式封禁玩家：按玩家 GUID 或按玩家 IP。
+`ban <PlayerID> <1|2> [time]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
 
-GUID 是存储在 PlayerPrefs 中的唯一游戏档案标识符，每次游戏创建新档案或存档时都会生成。实际上，只需删除游戏存档就可以轻易绕过 GUID 封禁。
+GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另一个 GUID，因此按 GUID 封禁不能阻止创建新存档。
 
-解除封禁使用 **BanID**。该 ID 在封禁后输出到控制台，始终不变，并保存在封禁列表中。
+`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time]` 设置（`1`）或移除（`0`）属性。时长格式与封禁相同，移除时忽略时长。重复设置会替换该属性的时长。示例：`setprop 15 nochat 1 15m`、`setprop 15 nochat 0`。
 
-封禁列表存储在 `BanList.json` 中。如果启动多个服务器实例，每个实例都可以通过启动参数指定自己的文件。
-每条封禁记录按以下格式保存：
+| 属性 | 作用 |
+| --- | --- |
+| `noweapon` | 禁止射击及放置、引爆炸弹，并将所选武器切换为拳头。 |
+| `nomove` | 冻结角色并使其离开车辆。服务器拒绝移动和进入车辆；BCL 客户端还会屏蔽移动输入。原版客户端通过原有的地形加载与传送流程修正位置。 |
+| `nocars` | 禁止生成车辆，不删除已有车辆。 |
+| `nochat` | 不发送该玩家的聊天消息。 |
+| `invisible` | 在 BCL 客户端隐藏头顶昵称、生命条及地图标记，角色本身仍可见。原版客户端没有对应网络标志，继续按原有规则显示。此属性不发送聊天公告。 |
+
+封禁与属性保存在 `BigCityLegacy/config/BanList.json`，可用 `banList` 指定路径。属性仅按 GUID 匹配，即使同一记录按 IP 封禁。`until` 为 UTC 秒数形式的 Unix 时间戳，支持 JSON 数字或数字字符串；省略表示永久。封禁与各属性分别计时，过期后立即失效并由服务器定期从文件中清理。手动编辑后使用 `reloadcfg`。
 
 ```json
+{
+  "Version": 1,
+  "Bans": [
     {
       "BanID": 1,
       "GUID": "1d9b4ba4-76f9-417f-b275-49e863726cb7",
       "IP": "1.2.3.4",
-      "Type": 1,
-      "Nickname": "BadPlayer"
+      "Type": 0,
+      "Nickname": "BadPlayer",
+      "Props": [
+        { "Prop": "noweapon", "until": 1792388642 },
+        { "Prop": "nochat" }
+      ]
     }
-
+  ]
+}
 ```
 
-`Type` 定义封禁类型：1 = GUID，2 = IP。
+`Type`：`0` 为仅属性、未封禁；`1` 按 GUID 封禁；`2` 按 IP 封禁。临时封禁在 `Type`、`Nickname` 同级使用自己的 `until` 字段。
 
-按 IP 封禁 PlayerID 为 52 的玩家的命令示例：`ban 52 2`。
+`unban <BanID>` 解除封禁：若记录仍有属性，则保留并设置 `Type: 0`；否则删除记录。该命令不移除属性。`playerinfo <PlayerID>` 会显示有效属性，例如 `Props: noweapon (5h), nochat (perm)`。
 
-解除 BanID 为 37 的封禁记录的命令示例：`unban 37`。
+踢出与封禁公告显示具体原因和封禁时长，代替普通断开消息。启用聊天事件时，武器、车辆、聊天和移动限制也会发送公告。
+
+#### 传送与清理聊天
+
+`tp <PlayerID> <x y z|json>` 接受小数点坐标或 Point Tool 的 JSON，例如 `tp 15 100.5 20 -30` 或 `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90}`。JSON 必须包含 `x`、`y`、`z`，`yaw` 可选；省略时保留朝向。`tpto <PlayerID> <to PlayerID>` 将角色传送到另一玩家的当前位置。传送会离开车辆、保留生命值并使用原有地形加载流程；冻结角色传送后继续在新位置冻结。
+
+`clearchat` 清空服务器历史，并通过已有 RPC 发送空消息来替换原版客户端聊天历史，无需新客户端协议。空行高亮按原有聊天高亮时间消退。
+
+`help` 显示命令列表，`help setprop` 和 `help tp` 提供详细示例。
+
+CS/CS_Sur 比赛进行时，自由模式角色在竞技区内停留五秒后会被击杀；驶入区域的车辆在五秒后也会被删除，即使司机已下车。离开区域或载有赛事参与者的车辆不会被删除，删除前会先让乘客下车。
 
 ## 日志与诊断
 

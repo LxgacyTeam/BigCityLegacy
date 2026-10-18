@@ -25,6 +25,7 @@ internal static class LegacyServerAdminService
         nextPlayerId = 1;
         nextReconcileAt = 0f;
         serverStarted = true;
+        LegacyPlayerProperties.Reset();
     }
 
     internal static void Update()
@@ -35,6 +36,7 @@ internal static class LegacyServerAdminService
         }
 
         CleanupExpiredPendingCarSpawns();
+        LegacyPlayerProperties.Update();
 
         if (Time.realtimeSinceStartup < nextReconcileAt)
         {
@@ -43,6 +45,8 @@ internal static class LegacyServerAdminService
 
         nextReconcileAt = Time.realtimeSinceStartup + ReconcileInterval;
         ReconcileSessions();
+        LegacyBanList.ExpireRestrictions();
+        LegacyPlayerProperties.Refresh();
     }
 
     internal static bool TryRejectBannedConnection(NetConnect connect, string guid, string nickname)
@@ -172,11 +176,12 @@ internal static class LegacyServerAdminService
             return false;
         }
 
+        ChatEventsPatches.SendAdminDisconnect(session.Connect, "was kicked from server");
         Disconnect(session.Connect);
         return true;
     }
 
-    internal static bool BanAndKickPlayer(int playerId, int banType, out LegacyBanList.BanEntry ban, out string error)
+    internal static bool BanAndKickPlayer(int playerId, int banType, long? until, out LegacyBanList.BanEntry ban, out string error)
     {
         ban = null;
         error = null;
@@ -188,17 +193,63 @@ internal static class LegacyServerAdminService
             return false;
         }
 
-        if (!LegacyBanList.AddBan(player, banType, out ban, out error))
+        if (!LegacyBanList.AddBan(player, banType, until, out ban, out error))
         {
             return false;
         }
 
-        string kickError;
-        if (!KickPlayer(playerId, out kickError))
+        NetInputControl input;
+        if (TryGetInput(playerId, out input) && input.netConnect)
         {
-            Debug.LogWarning("[Server] Ban was saved but immediate disconnect failed: " + kickError);
+            ChatEventsPatches.SendAdminDisconnect(input.netConnect, until.HasValue ?
+                "was banned for " + LegacyAdminTime.Remaining(until) : "was permanently banned");
+            Disconnect(input.netConnect);
         }
+        return true;
+    }
 
+    internal static bool TryGetInput(int playerId, out NetInputControl input)
+    {
+        ReconcileSessions();
+        PlayerSession session;
+        input = null;
+        if (!sessionsByPlayerId.TryGetValue(playerId, out session) || !session.IsConnected || !session.Connect) return false;
+        input = session.Connect.netInput;
+        return input;
+    }
+
+    internal static bool SetPlayerProp(int playerId, string prop, bool enabled, long? until, out string error)
+    {
+        ServerPlayerSnapshot player;
+        if (!TryGetPlayer(playerId, out player)) { error = "PlayerID was not found."; return false; }
+        if (!LegacyBanList.SetProp(player, prop, enabled, until, out error)) return false;
+        LegacyPlayerProperties.Refresh();
+        NetInputControl input;
+        if (enabled && prop != "invisible" && TryGetInput(playerId, out input))
+        {
+            string action = prop == "noweapon" ? "has been banned from using weapons" :
+                prop == "nocars" ? "has been banned from using cars" : prop == "nochat" ? "has been muted" : "has been frozen";
+            ChatEventsPatches.SendChatMessage(input, action + (until.HasValue ? " for " + LegacyAdminTime.Remaining(until) : " permanently"));
+        }
+        return true;
+    }
+
+    internal static bool TeleportPlayer(int playerId, Vector3 position, float? yaw, out string error)
+    {
+        error = null;
+        if (float.IsNaN(position.x) || float.IsInfinity(position.x) || float.IsNaN(position.y) || float.IsInfinity(position.y) ||
+            float.IsNaN(position.z) || float.IsInfinity(position.z) || Mathf.Abs(position.x) > 1000000f ||
+            Mathf.Abs(position.y) > 1000000f || Mathf.Abs(position.z) > 1000000f)
+        { error = "Destination coordinates are invalid or outside the supported range."; return false; }
+        NetInputControl input;
+        if (!TryGetInput(playerId, out input) || !input.input || !input.input.currentPlayer || !input.spawn)
+        { error = "Player has no spawned character."; return false; }
+        PlayerControl player = input.input.currentPlayer;
+        if (!player.isAlive) { error = "The player is dead."; return false; }
+        Quaternion rotation = yaw.HasValue ? Quaternion.Euler(0f, yaw.Value, 0f) : player.body_rot;
+        // The stock spawn handshake loads distant terrain and resets smoothing without healing the player.
+        // Detach first: teleporting the player must not move another driver's car or its passengers.
+        input.spawn.Spawn(position, rotation, false, true);
         return true;
     }
 
@@ -280,7 +331,7 @@ internal static class LegacyServerAdminService
                netControl.control is CarControl;
     }
 
-    private static bool TryDeleteCar(NetControl netControl, out int ejected, out string error)
+    internal static bool TryDeleteCar(NetControl netControl, out int ejected, out string error)
     {
         ejected = 0;
         error = null;
@@ -334,7 +385,7 @@ internal static class LegacyServerAdminService
 
             if (!ReferenceEquals(owner, null))
             {
-                owner.MarkInactive("removed by CLI");
+                owner.MarkInactive("removed by server");
             }
 
             return true;
@@ -402,6 +453,33 @@ internal static class LegacyServerAdminService
             error = ex.Message;
             return false;
         }
+    }
+
+    internal static bool ClearChat(out string error)
+    {
+        error = null;
+        LegacyHelpers.EnsureServerNetChat(NetManager.me);
+        if (!NetChat.me) { error = "Server chat is not ready."; return false; }
+        NetChat chat = NetChat.me;
+        // The stock client only appends messages. Its history has eleven slots and its UI
+        // has nine rows, so replacing all eleven with empty strings erases both text columns.
+        // Do not use AddMessage: it intentionally rejects empty strings and rate-limits senders.
+        int count = chat.mesagess.Capacity;
+        for (int i = 0; i < count; i++)
+        {
+            chat.totalID = unchecked(chat.totalID + 1U);
+            var blank = new NetChat.ChatMessageStruct {
+                ID = chat.totalID, nikName = string.Empty, message = string.Empty,
+                color = Color.clear, showOverHead = false, liveTimeMsg = 1f, timeAdded = nTime.Ms_thisFrame
+            };
+            chat.CallRpc_NewMessage(blank);
+        }
+        chat.mesagess.Clear();
+        if (NetManager.isServerWithGraphics)
+        {
+            foreach (NetUI_ChatItem item in chat.txts) if (item) item.gameObject.SetActive(false);
+        }
+        return true;
     }
 
     private static NetInputControl FindAnyChatSender()

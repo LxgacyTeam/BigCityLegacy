@@ -30,7 +30,7 @@ internal static class LegacyServerCli
         {
             case "help":
             case "?":
-                PrintHelp();
+                PrintHelp(arguments);
                 return;
 
             case "players":
@@ -47,6 +47,24 @@ internal static class LegacyServerCli
 
             case "ban":
                 Ban(arguments);
+                return;
+
+            case "setprop":
+                SetProp(arguments);
+                return;
+
+            case "tp":
+                Teleport(arguments);
+                return;
+
+            case "tpto":
+                TeleportTo(arguments);
+                return;
+
+            case "clearchat":
+                string clearError;
+                LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.ClearChat(out clearError) ?
+                    "[CLI] Chat cleared." : "[CLI] Chat cleanup failed: " + clearError);
                 return;
 
             case "unban":
@@ -83,21 +101,54 @@ internal static class LegacyServerCli
         }
     }
 
-    private static void PrintHelp()
+    private static void PrintHelp(string topic)
     {
+        if (!string.IsNullOrWhiteSpace(topic))
+        {
+            switch (topic.Trim().ToLowerInvariant())
+            {
+                case "setprop":
+                    LegacyServerConsole.WriteAdminLine("[CLI] setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time]");
+                    LegacyServerConsole.WriteAdminLine("[CLI] 1 enables the restriction; 0 removes it. Optional time: 30s, 15m, 12h, 5d; omitted = permanent.");
+                    LegacyServerConsole.WriteAdminLine("[CLI]");
+                    LegacyServerConsole.WriteAdminLine("[CLI] \tnoweapon: block weapons;");
+                    LegacyServerConsole.WriteAdminLine("[CLI] \tnomove: freeze;");
+                    LegacyServerConsole.WriteAdminLine("[CLI] \tnocars: block car spawning;");
+                    LegacyServerConsole.WriteAdminLine("[CLI] \tnochat: mute;");
+                    LegacyServerConsole.WriteAdminLine("[CLI] \tinvisible: hide overhead UI and map marker (BCL client only).");
+                    LegacyServerConsole.WriteAdminLine("[CLI]");
+                    LegacyServerConsole.WriteAdminLine("[CLI] Example: setprop 15 nochat 1 15m | setprop 15 nochat 0");
+                    return;
+                case "tp":
+                    LegacyServerConsole.WriteAdminLine("[CLI] tp <PlayerID> <x y z|Point Tool JSON>");
+                    LegacyServerConsole.WriteAdminLine("[CLI]");
+                    LegacyServerConsole.WriteAdminLine("[CLI] Examples: tp 15 10.5 20 -30 | tp 15 {\"x\":10.5,\"y\":20,\"z\":-30,\"yaw\":90}");
+                    LegacyServerConsole.WriteAdminLine("[CLI]");
+                    LegacyServerConsole.WriteAdminLine("[CLI] Use decimal dots. JSON yaw is optional; without it the current rotation is kept. Teleporting exits vehicles.");
+                    LegacyServerConsole.WriteAdminLine("[CLI] tpto <PlayerID> <to PlayerID> teleports to another player's position.");
+                    return;
+                default:
+                    LegacyServerConsole.WriteAdminLine("[CLI] Detailed help topics: setprop, tp. Use help for the full command list.");
+                    return;
+            }
+        }
         LegacyServerConsole.WriteAdminLine("[CLI] Commands:");
-        LegacyServerConsole.WriteAdminLine("[CLI]   players\t\t\t| display a list of players");
-        LegacyServerConsole.WriteAdminLine("[CLI]   playerinfo <PlayerID>\t| check info about player");
-        LegacyServerConsole.WriteAdminLine("[CLI]   kick <PlayerID>\t\t| kick player");
-        LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2>\t| ban player; 1 = GUID, 2 = IP");
-        LegacyServerConsole.WriteAdminLine("[CLI]   unban <BanID>\t\t| unban player");
-        LegacyServerConsole.WriteAdminLine("[CLI]   reloadcfg\t\t| reload configs (EventsList, RespawnPoints, BanList)");
-        LegacyServerConsole.WriteAdminLine("[CLI]   msg <text>\t\t| send a message to the game chat");
-        LegacyServerConsole.WriteAdminLine("[CLI]   cleardrop\t\t| remove all world weapon/medical drops");
-        LegacyServerConsole.WriteAdminLine("[CLI]   delcars all\t\t| remove every spawned car");
-        LegacyServerConsole.WriteAdminLine("[CLI]   delcars <PlayerID>\t| remove cars spawned by a player");
-        LegacyServerConsole.WriteAdminLine("[CLI]   stats\t\t\t| display CPU, memory, frame and runtime statistics");
-        LegacyServerConsole.WriteAdminLine("[CLI]   stop\t\t\t| stop server");
+        LegacyServerConsole.WriteAdminLine("[CLI]   players\t\t\t\t\t| display a list of players");
+        LegacyServerConsole.WriteAdminLine("[CLI]   playerinfo <PlayerID>\t\t\t| check info about player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   kick <PlayerID>\t\t\t\t| kick player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2> [time]\t\t| ban player; 1 = GUID, 2 = IP");
+        LegacyServerConsole.WriteAdminLine("[CLI]   setprop <PlayerID> <prop> <0|1> [time]\t| see 'help setprop'");
+        LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <x y z|json>\t\t| see help tp");
+        LegacyServerConsole.WriteAdminLine("[CLI]   tpto <PlayerID> <to PlayerID>\t\t| teleport to a player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   unban <BanID>\t\t\t\t| unban player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   reloadcfg\t\t\t\t| reload configs (EventsList, RespawnPoints, BanList)");
+        LegacyServerConsole.WriteAdminLine("[CLI]   msg <text>\t\t\t\t| send a message to the game chat");
+        LegacyServerConsole.WriteAdminLine("[CLI]   clearchat\t\t\t\t| clear the game chat");
+        LegacyServerConsole.WriteAdminLine("[CLI]   cleardrop\t\t\t\t| remove all world weapon/medical drops");
+        LegacyServerConsole.WriteAdminLine("[CLI]   delcars all\t\t\t\t| remove every spawned car");
+        LegacyServerConsole.WriteAdminLine("[CLI]   delcars <PlayerID>\t\t\t| remove cars spawned by a player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   stats\t\t\t\t\t| display CPU, memory, frame and runtime statistics");
+        LegacyServerConsole.WriteAdminLine("[CLI]   stop\t\t\t\t\t| stop server");
     }
 
     private static void PrintPlayers()
@@ -141,6 +192,13 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   Cars: " + player.ActiveCars.ToString() + " active, " + player.TotalCarsSpawned.ToString() + " spawned");
         LegacyServerConsole.WriteAdminLine("[CLI]   Ping: " + (player.PingMilliseconds >= 0 ? player.PingMilliseconds.ToString() + " ms" : "unavailable"));
         LegacyServerConsole.WriteAdminLine("[CLI]   Platform: " + EmptyAsUnknown(player.Platform));
+        List<LegacyBanList.PlayerProp> props = LegacyBanList.GetProps(player.Guid);
+        if (props.Count > 0)
+        {
+            var values = new List<string>();
+            foreach (LegacyBanList.PlayerProp prop in props) values.Add(prop.Prop + " (" + LegacyAdminTime.Remaining(prop.Until) + ")");
+            LegacyServerConsole.WriteAdminLine("[CLI]   Props: " + string.Join(", ", values.ToArray()));
+        }
     }
 
     private static void Kick(string arguments)
@@ -165,9 +223,9 @@ internal static class LegacyServerCli
     private static void Ban(string arguments)
     {
         string[] tokens = Tokenize(arguments);
-        if (tokens.Length != 2)
+        if (tokens.Length < 2 || tokens.Length > 3)
         {
-            LegacyServerConsole.WriteAdminLine("[CLI] Usage: ban <PlayerID> <1|2>. Type 1 bans by GUID; type 2 bans by IP.");
+            LegacyServerConsole.WriteAdminLine("[CLI] Usage: ban <PlayerID> <1|2> [time]. Time: 30s, 15m, 12h, 5d; omitted = permanent.");
             return;
         }
 
@@ -180,9 +238,12 @@ internal static class LegacyServerCli
             return;
         }
 
+        long? until;
+        if (!LegacyAdminTime.TryParse(tokens.Length == 3 ? tokens[2] : null, out until))
+        { LegacyServerConsole.WriteAdminLine("[CLI] Invalid duration. Use a positive integer with s, m, h or d."); return; }
         LegacyBanList.BanEntry entry;
         string error;
-        if (!LegacyServerAdminService.BanAndKickPlayer(playerId, banType, out entry, out error))
+        if (!LegacyServerAdminService.BanAndKickPlayer(playerId, banType, until, out entry, out error))
         {
             LegacyServerConsole.WriteAdminLine("[CLI] Ban failed: " + error);
             return;
@@ -191,8 +252,54 @@ internal static class LegacyServerCli
         string value = banType == LegacyBanList.BanTypeGuid ? entry.GUID : entry.IP;
         LegacyServerConsole.WriteAdminLine(
             "[CLI] PlayerID " + playerId.ToString() + " banned. BanID=" + entry.BanID.ToString() +
-            ", Type=" + banType.ToString() + ", Value=" + EmptyAsUnknown(value) + "."
+            ", Type=" + banType.ToString() + ", Value=" + EmptyAsUnknown(value) + ", Duration=" + LegacyAdminTime.Remaining(until) + "."
         );
+    }
+
+    private static void SetProp(string arguments)
+    {
+        string[] tokens = Tokenize(arguments);
+        int id;
+        if (tokens.Length < 3 || tokens.Length > 4 || !TryReadSinglePositiveInt(tokens[0], out id) ||
+            !LegacyBanList.IsKnownProp(tokens[1].ToLowerInvariant()) || (tokens[2] != "0" && tokens[2] != "1"))
+        { PrintHelp("setprop"); return; }
+        long? until;
+        if (!LegacyAdminTime.TryParse(tokens.Length == 4 ? tokens[3] : null, out until))
+        { LegacyServerConsole.WriteAdminLine("[CLI] Invalid duration. Use a positive integer with s, m, h or d."); return; }
+        string error;
+        bool enabled = tokens[2] == "1";
+        string prop = tokens[1].ToLowerInvariant();
+        if (!LegacyServerAdminService.SetPlayerProp(id, prop, enabled, until, out error))
+        { LegacyServerConsole.WriteAdminLine("[CLI] Setprop failed: " + error); return; }
+        LegacyServerConsole.WriteAdminLine("[CLI] PlayerID " + id + ": " + prop + (enabled ? " enabled (" + LegacyAdminTime.Remaining(until) + ")." : " removed."));
+    }
+
+    private static void Teleport(string arguments)
+    {
+        string idText, coordinates;
+        SplitCommand(arguments, out idText, out coordinates);
+        int id;
+        UnityEngine.Vector3 position;
+        float? yaw;
+        if (!TryReadSinglePositiveInt(idText, out id) || !LegacyAdminTeleportParser.TryParse(coordinates, out position, out yaw))
+        { PrintHelp("tp"); return; }
+        string error;
+        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, position, yaw, out error) ?
+            "[CLI] PlayerID " + id + " teleported to " + position + "." : "[CLI] Teleport failed: " + error);
+    }
+
+    private static void TeleportTo(string arguments)
+    {
+        string[] tokens = Tokenize(arguments);
+        int id, target;
+        if (tokens.Length != 2 || !TryReadSinglePositiveInt(tokens[0], out id) || !TryReadSinglePositiveInt(tokens[1], out target))
+        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: tpto <PlayerID> <to PlayerID>"); return; }
+        NetInputControl input;
+        if (!LegacyServerAdminService.TryGetInput(target, out input) || !input.input || !input.input.currentOrParent)
+        { LegacyServerConsole.WriteAdminLine("[CLI] Target player has no spawned character."); return; }
+        string error;
+        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, input.input.currentOrParent.body_pos, null, out error) ?
+            "[CLI] PlayerID " + id + " teleported to PlayerID " + target + "." : "[CLI] Teleport failed: " + error);
     }
 
     private static void Unban(string arguments)

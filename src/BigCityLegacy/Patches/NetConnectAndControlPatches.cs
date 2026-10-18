@@ -85,6 +85,7 @@ internal static class NetConnectAndControlPatches
             return true;
         }
 
+        if (LegacyPlayerProperties.Has(__instance, "nocars")) return false;
         if (!LegacyCarSpawnTimeout.CanSpawn(__instance)) return false;
 
         Net_BaseEvent curEvent = __instance.curEvent;
@@ -246,6 +247,7 @@ internal static class NetConnectAndControlPatches
     [HarmonyPrefix]
     private static bool NetInputControl_CmdAddMessage_Prefix(NetInputControl __instance, string s)
     {
+        if (LegacyPlayerProperties.Has(__instance, "nochat")) return false;
         LegacyHelpers.EnsureServerNetChat(NetManager.me);
         if (NetChat.me)
         {

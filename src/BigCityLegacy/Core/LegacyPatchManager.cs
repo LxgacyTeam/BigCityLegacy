@@ -42,12 +42,20 @@ internal static class LegacyPatchManager
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(RuntimeQualityAndCursorPatches));
         PatchClass(typeof(ChatEventsPatches));
+        PatchClass(typeof(PlayerPropertiesPatches));
         PatchClass(typeof(ShadowFixPatches));
         PatchClass(typeof(SettingsMenuPatches));
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));
         PatchClass(typeof(CsPatches));
         PatchClass(typeof(CsKillZonePatches));
+        if (LegacyCsDiagnostics.Enabled)
+        {
+            PatchClass(typeof(CsDiagnosticsPatches));
+            PatchClass(typeof(CsDiagnosticsLifecyclePatches));
+            PatchClass(typeof(CsDiagnosticsDamageCalculationPatch));
+            PatchClass(typeof(CsDiagnosticsImpactDeliveryPatch));
+        }
         PatchClass(typeof(AsyncRequestString_Patch));
         PatchClass(typeof(ServerLoggingPatches));
         if (LegacyServerLog.DiagnosticsEnabled) PatchClass(typeof(ServerDiagnosticsPatches));

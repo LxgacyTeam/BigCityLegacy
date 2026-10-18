@@ -17,14 +17,24 @@ internal sealed class LegacyServerLogWriter : IDisposable
     internal string Failure { get; private set; }
 
     internal LegacyServerLogWriter(string directory, LegacyServerLogLevel minimum, int serverPort)
+        : this(directory, minimum, PortPrefix(serverPort)) { }
+
+    private static string PortPrefix(int port)
     {
-        if (serverPort < 1 || serverPort > 65535) throw new ArgumentOutOfRangeException(nameof(serverPort));
+        if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+        return port.ToString(CultureInfo.InvariantCulture);
+    }
+
+    internal LegacyServerLogWriter(string directory, LegacyServerLogLevel minimum, string prefix)
+    {
+        if (string.IsNullOrEmpty(prefix) || prefix.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || prefix.Contains("/") || prefix.Contains("\\"))
+            throw new ArgumentException("Invalid log filename prefix.", nameof(prefix));
         Directory.CreateDirectory(directory);
         Minimum = minimum;
         DateTime timestamp = DateTime.UtcNow;
         for (int attempt = 0; ; attempt++)
         {
-            string path = Path.Combine(directory, serverPort.ToString(CultureInfo.InvariantCulture) + "_" + timestamp.AddMilliseconds(attempt).ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".log");
+            string path = Path.Combine(directory, prefix + "_" + timestamp.AddMilliseconds(attempt).ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".log");
             FileStream stream;
             try { stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read); }
             catch (IOException) { if (attempt < 9999 && File.Exists(path)) continue; throw; }
