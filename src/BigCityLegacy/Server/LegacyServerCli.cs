@@ -138,7 +138,7 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   kick <PlayerID>\t\t\t\t| kick player");
         LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2> [time]\t\t| ban player; 1 = GUID, 2 = IP");
         LegacyServerConsole.WriteAdminLine("[CLI]   setprop <PlayerID> <prop> <0|1> [time]\t| see 'help setprop'");
-        LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <x y z|json>\t\t| see help tp");
+        LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <x y z|json>\t\t| see 'help tp'");
         LegacyServerConsole.WriteAdminLine("[CLI]   tpto <PlayerID> <to PlayerID>\t\t| teleport to a player");
         LegacyServerConsole.WriteAdminLine("[CLI]   unban <BanID>\t\t\t\t| unban player");
         LegacyServerConsole.WriteAdminLine("[CLI]   reloadcfg\t\t\t\t| reload configs (EventsList, RespawnPoints, BanList)");

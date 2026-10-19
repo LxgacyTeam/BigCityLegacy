@@ -48,6 +48,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SuppressReporterGesturePatch));
         PatchClass(typeof(KillChatPatches));
         PatchClass(typeof(CsPatches));
+        PatchClass(typeof(CsServerPosePatches));
         PatchClass(typeof(CsKillZonePatches));
         if (LegacyCsDiagnostics.Enabled)
         {
