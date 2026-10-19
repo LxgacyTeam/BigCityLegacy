@@ -30,6 +30,7 @@ internal static class LegacyNearestPointRespawn
 
     internal static bool Reload()
     {
+        LegacyRespawnHistory.Clear();
         wasTried = false;
         isReady = false;
         points = new RespawnPoint[0];
@@ -109,6 +110,40 @@ internal static class LegacyNearestPointRespawn
     internal static bool TryGetNearestSafeRespawnPoint(Vector3 currentPlayerPos, out Vector3 respawnPoint)
     {
         return TryGetNearestRespawnPoint(currentPlayerPos, true, out respawnPoint);
+    }
+
+    internal static bool TryGetRotatingRespawnPoint(NetInputControl player, Vector3 currentPlayerPos, out Vector3 respawnPoint)
+    {
+        bool safeOnly = true;
+        if (!TryGetNearestSafeRespawnPoint(currentPlayerPos, out respawnPoint))
+        {
+            safeOnly = false;
+            if (!TryGetNearestRespawnPoint(currentPlayerPos, out respawnPoint)) return false;
+        }
+        Vector3 excluded;
+        if (!LegacyRespawnHistory.TryGetExcludedPoint(player, respawnPoint, out excluded)) return true;
+        float bestDistance = float.PositiveInfinity;
+        for (int i = 0; i < points.Length; i++)
+        {
+            Vector3 candidate = points[i].position;
+            float distance = (currentPlayerPos - candidate).sqrMagnitude;
+            if (LegacyRespawnHistory.SamePoint(candidate, excluded) || float.IsNaN(distance) || float.IsInfinity(distance) ||
+                distance >= bestDistance || (safeOnly && !LegacyCsKillZone.IsSafeRespawnPosition(candidate))) continue;
+            bestDistance = distance;
+            respawnPoint = candidate;
+        }
+        return true;
+    }
+
+    internal static void RecordRespawn(NetInputControl player, Vector3 actualPosition, float deathTime)
+    {
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (!LegacyRespawnHistory.SamePoint(actualPosition, points[i].position)) continue;
+            LegacyRespawnHistory.Record(player, points[i].position, deathTime);
+            return;
+        }
+        LegacyRespawnHistory.Forget(player);
     }
 
     private static bool TryGetNearestRespawnPoint(Vector3 currentPlayerPos, bool avoidArenas, out Vector3 respawnPoint)

@@ -56,6 +56,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 // Do not instantiate/register client-only systems on a dedicated server.
                 if (!_serverProcess)
                 {
+                    LegacyRemoteLook.Configure(Config);
                     LegacyPointTool.InitIfNeeded();
                     LegacyCustomSettings.Register();
                     LegacyPublicMirror.Start(this);

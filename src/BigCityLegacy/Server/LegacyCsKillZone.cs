@@ -273,7 +273,7 @@ internal static class LegacyCsKillZone
             "'. Arena countdown will resume after leaving and reentering the zone.");
     }
 
-    private static bool IsParticipant(NetInputControl input)
+    internal static bool IsParticipant(NetInputControl input)
     {
         if (input.curEvent)
         {
