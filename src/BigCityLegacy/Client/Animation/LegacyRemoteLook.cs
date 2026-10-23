@@ -15,6 +15,18 @@ internal sealed class LegacyRemoteLook : MonoBehaviour
     private LegacyGazeCycle gaze;
     private bool engaged, seatedBefore;
 
+    internal static bool Enabled
+    {
+        get { return setting == null || setting.Value; }
+        set
+        {
+            if (setting == null) return;
+            setting.Value = value;
+            if (!value)
+                foreach (LegacyRemoteLook look in Resources.FindObjectsOfTypeAll<LegacyRemoteLook>()) look.ResetPose();
+        }
+    }
+
     internal static void Configure(ConfigFile config)
     {
         setting = config.Bind("Client", "RemoteHeadLook", true,

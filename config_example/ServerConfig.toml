@@ -8,6 +8,7 @@ Mode = "None"
 lang = "en"
 maxCars = 100
 maxCarsByPlayer = 15
+maxVinylLayers = 1024
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
@@ -40,7 +41,3 @@ noUpdCheck = false
 logsDir = ''
 noLogging = false
 logLevel = "Log"
-
-# Optional CS/CS_Sur hit-registration trace; independent server/client files.
-csDiagnostics = false
-csDiagnosticsMaxShotsPerSecond = 60

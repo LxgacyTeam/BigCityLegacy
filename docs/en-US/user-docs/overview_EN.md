@@ -54,6 +54,7 @@ Arguments with values use a strict colon syntax:
 
 | Argument | Purpose | Accepted values |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| -onlineVersion:[number] | Force a client online version no higher than the global default (94). | For example, 93 |
 | -connectIP:[value] | Set the game server address for direct connection. | Game server IP/domain. |
 | -connectPort:[value] | Set the game server port for direct connection. | Game server port. |
 | -useMaster | Automatically use the specified/saved master server. | - |
@@ -76,6 +77,7 @@ Arguments with values use a strict colon syntax:
 | -Mode:[value] | Game mode on the server. | None / RP / Race / CS / CS_Sur |
 | -maxCars:[value] | Maximum possible number of cars on the server.<br />Default: 100 | Number of cars; 0 = unlimited. |
 | -maxCarsByPlayer:[value] | Maximum possible number of cars per player.<br />Default: 15 | Number of cars; 0 = unlimited. |
+| -maxVinylLayers:[number] | Vinyl layers per vehicle, including body and glass. Default: 1024. | 1..4096; 0 = transport maximum 4096 |
 | -CarSpawnTimeout:[value] | Minimum interval between car spawns by the same player. Default: 1000 ms. | Integer milliseconds; 0 = no delay. |
 | -maxNikLength:[value] | Maximum possible player nickname length on the server.<br />Default: 20 | Nickname length; 0 = unlimited. |
 | -noChatEvents | Disables chat notifications about server events, currently player connect/disconnect messages. | - |

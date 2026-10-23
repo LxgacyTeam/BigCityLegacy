@@ -13,7 +13,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 
 | Секция | Параметры |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (по умолчанию `true`), `masterPort` (по умолчанию `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
 | `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
@@ -33,6 +33,7 @@ Mode = "None"
 lang = "en"
 maxCars = 100
 maxCarsByPlayer = 15
+maxVinylLayers = 1024
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
@@ -115,7 +116,7 @@ Game Server настраивается через TOML и параметры з�
       "lang": "ru",
       "menuGroup": "FreeRoam",
       "serverMode": "None",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": true
@@ -150,7 +151,7 @@ Game Server настраивается через TOML и параметры з�
 
 `serverMode` - режим игры на сервере
 
-`onlineProtocolVersion` - версия онлайна, для версии игры 9.4 она равна 93
+`onlineProtocolVersion` — версия онлайна, по умолчанию `94`. Глобальное значение задаётся константой `OnlineProtocolVersion` в `BigCityLegacyPlugin.cs`. Для собственной записи mirror (`self`) используется глобальная версия. Для отдельных записей других серверов можно указать их версию явно. Клиентский аргумент `-onlineVersion:93` понижает версию; значение выше глобального ограничивается глобальным.
 
 `includeInAuto` - будет ли сервер учитываться при авто-подключении
 
@@ -174,11 +175,12 @@ Master сервер необходим, если вы хотите запуст�
 | players               | Вывести текущий список игроков на сервере                    |
 | playerinfo {PlayerID} | Отобразить информацию об игроке                                       |
 | kick {PlayerID}       | Кикнуть игрока                                                                       |
+| kill {PlayerID} | Убить персонажа игрока. |
 | ban {PlayerID} {1/2} [time]  | Забанить игрока; 1 = бан по GUID, 2 = бан по IP                           |
 | unban {BanID}         | Разбанить игрока по BanID                                                        |
 | setprop {PlayerID} {prop} {0/1} [time] | Назначить или снять свойство; `help setprop` |
-| tp {PlayerID} {x y z/json} | Телепорт по координатам; `help tp` |
-| tpto {PlayerID} {to PlayerID} | Телепорт к игроку |
+| tp {PlayerID} {preset/x y z/json} [wcar] | Телепорт по координатам; `help tp` |
+| tpto {PlayerID} {to PlayerID} [wcar] | Телепорт к игроку |
 | clearchat | Очистить чат |
 | help [setprop/tp] | Справка по командам |
 | reloadcfg             | Перезагрузить конфиги (EventsList, RespawnPoints, BanList)                   |
@@ -241,7 +243,9 @@ GUID принадлежит игровому профилю и хранится 
 
 #### Телепортация и очистка чата
 
-`tp <PlayerID> <x y z|json>` принимает координаты с десятичной точкой или JSON из Point Tool, например `tp 15 100.5 20 -30` либо `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90}`. JSON обязан содержать `x`, `y`, `z`; `yaw` необязателен. Без `yaw` поворот сохраняется. `tpto <PlayerID> <to PlayerID>` переносит персонажа к текущей позиции другого игрока. Телепортация высаживает персонажа из транспорта, сохраняет здоровье и использует штатную загрузку местности; замороженный персонаж остаётся замороженным в новой точке.
+`tp <PlayerID> <точка|x y z|json> [wcar]` принимает имя готовой точки, координаты с десятичной точкой или JSON из Point Tool, например `tp 15 police`, `tp 15 100.5 20 -30` либо `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`. JSON обязан содержать `x`, `y`, `z`; `yaw` необязателен. Готовые точки содержат координаты и направление взгляда: police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm. Имена не зависят от регистра. Без `yaw` поворот сохраняется. `tpto <PlayerID> <to PlayerID> [wcar]` переносит к текущей позиции другого игрока. С `wcar` перемещается автомобиль вместе со всеми пассажирами, если персонаж находится в машине; без него персонаж высаживается. Телепортация сохраняет здоровье и использует штатную загрузку местности; замороженный персонаж остаётся замороженным в новой точке. Пример: `tpto 15 16 wcar`.
+
+`kill <PlayerID>` обнуляет здоровье персонажа через штатную серверную систему смерти. `kick` и `ban` немедленно удаляют игровую сессию и персонажа; `disconnectedKickTimeout` применяется только к оборванным соединениям, а не к административному удалению.
 
 `clearchat` очищает серверную историю и вытесняет текст из истории штатных клиентов пустыми сообщениями через существующий RPC. Новый клиентский протокол не требуется. Подсветка пустых строк исчезает с обычным временем подсветки чата.
 

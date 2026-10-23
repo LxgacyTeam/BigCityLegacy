@@ -27,20 +27,26 @@ internal static class LegacyPatchManager
     private static void PatchFullMode()
     {
         PatchClass(typeof(GeneralPatches));
+        PatchClass(typeof(OnlineProtocolPatches));
+        PatchClass(typeof(TerrainShadowPatches));
+        PatchClass(typeof(ExistingTerrainShadowPatches));
+        PatchClass(typeof(PlayerHealthPatches));
         PatchClass(typeof(CarSaveIdentityPatches));
         PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
         PatchClass(typeof(ServerConfigPatches));
         PatchClass(typeof(NetworkPatches));
+        PatchClass(typeof(CarXmlNetworkPatches));
         PatchClass(typeof(ServerHeadlessOptimizationPatches));
         PatchClass(typeof(ServerPerformancePatches));
         PatchClass(typeof(ServerCarSleepPatches));
         PatchClass(typeof(ServerCarAudioPatches));
         //PatchClass(typeof(ServerCarPresentationPatches)); NEEDS TO REWORK
         PatchClass(typeof(ServerNetworkBufferPatches));
+        PatchClass(typeof(ServerReliableSendPatches));
         PatchClass(typeof(RaceAndWorldPatches));
-        PatchClass(typeof(RuntimeQualityAndCursorPatches));
+        PatchClass(typeof(InputPatches));
         PatchClass(typeof(ChatEventsPatches));
         PatchClass(typeof(PlayerPropertiesPatches));
         PatchClass(typeof(ShadowFixPatches));
@@ -51,6 +57,8 @@ internal static class LegacyPatchManager
         PatchClass(typeof(CsPatches));
         PatchClass(typeof(CsServerPosePatches));
         PatchClass(typeof(CsKillZonePatches));
+
+        #if DEBUG
         if (LegacyCsDiagnostics.Enabled)
         {
             PatchClass(typeof(CsDiagnosticsPatches));
@@ -58,9 +66,13 @@ internal static class LegacyPatchManager
             PatchClass(typeof(CsDiagnosticsDamageCalculationPatch));
             PatchClass(typeof(CsDiagnosticsImpactDeliveryPatch));
         }
+
+        if (LegacyServerLog.DiagnosticsEnabled) PatchClass(typeof(ServerDiagnosticsPatches));
+        #endif
+
         PatchClass(typeof(AsyncRequestString_Patch));
         PatchClass(typeof(ServerLoggingPatches));
-        if (LegacyServerLog.DiagnosticsEnabled) PatchClass(typeof(ServerDiagnosticsPatches));
+
     }
 
     private static void PatchCompatibilityMode()

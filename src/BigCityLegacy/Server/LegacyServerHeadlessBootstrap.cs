@@ -68,7 +68,7 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
             if (!cachedObjectOptimizationEnabled.HasValue)
             {
                 cachedObjectOptimizationEnabled =
-                    IsHeadlessServer && !LegacyCommandLine.HasArg("-noServerObjectStripping");
+                    IsHeadlessServer && !DebugOnlyArgs.noServerObjectStripping;
             }
             return cachedObjectOptimizationEnabled.Value;
         }
@@ -83,7 +83,7 @@ public class LegacyServerHeadlessBootstrap : MonoBehaviour
             if (!cachedCpuOptimizationEnabled.HasValue)
             {
                 cachedCpuOptimizationEnabled =
-                    IsHeadlessServer && !LegacyCommandLine.HasArg("-noServerCpuOptimization");
+                    IsHeadlessServer && !DebugOnlyArgs.noServerCpuOptimization;
             }
             return cachedCpuOptimizationEnabled.Value;
         }

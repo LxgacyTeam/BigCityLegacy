@@ -12,6 +12,7 @@ internal static class LegacyServerAdminService
     private static readonly Dictionary<string, PlayerSession> sessionsByKey = new Dictionary<string, PlayerSession>();
     private static readonly Dictionary<int, PlayerSession> sessionsByPlayerId = new Dictionary<int, PlayerSession>();
     private static readonly List<PendingCarSpawn> pendingCarSpawns = new List<PendingCarSpawn>();
+    private static readonly HashSet<NetConnect> terminatedConnections = new HashSet<NetConnect>();
 
     private static int nextPlayerId = 1;
     private static float nextReconcileAt;
@@ -22,6 +23,7 @@ internal static class LegacyServerAdminService
         sessionsByKey.Clear();
         sessionsByPlayerId.Clear();
         pendingCarSpawns.Clear();
+        terminatedConnections.Clear();
         nextPlayerId = 1;
         nextReconcileAt = 0f;
         serverStarted = true;
@@ -51,6 +53,7 @@ internal static class LegacyServerAdminService
 
     internal static bool TryRejectBannedConnection(NetConnect connect, string guid, string nickname)
     {
+        if (connect && terminatedConnections.Contains(connect)) return true;
         if (!NetManager.isServer || connect == null)
         {
             return false;
@@ -77,7 +80,7 @@ internal static class LegacyServerAdminService
 
     internal static void ObserveAuthenticatedConnection(NetConnect connect, string guid, string nickname, RuntimePlatform platform)
     {
-        if (!NetManager.isServer || connect == null)
+        if (!NetManager.isServer || connect == null || terminatedConnections.Contains(connect))
         {
             return;
         }
@@ -177,7 +180,7 @@ internal static class LegacyServerAdminService
         }
 
         ChatEventsPatches.SendAdminDisconnect(session.Connect, "was kicked from server");
-        Disconnect(session.Connect);
+        Disconnect(session.Connect, true);
         return true;
     }
 
@@ -203,7 +206,7 @@ internal static class LegacyServerAdminService
         {
             ChatEventsPatches.SendAdminDisconnect(input.netConnect, until.HasValue ?
                 "was banned for " + LegacyAdminTime.Remaining(until) : "was permanently banned");
-            Disconnect(input.netConnect);
+            Disconnect(input.netConnect, true);
         }
         return true;
     }
@@ -234,7 +237,7 @@ internal static class LegacyServerAdminService
         return true;
     }
 
-    internal static bool TeleportPlayer(int playerId, Vector3 position, float? yaw, out string error)
+    internal static bool TeleportPlayer(int playerId, Vector3 position, float? yaw, bool withCar, out string error)
     {
         error = null;
         if (float.IsNaN(position.x) || float.IsInfinity(position.x) || float.IsNaN(position.y) || float.IsInfinity(position.y) ||
@@ -246,10 +249,40 @@ internal static class LegacyServerAdminService
         { error = "Player has no spawned character."; return false; }
         PlayerControl player = input.input.currentPlayer;
         if (!player.isAlive) { error = "The player is dead."; return false; }
-        Quaternion rotation = yaw.HasValue ? Quaternion.Euler(0f, yaw.Value, 0f) : player.body_rot;
+        CarControl car = withCar ? player.parent_control as CarControl : null;
+        Control moving = car ? (Control)car : player;
+        Quaternion rotation = yaw.HasValue ? Quaternion.Euler(0f, yaw.Value, 0f) : moving.body_rot;
+        if (car)
+        {
+            if (!car.net_control || car.net_control.smoothSync == null)
+            { error = "The vehicle has no network synchronization."; return false; }
+            // Keep seats and authority intact. The stock spawn handshake holds the current
+            // parent vehicle at its destination while the recipient loads distant terrain.
+            car.SetPosAndRot(position, rotation);
+            car.net_control.smoothSync.teleport(nTime.NetworkTimeCached, position, rotation, true);
+            foreach (Control occupant in car.child_controls.ToArray())
+            {
+                PlayerControl passenger = occupant as PlayerControl;
+                if (passenger && passenger.input && passenger.input.netInput && passenger.input.netInput.spawn)
+                    passenger.input.netInput.spawn.Spawn(position, rotation, false, false);
+            }
+            return true;
+        }
         // The stock spawn handshake loads distant terrain and resets smoothing without healing the player.
         // Detach first: teleporting the player must not move another driver's car or its passengers.
         input.spawn.Spawn(position, rotation, false, true);
+        return true;
+    }
+
+    internal static bool KillPlayer(int playerId, out string error)
+    {
+        NetInputControl input;
+        error = null;
+        if (!TryGetInput(playerId, out input) || !input.input || !input.input.currentPlayer)
+        { error = "Player has no spawned character."; return false; }
+        PlayerControl player = input.input.currentPlayer;
+        if (!player.isAlive) { error = "The player is already dead."; return false; }
+        player.SetLive(0f, false, WhoKill.Init(player, Weapone.Type.Unknow));
         return true;
     }
 
@@ -658,13 +691,43 @@ internal static class LegacyServerAdminService
         return CountActiveCarsForSession(sessionKey);
     }
 
-    internal static void Disconnect(NetConnect connect)
+    internal static void Disconnect(NetConnect connect, bool endSession = false)
     {
         if (connect == null)
         {
             return;
         }
 
+        if (endSession) terminatedConnections.Add(connect);
+        NetInputControl input = connect.netInput;
+        try
+        {
+            if (endSession)
+                foreach (PlayerSession session in new List<PlayerSession>(sessionsByPlayerId.Values))
+                    if (session.Connect == connect)
+                    {
+                        session.IsConnected = false;
+                        sessionsByKey.Remove(session.SessionKey);
+                        sessionsByPlayerId.Remove(session.PlayerId);
+                        RemovePendingForSession(session.SessionKey);
+                    }
+            if (endSession && input)
+            {
+                // A transport disconnect deliberately retains the stock reconnect session.
+                // Administrative removal uses the same cleanup as an expired session instead.
+                if (NetManager.me) NetManager.me.needKikByNotMoveTime.Remove(input);
+                connect.netInput = null;
+                input.SetNetConnectGO(null);
+                bool registered = false;
+                for (int i = 0; i < NetManager.curCount; i++)
+                    if (NetManager.netControlsByIndex[i] == input) { registered = true; break; }
+                if (registered) NetManagerTools.RemoveToCacheClientItems(input, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[Server] Administrative session cleanup failed: " + ex);
+        }
         try
         {
             if (connect.conn != null)
@@ -691,6 +754,7 @@ internal static class LegacyServerAdminService
             return;
         }
 
+        terminatedConnections.RemoveWhere(c => !c);
         HashSet<string> liveKeys = new HashSet<string>();
         NetConnect[] connects = Resources.FindObjectsOfTypeAll<NetConnect>();
 
@@ -755,7 +819,7 @@ internal static class LegacyServerAdminService
 
     private static bool IsUsableConnection(NetConnect connect)
     {
-        if (connect == null || connect.conn == null || connect.gameObject == null)
+        if (connect == null || terminatedConnections.Contains(connect) || connect.conn == null || connect.gameObject == null)
         {
             return false;
         }

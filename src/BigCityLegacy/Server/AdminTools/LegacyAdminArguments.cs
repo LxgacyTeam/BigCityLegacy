@@ -51,12 +51,39 @@ internal static class LegacyAdminTime
 
 internal static class LegacyAdminTeleportParser
 {
+    internal const string PresetNames = "police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm";
+
+    internal static bool StripWithCar(ref string text)
+    {
+        text = (text ?? "").Trim();
+        int split = text.LastIndexOfAny(new[] { ' ', '\t' });
+        if (split < 0 || !string.Equals(text.Substring(split + 1), "wcar", StringComparison.OrdinalIgnoreCase)) return false;
+        text = text.Substring(0, split).TrimEnd();
+        return true;
+    }
+
     internal static bool TryParse(string text, out Vector3 position, out float? yaw)
     {
         position = Vector3.zero;
         yaw = null;
         if (string.IsNullOrWhiteSpace(text)) return false;
         text = text.Trim();
+        switch (text.ToLowerInvariant())
+        {
+            case "police": position = new Vector3(-2204.523f, -2.732f, 2259.899f); yaw = 158.882f; return true;
+            case "park": position = new Vector3(-1724.992f, -2.973f, 2150.122f); yaw = 142.503f; return true;
+            case "airport": position = new Vector3(-1168.726f, -21.871f, 191.786f); yaw = 260.141f; return true;
+            case "sto1": position = new Vector3(175.315f, 9.861f, 70.301f); yaw = 257.819f; return true;
+            case "sto2": position = new Vector3(-1766.753f, 2.38f, 2679.624f); yaw = 301.47f; return true;
+            case "sto3": position = new Vector3(-2059.275f, -16.363f, 432.42f); yaw = 72.827f; return true;
+            case "sto4": position = new Vector3(-754.179f, 8.891f, 2031.091f); yaw = 92.544f; return true;
+            case "desert": position = new Vector3(51.679f, -30.625f, 790.927f); yaw = 190.66f; return true;
+            case "mountain": position = new Vector3(-765.703f, 85.939f, -554.006f); yaw = 348.065f; return true;
+            case "cemetry": position = new Vector3(-620.653f, -19.103f, 1201.56f); yaw = 88.573f; return true;
+            case "derbyarena": position = new Vector3(-160.268f, -27.222f, -385.677f); yaw = 183.371f; return true;
+            case "mansion": position = new Vector3(-418.916f, -14.227f, 2318.561f); yaw = 343.576f; return true;
+            case "farm": position = new Vector3(-1829.054f, -23.318f, 765.427f); yaw = 96.496f; return true;
+        }
         try
         {
             float x, y, z;

@@ -172,7 +172,7 @@ internal static class NetConnectAndControlPatches
         connect.InitInputControl(setPlayerXml, platform);
     }
 
-    private static bool IsServerPlayerCreateReady(out string reason)
+    internal static bool IsServerPlayerCreateReady(out string reason)
     {
         reason = string.Empty;
         bool spawnsReady = RaceAndWorldPatches.TryEnsureNetSpawns();

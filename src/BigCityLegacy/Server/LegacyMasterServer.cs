@@ -22,6 +22,10 @@ public class LegacyMasterServer : MonoBehaviour
                 {
                     host.AddComponent<LegacyMasterServer>();
                 }
+                else
+                {
+                    host.GetComponent<LegacyMasterServer>().enabled = true;
+                }
             }
         }
     }
@@ -42,12 +46,22 @@ public class LegacyMasterServer : MonoBehaviour
         }
         else
         {
-            this.LoadAndStart();
+            StartCoroutine(WaitForGameServer());
         }
+    }
+
+    private System.Collections.IEnumerator WaitForGameServer()
+    {
+        yield return null; // Let RunServer activate the map before checking readiness.
+        string reason;
+        while (!UnityEngine.Networking.NetworkServer.active || !NetManager.isServer || Initializer.isBusy ||
+            !NetConnectAndControlPatches.IsServerPlayerCreateReady(out reason)) yield return null;
+        LoadAndStart();
     }
 
     private void OnDisable()
     {
+        StopAllCoroutines();
         bool flag = this.receiver != null;
         if (flag)
         {
@@ -64,6 +78,8 @@ public class LegacyMasterServer : MonoBehaviour
 
     private void Update()
     {
+        if (receiver == null) return;
+        if (!UnityEngine.Networking.NetworkServer.active) { enabled = false; return; }
         bool flag = this.receiver != null;
         if (flag)
         {
@@ -183,7 +199,7 @@ public class LegacyMasterServer : MonoBehaviour
 
     private static string GetExampleConfigText()
     {
-        return "{\n  \"version\": 1,\n  \"pollIntervalMs\": 1500,\n  \"staleAfterMs\": 6000,\n  \"servers\": [\n    {\n      \"id\": \"master-self\",\n      \"name\": \"Local FreeRoam\",\n      \"connectIp\": \"127.0.0.1\",\n      \"queryIp\": \"127.0.0.1\",\n      \"port\": 7800,\n      \"maxPlayers\": 16,\n      \"lang\": \"ru\",\n      \"menuGroup\": \"FreeRoam\",\n      \"serverMode\": \"None\",\n      \"onlineProtocolVersion\": 0,\n      \"showIfOffline\": true,\n      \"self\": true\n    }\n  ]\n}\n";
+        return "{\n  \"version\": 1,\n  \"pollIntervalMs\": 1500,\n  \"staleAfterMs\": 6000,\n  \"servers\": [\n    {\n      \"id\": \"master-self\",\n      \"name\": \"Local FreeRoam\",\n      \"connectIp\": \"127.0.0.1\",\n      \"queryIp\": \"127.0.0.1\",\n      \"port\": 7800,\n      \"maxPlayers\": 16,\n      \"lang\": \"ru\",\n      \"menuGroup\": \"FreeRoam\",\n      \"serverMode\": \"None\",\n      \"onlineProtocolVersion\": " + BigCityLegacyPlugin.OnlineProtocolVersion.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\n      \"showIfOffline\": true,\n      \"self\": true\n    }\n  ]\n}\n";
     }
 
     private void NormalizeConfig()
@@ -205,6 +221,8 @@ public class LegacyMasterServer : MonoBehaviour
             bool flag2 = serverEntry != null && !serverEntry.disabled;
             if (flag2)
             {
+                if (serverEntry.self || serverEntry.onlineProtocolVersion <= 0)
+                    serverEntry.onlineProtocolVersion = BigCityLegacyPlugin.OnlineProtocolVersion;
                 bool flag3 = serverEntry.self && NetManager.me;
                 if (flag3)
                 {
@@ -1088,7 +1106,7 @@ public class LegacyMasterServer : MonoBehaviour
 
         public string serverMode;
 
-        public int onlineProtocolVersion;
+        public int onlineProtocolVersion = BigCityLegacyPlugin.OnlineProtocolVersion;
 
         public bool showIfOffline;
 

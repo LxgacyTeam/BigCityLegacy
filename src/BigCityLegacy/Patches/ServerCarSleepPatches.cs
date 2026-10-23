@@ -37,12 +37,8 @@ internal static class ServerCarSleepPatches
         {
             if (!cachedSleepDelayMs.HasValue)
             {
-                float parsed;
-                string value = LegacyCommandLine.GetArgValue("-serverCarSleepDelayMs");
-                if (!float.TryParse(value, System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out parsed))
-                    parsed = DefaultSleepDelayMs;
-                cachedSleepDelayMs = Mathf.Clamp(parsed, 500f, 5000f);
+                float value = DebugOnlyArgs.serverCarSleepDelayMs ?? DefaultSleepDelayMs;
+                cachedSleepDelayMs = Mathf.Clamp(value, 500f, 5000f);
             }
             return cachedSleepDelayMs.Value;
         }
@@ -69,7 +65,7 @@ internal static class ServerCarSleepPatches
             {
                 cachedAggressiveSleepEnabled =
                     LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled &&
-                    !LegacyCommandLine.HasArg("-noServerCarAggressiveSleep");
+                    !DebugOnlyArgs.noServerCarAggressiveSleep;
             }
 
             return cachedAggressiveSleepEnabled.Value;
@@ -84,7 +80,7 @@ internal static class ServerCarSleepPatches
             {
                 cachedSleepFastPathEnabled =
                     LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled &&
-                    !LegacyCommandLine.HasArg("-noServerCarSleepFastPath");
+                    !DebugOnlyArgs.noServerCarSleepFastPath;
             }
 
             return cachedSleepFastPathEnabled.Value;
@@ -99,7 +95,7 @@ internal static class ServerCarSleepPatches
             {
                 cachedClientPhysicsBypassEnabled =
                     LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled &&
-                    !LegacyCommandLine.HasArg("-noServerClientCarPhysicsBypass");
+                    !DebugOnlyArgs.noServerClientCarPhysicsBypass;
             }
 
             return cachedClientPhysicsBypassEnabled.Value;

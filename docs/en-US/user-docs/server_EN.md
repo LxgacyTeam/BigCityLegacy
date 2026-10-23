@@ -13,7 +13,7 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 
 | Section | Options |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
 | `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
@@ -33,6 +33,7 @@ Mode = "None"
 lang = "en"
 maxCars = 100
 maxCarsByPlayer = 15
+maxVinylLayers = 1024
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
@@ -114,7 +115,7 @@ Mirror server configuration is stored in a separate JSON config. By default, it 
       "lang": "ru",
       "menuGroup": "FreeRoam",
       "serverMode": "None",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": true
@@ -149,7 +150,7 @@ Mirror server configuration is stored in a separate JSON config. By default, it 
 
 `serverMode` - game mode on the server.
 
-`onlineProtocolVersion` - online protocol version. For game version 9.4, it is 93.
+`onlineProtocolVersion` is the online protocol version, default `94`. The global value is the `OnlineProtocolVersion` constant in `BigCityLegacyPlugin.cs`. The mirror uses that value for its own `self` entry. Entries for other servers may explicitly specify their version. The client option `-onlineVersion:93` lowers the version; values above the global version are capped at the global value.
 
 `includeInAuto` - whether the server is included in auto-connect selection.
 
@@ -173,11 +174,12 @@ While the game server is running, it can be controlled through the interactive C
 | players | Display the current list of players on the server. |
 | playerinfo {PlayerID} | Display information about a player. |
 | kick {PlayerID} | Kick a player. |
+| kill {PlayerID} | Kill a player character. |
 | ban {PlayerID} {1/2} [time] | Ban a player; 1 = ban by GUID, 2 = ban by IP. |
 | unban {BanID} | Unban a player by BanID. |
 | setprop {PlayerID} {prop} {0/1} [time] | Set/remove a property; `help setprop` |
-| tp {PlayerID} {x y z/json} | Teleport to coordinates; `help tp` |
-| tpto {PlayerID} {to PlayerID} | Teleport to a player |
+| tp {PlayerID} {preset/x y z/json} [wcar] | Teleport to coordinates; `help tp` |
+| tpto {PlayerID} {to PlayerID} [wcar] | Teleport to a player |
 | clearchat | Clear chat |
 | help [setprop/tp] | Command help |
 | reloadcfg | Reload configs: EventsList, RespawnPoints, BanList. |
@@ -240,7 +242,9 @@ Kick/ban chat events describe the reason and ban duration instead of the normal 
 
 #### Teleportation and chat cleanup
 
-`tp <PlayerID> <x y z|json>` accepts decimal-dot coordinates or Point Tool JSON: `tp 15 100.5 20 -30` or `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90}`. JSON requires `x`, `y`, `z`; `yaw` is optional. Without yaw, rotation is preserved. `tpto <PlayerID> <to PlayerID>` moves a character to another player's current position. Teleportation exits vehicles, preserves health and uses the stock terrain-loading handshake; frozen players remain frozen at their new position.
+`tp <PlayerID> <preset|x y z|json> [wcar]` accepts a preset name, decimal-dot coordinates or Point Tool JSON: `tp 15 police`, `tp 15 100.5 20 -30`, or `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`. JSON requires `x`, `y`, `z`; `yaw` is optional. Presets include coordinates and heading: police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm. Names are case insensitive. Without yaw, rotation is preserved. `tpto <PlayerID> <to PlayerID> [wcar]` moves to another player’s current position. With `wcar`, a seated character travels with the vehicle and all its passengers; otherwise the character exits the vehicle. Teleportation preserves health and uses the stock terrain-loading handshake; frozen players remain frozen at the destination. Example: `tpto 15 16 wcar`.
+
+`kill <PlayerID>` sets the character’s health to zero through the stock server death system. `kick` and `ban` immediately remove the game session and character. `disconnectedKickTimeout` applies to lost connections rather than administrative removal.
 
 `clearchat` clears server history and replaces stock-client chat history with empty messages through the existing RPC. No new client protocol is required. Empty-row highlighting fades with the normal chat highlight timer.
 

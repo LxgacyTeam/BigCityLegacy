@@ -43,7 +43,7 @@ internal static class LegacyServerLog
         if (!IsServer || configured) return;
         bool disabled = args.Any(a => a.Equals("-noLogging", StringComparison.OrdinalIgnoreCase));
         var level = startupFailed ? LegacyServerLogLevel.Log : LegacyServerLogWriter.ParseLevel(Value(args, "-logLevel"));
-        DiagnosticsEnabled = !disabled && args.Any(a => a.Equals("-serverDiagnostics", StringComparison.OrdinalIgnoreCase));
+        DiagnosticsEnabled = !disabled && LegacyHelpers.isDebugBuild && args.Any(a => a.Equals("-serverDiagnostics", StringComparison.OrdinalIgnoreCase));
         lock (sync)
         {
             if (!disabled)

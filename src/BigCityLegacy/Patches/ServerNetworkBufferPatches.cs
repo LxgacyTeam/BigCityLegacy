@@ -39,7 +39,7 @@ internal static class ServerNetworkBufferPatches
         {
             if (!enabled.HasValue)
                 enabled = LegacyServerHeadlessBootstrap.IsHeadlessServer &&
-                          !LegacyCommandLine.HasArg("-noServerNetworkBufferTuning");
+                          !DebugOnlyArgs.noServerNetworkBufferTuning;
             return enabled.Value;
         }
     }
@@ -50,9 +50,7 @@ internal static class ServerNetworkBufferPatches
         {
             if (!pendingLimit.HasValue)
             {
-                int value;
-                if (!int.TryParse(LegacyCommandLine.GetArgValue("-serverMaxPendingBuffers"), out value))
-                    value = 256;
+                int value = DebugOnlyArgs.serverMaxPendingBuffers ?? 256;
                 // ChannelBuffer.SetOption rejects values >= 512 in the Unity HLAPI.
                 pendingLimit = Math.Max(64, Math.Min(511, value));
             }

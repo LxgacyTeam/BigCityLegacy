@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEngine;
 
 internal static class LegacyHotkeys
@@ -34,6 +35,12 @@ internal static class LegacyHotkeys
         if (Input.GetKeyDown(KeyCode.F1) && LegacyHelpers.IsGameplayRunning)
         {
             LegacyHudToggle.Toggle();
+        }
+
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            string merctest = PlayerPrefs.GetString("CarSaved_Mercedes_600");
+            File.WriteAllText(Path.Combine(LegacyHelpers.ModDataPath, "CarSaved_Mercedes_600.txt"), merctest);
         }
 
 

@@ -45,6 +45,10 @@ internal static class LegacyServerCli
                 Kick(arguments);
                 return;
 
+            case "kill":
+                Kill(arguments);
+                return;
+
             case "ban":
                 Ban(arguments);
                 return;
@@ -120,12 +124,13 @@ internal static class LegacyServerCli
                     LegacyServerConsole.WriteAdminLine("[CLI] Example: setprop 15 nochat 1 15m | setprop 15 nochat 0");
                     return;
                 case "tp":
-                    LegacyServerConsole.WriteAdminLine("[CLI] tp <PlayerID> <x y z|Point Tool JSON>");
+                    LegacyServerConsole.WriteAdminLine("[CLI] tp <PlayerID> <preset|x y z|Point Tool JSON> [wcar]");
                     LegacyServerConsole.WriteAdminLine("[CLI]");
                     LegacyServerConsole.WriteAdminLine("[CLI] Examples: tp 15 10.5 20 -30 | tp 15 {\"x\":10.5,\"y\":20,\"z\":-30,\"yaw\":90}");
                     LegacyServerConsole.WriteAdminLine("[CLI]");
-                    LegacyServerConsole.WriteAdminLine("[CLI] Use decimal dots. JSON yaw is optional; without it the current rotation is kept. Teleporting exits vehicles.");
-                    LegacyServerConsole.WriteAdminLine("[CLI] tpto <PlayerID> <to PlayerID> teleports to another player's position.");
+                    LegacyServerConsole.WriteAdminLine("[CLI] Use decimal dots. JSON yaw is optional; without it the current rotation is kept. Add wcar to keep the vehicle and its occupants; otherwise the player exits the vehicle.");
+                    LegacyServerConsole.WriteAdminLine("[CLI] Presets: " + LegacyAdminTeleportParser.PresetNames);
+                    LegacyServerConsole.WriteAdminLine("[CLI] tpto <PlayerID> <to PlayerID> [wcar] teleports to another player's position.");
                     return;
                 default:
                     LegacyServerConsole.WriteAdminLine("[CLI] Detailed help topics: setprop, tp. Use help for the full command list.");
@@ -136,10 +141,11 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   players\t\t\t\t\t| display a list of players");
         LegacyServerConsole.WriteAdminLine("[CLI]   playerinfo <PlayerID>\t\t\t| check info about player");
         LegacyServerConsole.WriteAdminLine("[CLI]   kick <PlayerID>\t\t\t\t| kick player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   kill <PlayerID>\t\t\t\t| kill player");
         LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2> [time]\t\t| ban player; 1 = GUID, 2 = IP");
         LegacyServerConsole.WriteAdminLine("[CLI]   setprop <PlayerID> <prop> <0|1> [time]\t| see 'help setprop'");
-        LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <x y z|json>\t\t| see 'help tp'");
-        LegacyServerConsole.WriteAdminLine("[CLI]   tpto <PlayerID> <to PlayerID>\t\t| teleport to a player");
+        LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <preset|x y z|json> [wcar]\t\t| see 'help tp'");
+        LegacyServerConsole.WriteAdminLine("[CLI]   tpto <PlayerID> <to PlayerID> [wcar]\t\t| teleport to a player");
         LegacyServerConsole.WriteAdminLine("[CLI]   unban <BanID>\t\t\t\t| unban player");
         LegacyServerConsole.WriteAdminLine("[CLI]   reloadcfg\t\t\t\t| reload configs (EventsList, RespawnPoints, BanList)");
         LegacyServerConsole.WriteAdminLine("[CLI]   msg <text>\t\t\t\t| send a message to the game chat");
@@ -220,6 +226,16 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI] Disconnect requested for PlayerID " + playerId.ToString() + ".");
     }
 
+    private static void Kill(string arguments)
+    {
+        int id;
+        if (!TryReadSinglePositiveInt(arguments, out id))
+        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: kill <PlayerID>"); return; }
+        string error;
+        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.KillPlayer(id, out error) ?
+            "[CLI] PlayerID " + id + " killed." : "[CLI] Kill failed: " + error);
+    }
+
     private static void Ban(string arguments)
     {
         string[] tokens = Tokenize(arguments);
@@ -278,27 +294,29 @@ internal static class LegacyServerCli
     {
         string idText, coordinates;
         SplitCommand(arguments, out idText, out coordinates);
+        bool withCar = LegacyAdminTeleportParser.StripWithCar(ref coordinates);
         int id;
         UnityEngine.Vector3 position;
         float? yaw;
         if (!TryReadSinglePositiveInt(idText, out id) || !LegacyAdminTeleportParser.TryParse(coordinates, out position, out yaw))
         { PrintHelp("tp"); return; }
         string error;
-        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, position, yaw, out error) ?
+        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, position, yaw, withCar, out error) ?
             "[CLI] PlayerID " + id + " teleported to " + position + "." : "[CLI] Teleport failed: " + error);
     }
 
     private static void TeleportTo(string arguments)
     {
+        bool withCar = LegacyAdminTeleportParser.StripWithCar(ref arguments);
         string[] tokens = Tokenize(arguments);
         int id, target;
         if (tokens.Length != 2 || !TryReadSinglePositiveInt(tokens[0], out id) || !TryReadSinglePositiveInt(tokens[1], out target))
-        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: tpto <PlayerID> <to PlayerID>"); return; }
+        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: tpto <PlayerID> <to PlayerID> [wcar]"); return; }
         NetInputControl input;
         if (!LegacyServerAdminService.TryGetInput(target, out input) || !input.input || !input.input.currentOrParent)
         { LegacyServerConsole.WriteAdminLine("[CLI] Target player has no spawned character."); return; }
         string error;
-        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, input.input.currentOrParent.body_pos, null, out error) ?
+        LegacyServerConsole.WriteAdminLine(LegacyServerAdminService.TeleportPlayer(id, input.input.currentOrParent.body_pos, null, withCar, out error) ?
             "[CLI] PlayerID " + id + " teleported to PlayerID " + target + "." : "[CLI] Teleport failed: " + error);
     }
 

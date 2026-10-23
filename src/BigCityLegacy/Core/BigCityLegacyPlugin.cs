@@ -9,6 +9,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.bigcitylegacy.baseplugin";
     public const string PluginName = "BigCityLegacy";
+    public const int OnlineProtocolVersion = 94;
     public const bool IsPrerelease = false;
 
     internal static ManualLogSource Log;
@@ -46,6 +47,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             if (LegacyCompatibility.IsFullMode)
             {
                 LegacyCommandLine.UpdateFromArgs();
+                LegacyOnlineProtocol.Apply();
                 _serverProcess = LegacyCommandLine.HasServerArg();
                 LegacyCsDiagnostics.Initialize();
 

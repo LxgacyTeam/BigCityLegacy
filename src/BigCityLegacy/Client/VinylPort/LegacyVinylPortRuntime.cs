@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using BepInEx.Bootstrap;
 using HarmonyLib;
+using UnityEngine;
 
 internal static class LegacyVinylPortRuntime
 {
@@ -32,6 +33,17 @@ internal static class LegacyVinylPortRuntime
         var method = Bridge?.GetMethod("ApplyGarageXml", BindingFlags.Public | BindingFlags.Static);
         if (method != null) method.Invoke(null, new object[] { garage, xml });
         else { garage.CarPaint_Finish(); saveLoad.LoadXml(xml); }
+    }
+    internal static void ApplyPaint(CarGarageUI garage, CarSaveLoad saveLoad, string xml)
+    {
+        var method = Bridge?.GetMethod("ApplyGaragePaintXml", BindingFlags.Public | BindingFlags.Static);
+        if (method != null) { method.Invoke(null, new object[] { garage, xml }); return; }
+        // Do not load CarUpgrade, suspension, engine, drive or other SaveLoad components.
+        var root = LegacyVinylPackCodec.ReadXml(xml).DocumentElement;
+        garage.CarPaint_Finish();
+        var material = saveLoad.car.GetComponent<CarMaterial>();
+        if (material) material.SaveLoad(root, false);
+        if (saveLoad.car.paintItems) { saveLoad.car.paintItems.SaveLoad(root, false); saveLoad.car.paintItems.UpImage(); }
     }
     internal static string Primitive()
     {

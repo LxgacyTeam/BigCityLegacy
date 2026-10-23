@@ -16,7 +16,7 @@ internal static class NetworkPatches
     [HarmonyPostfix]
     private static void NetManagerTools_UpdateCommandLines_Postfix()
     {
-        LegacyMasterServer.ChkEnt();
+        if (!LegacyHelpers.isDebugBuild) { LegacyMasterServer.ChkEnt(); }
         LegacyCommandLine.UpdateFromArgs();
     }
 
@@ -98,6 +98,7 @@ internal static class NetworkPatches
         LegacyHelpers.EnsureServerNetChat(__instance);
         LegacyHelpers.EnsureServerUnetSettings(__instance);
         LegacyServerAdminService.Update();
+        LegacyPlayerHealth.Tick();
     }
 
     [HarmonyPatch(typeof(NetManager), "NowStoped")]

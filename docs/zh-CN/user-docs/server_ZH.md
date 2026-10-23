@@ -12,6 +12,11 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 `masterServer = true` 是默认值，表示同时启动游戏服务器和 Mirror。仅启动游戏服务器时，设置 `masterServer = false`。Mirror 端口通过 TOML 的 `masterPort` 或 `-masterPort:<端口>` 设置。`ServersList.json` 保存服务器列表和轮询间隔。
 
 
+
+每辆车的贴花图层上限通过 `[server]` 中的 `maxVinylLayers` 或 `-maxVinylLayers:<数量>` 设置。默认值为 `1024`，车身与玻璃图层合并计数。可用值为 `1..4096`；`0` 使用传输上限 `4096`。超过限制的车辆生成或涂装更新会被拒绝并写入服务器日志，不会截断贴花。
+
+角色生命值由服务器控制，范围为 `0..100`，并定期同步给所属客户端。修理命令仅适用于车辆。医疗包保留原有的服务器拾取检查和恢复机制；修改本地 HP 不会恢复服务器上的生命值。
+
 | 节 | 参数 |
 | --- | --- |
 | `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
@@ -34,6 +39,7 @@ Mode = "None"
 lang = "en"
 maxCars = 100
 maxCarsByPlayer = 15
+maxVinylLayers = 1024
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
@@ -116,7 +122,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
       "lang": "ru",
       "menuGroup": "FreeRoam",
       "serverMode": "None",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": true
@@ -151,7 +157,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 `serverMode` - 服务器上的游戏模式。
 
-`onlineProtocolVersion` - 在线协议版本。游戏版本 9.4 对应的协议版本为 93。
+`onlineProtocolVersion` 为在线协议版本，默认值为 `94`。全局值由 `BigCityLegacyPlugin.cs` 中的 `OnlineProtocolVersion` 常量定义。Mirror 的自身条目（`self`）使用该值；其他服务器条目可明确指定各自的版本。客户端参数 `-onlineVersion:93` 可降低版本；高于全局值的输入会被限制为全局值。
 
 `includeInAuto` - 是否将该服务器纳入自动连接的候选范围。
 
@@ -174,11 +180,12 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | players | 显示服务器当前的玩家列表。 |
 | playerinfo {PlayerID} | 显示某位玩家的信息。 |
 | kick {PlayerID} | 踢出玩家。 |
+| kill {PlayerID} | 杀死玩家角色。 |
 | ban {PlayerID} {1/2} [time] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
 | unban {BanID} | 根据 BanID 解除封禁。 |
 | setprop {PlayerID} {prop} {0/1} [time] | 设置或移除属性；`help setprop` |
-| tp {PlayerID} {x y z/json} | 按坐标传送；`help tp` |
-| tpto {PlayerID} {to PlayerID} | 传送到玩家 |
+| tp {PlayerID} {preset/x y z/json} [wcar] | 按坐标传送；`help tp` |
+| tpto {PlayerID} {to PlayerID} [wcar] | 传送到玩家 |
 | clearchat | 清理聊天 |
 | help [setprop/tp] | 命令帮助 |
 | reloadcfg | 重新加载配置：EventsList、RespawnPoints、BanList。 |
@@ -241,7 +248,9 @@ GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另�
 
 #### 传送与清理聊天
 
-`tp <PlayerID> <x y z|json>` 接受小数点坐标或 Point Tool 的 JSON，例如 `tp 15 100.5 20 -30` 或 `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90}`。JSON 必须包含 `x`、`y`、`z`，`yaw` 可选；省略时保留朝向。`tpto <PlayerID> <to PlayerID>` 将角色传送到另一玩家的当前位置。传送会离开车辆、保留生命值并使用原有地形加载流程；冻结角色传送后继续在新位置冻结。
+`tp <PlayerID> <预设|x y z|json> [wcar]` 接受预设名称、小数点坐标或 Point Tool JSON，例如 `tp 15 police`、`tp 15 100.5 20 -30` 或 `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`。JSON 必须包含 `x`、`y`、`z`，`yaw` 可选。预设包含位置和朝向：police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm。名称不区分大小写，省略 yaw 时保留原朝向。`tpto <PlayerID> <to PlayerID> [wcar]` 传送到另一玩家的当前位置。添加 `wcar` 时，车内角色会连同车辆及全部乘客一起传送；否则角色会下车。传送保留生命值并使用原有地形加载流程，冻结角色在目标位置继续冻结。例如：`tpto 15 16 wcar`。
+
+`kill <PlayerID>` 通过原有服务器死亡机制将角色生命值设为零。`kick` 和 `ban` 立即删除游戏会话与角色。`disconnectedKickTimeout` 仅用于连接丢失后的会话保留，不用于管理员移除玩家。
 
 `clearchat` 清空服务器历史，并通过已有 RPC 发送空消息来替换原版客户端聊天历史，无需新客户端协议。空行高亮按原有聊天高亮时间消退。
 
