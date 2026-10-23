@@ -16,7 +16,7 @@ internal static class NetworkPatches
     [HarmonyPostfix]
     private static void NetManagerTools_UpdateCommandLines_Postfix()
     {
-        LegacyMasterServer.ChkEnt();
+        if (!LegacyHelpers.isDebugBuild) { LegacyMasterServer.ChkEnt(); }
         LegacyCommandLine.UpdateFromArgs();
     }
 
@@ -60,6 +60,7 @@ internal static class NetworkPatches
         LegacyBanList.TryLoad();
         LegacyServerAdminService.ResetForServerStart();
         LegacyServerDropCleanup.ResetForServerStart();
+        LegacyRespawnHistory.Clear();
         Debug.Log("DIRECT CONNECT -> " + LegacyCommandLine.ConnectIP + ":" + LegacyCommandLine.ConnectPort.ToString());
         __instance.StartServer();
         LegacyServerHeadlessBootstrap.Install(__instance.gameObject);
@@ -97,12 +98,21 @@ internal static class NetworkPatches
         LegacyHelpers.EnsureServerNetChat(__instance);
         LegacyHelpers.EnsureServerUnetSettings(__instance);
         LegacyServerAdminService.Update();
+        LegacyPlayerHealth.Tick();
     }
 
     [HarmonyPatch(typeof(NetManager), "NowStoped")]
     [HarmonyPostfix]
     private static void NetManager_NowStoped_Postfix()
     {
+        LegacyRespawnHistory.Clear();
+    }
+
+    [HarmonyPatch(typeof(NetInputControl), "OnDestroy")]
+    [HarmonyPrefix]
+    private static void NetInputControl_OnDestroy_Prefix(NetInputControl __instance)
+    {
+        LegacyRespawnHistory.Forget(__instance);
     }
 
 
@@ -179,41 +189,3 @@ internal static class AsyncRequestString_Patch
     }
 }
 
-// adds console flag to disable creating m_log files
-[HarmonyPatch(typeof(NetManagerTools), "OnEnable")]
-public static class NetManagerTools_OnEnable_Patch
-{
-    static IEnumerable<CodeInstruction> Transpiler(
-        IEnumerable<CodeInstruction> instructions)
-    {
-        var codes = new List<CodeInstruction>(instructions);
-
-        MethodInfo getIsEditor = AccessTools.PropertyGetter(
-            typeof(Application),
-            nameof(Application.isEditor));
-
-        MethodInfo hasArg = AccessTools.Method(
-            typeof(LegacyCommandLine),
-            nameof(LegacyCommandLine.HasArg),
-            new[] { typeof(string) });
-
-        for (int i = 0; i < codes.Count; i++)
-        {
-            yield return codes[i];
-
-            if (codes[i].Calls(getIsEditor))
-            {
-                yield return new CodeInstruction(
-                    OpCodes.Ldstr,
-                    "-noLogFile");
-
-                yield return new CodeInstruction(
-                    OpCodes.Call,
-                    hasArg);
-
-                yield return new CodeInstruction(
-                    OpCodes.Or);
-            }
-        }
-    }
-}

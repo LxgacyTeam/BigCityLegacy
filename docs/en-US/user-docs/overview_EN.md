@@ -52,6 +52,7 @@ Arguments with values use a strict colon syntax:
 
 | Argument | Purpose | Accepted values |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| -onlineVersion:[number] | Force a client online version no higher than the global default (94). | For example, 93 |
 | -connectIP:[value] | Set the game server address for direct connection. | Game server IP/domain. |
 | -connectPort:[value] | Set the game server port for direct connection. | Game server port. |
 | -useMaster | Automatically use the specified/saved master server. | - |
@@ -74,10 +75,12 @@ Arguments with values use a strict colon syntax:
 | -Mode:[value] | Game mode on the server. | None / RP / Race / CS / CS_Sur |
 | -maxCars:[value] | Maximum possible number of cars on the server.<br />Default: 100 | Number of cars; 0 = unlimited. |
 | -maxCarsByPlayer:[value] | Maximum possible number of cars per player.<br />Default: 15 | Number of cars; 0 = unlimited. |
+| -maxVinylLayers:[number] | Vinyl layers per vehicle, including body and glass. Default: 1024. | 1..4096; 0 = transport maximum 4096 |
 | -CarSpawnTimeout:[value] | Minimum interval between car spawns by the same player. Default: 1000 ms. | Integer milliseconds; 0 = no delay. |
 | -maxNikLength:[value] | Maximum possible player nickname length on the server.<br />Default: 20 | Nickname length; 0 = unlimited. |
 | -noChatEvents | Disables chat notifications about server events, currently player connect/disconnect messages. | - |
 | -idleKickTimeout:[value] | Timeout before kicking a player for inactivity, idle-kick.<br /><br />Default: 120s | `{n}` or `{n}s` - value in seconds; `{n}ms` - value in milliseconds. Examples: 120, 60s, 90000ms; 0 = disables idle-kick. |
+| -disconnectedKickTimeout:[value] | Session retention after disconnection, independent of AFK. Default: 30 seconds. | 30s; 0 = off |
 | -useVanillaRespawn | Enables the original respawn system after death, disabling RespawnPoints.json. | - |
 | -masterServer | Launch the mirror server. | - |
 | -serversList:[path] | Manually specify the path to the mirror server config. By default, the config is read from BigCityLegacy/config/ServersList.json. Use only if you want to specify another file. | Path to the Mirror server config file. |

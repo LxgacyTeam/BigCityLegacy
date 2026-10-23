@@ -53,6 +53,7 @@ game.exe -arg1 -arg2 -arg3
 
 | 参数 | 用途 | 可接受的值 |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| -onlineVersion:[数字] | 强制指定客户端在线版本，不高于全局默认值（94）。 | 例如 93 |
 | -connectIP:[value] | 设置直连游戏服务器的地址。 | 游戏服务器 IP/域名。 |
 | -connectPort:[value] | 设置直连游戏服务器的端口。 | 游戏服务器端口。 |
 | -useMaster | 自动使用指定或已保存的主服务器。 | - |
@@ -74,10 +75,12 @@ game.exe -arg1 -arg2 -arg3
 | -Mode:[value] | 服务器上的游戏模式。 | None / RP / Race / CS / CS_Sur |
 | -maxCars:[value] | 服务器上允许存在的最大车辆数。<br />默认值：100 | 车辆数；0 = 无限制。 |
 | -maxCarsByPlayer:[value] | 每位玩家允许拥有的最大车辆数。<br />默认值：15 | 车辆数；0 = 无限制。 |
+| -maxVinylLayers:[数字] | 每辆车的贴花图层上限，含车身与玻璃。默认 1024。 | 1..4096；0 = 传输上限 4096 |
 | -CarSpawnTimeout:[value] | 同一玩家生成车辆的最短间隔。默认值：1000 毫秒。 | 整数毫秒；0 = 无延迟。 |
 | -maxNikLength:[value] | 服务器上允许的最大玩家昵称长度。<br />默认值：20 | 昵称长度；0 = 无限制。 |
 | -noChatEvents | 禁用服务器事件的聊天通知，目前包括玩家连接和断开连接的消息。 | - |
 | -idleKickTimeout:[value] | 玩家无操作后被踢出的等待时间（闲置踢出）。<br /><br />默认值：120 秒 | `{n}` 或 `{n}s` - 秒数；`{n}ms` - 毫秒数。示例：120、60s、90000ms；0 = 禁用闲置踢出。 |
+| -disconnectedKickTimeout:[value] | 断线后的会话保留时间，与挂机计时器独立。默认 30 秒。 | 30s; 0 = off |
 | -useVanillaRespawn | 启用原版的死亡后重生系统，禁用 RespawnPoints.json。 | - |
 | -masterServer | 启动 Mirror 服务器。 | - |
 | -serversList:[path] | 手动指定 Mirror 服务器配置的路径。默认从 BigCityLegacy/config/ServersList.json 读取。仅在需要指定其他文件时使用。 | Mirror 服务器配置文件的路径。 |

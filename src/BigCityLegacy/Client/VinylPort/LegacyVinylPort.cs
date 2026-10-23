@@ -374,19 +374,20 @@ public class LegacyVinylPort : MonoBehaviour
             original = CaptureCurrentGarageXml();
             if (string.IsNullOrEmpty(original)) throw new InvalidOperationException(
                 LegacyLocalizer.Text("Failed to capture car state", "Не удалось получить состояние машины"));
-            string xml = LegacyVinylPackCodec.Merge(pack, string.IsNullOrEmpty(previous) ? original : previous, primitive).OuterXml;
+            string xml = LegacyVinylPackCodec.Merge(pack, original, primitive).OuterXml;
+            string saved = LegacyVinylPackCodec.Merge(pack, string.IsNullOrEmpty(previous) ? original : previous, primitive).OuterXml;
             applied = true;
-            LegacyVinylPortRuntime.Apply(garage, saveLoad, xml);
+            LegacyVinylPortRuntime.ApplyPaint(garage, saveLoad, xml);
             SyncGarageMaterialControls(saveLoad.car);
             wrote = true;
-            PlayerPrefs.SetString(key, xml); PlayerPrefs.Save();
+            PlayerPrefs.SetString(key, saved); PlayerPrefs.Save();
             Flash(LegacyLocalizer.Text("Applied pack: ", "Применён пак: ") + Path.GetFileNameWithoutExtension(path));
         }
         catch (Exception error)
         {
             if (applied && !string.IsNullOrEmpty(original) && garage && saveLoad && garage.car == saveLoad.car)
             {
-                try { LegacyVinylPortRuntime.Apply(garage, saveLoad, original); SyncGarageMaterialControls(saveLoad.car); }
+                try { LegacyVinylPortRuntime.ApplyPaint(garage, saveLoad, original); SyncGarageMaterialControls(saveLoad.car); }
                 catch (Exception rollback) { Debug.LogError("VinylPort: runtime rollback failed: " + rollback.GetType().Name); }
             }
             if (wrote)

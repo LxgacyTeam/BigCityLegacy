@@ -5,7 +5,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>BigCityLegacy</AssemblyName>
 	<Authors>LegacyTeam</Authors>
-	<VersionPrefix>1.4.0</VersionPrefix>
+	<VersionPrefix>1.4.1</VersionPrefix>
 	<VersionSuffix></VersionSuffix>
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <RootNamespace>BigCityLegacy</RootNamespace>
@@ -49,6 +49,12 @@
 	</ItemGroup>
   </Target>
 
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+	  <Compile Remove="src\DebugClasses\**\*" />
+	  <Content Remove="src\DebugClasses\**\*" />
+	  <None Remove="src\DebugClasses\**\*" />
+  </ItemGroup>
+
   <Target Name="ValidateGameDir" BeforeTargets="PrepareForBuild">
 	 <Error Condition="'$(GameDir)' == '' Or !Exists('$(GameDir)')" Text="&#xD;&#xA;&gt; &gt; &gt; &gt; &gt; &gt; Invalid GameDir: '$(GameDir)' &lt; &lt; &lt; &lt; &lt; &lt; &#xD;&#xA;&#xD;&#xA;The project requires access to the game's Unity assemblies.&#xD;&#xA;Set &lt;GameDir&gt; in the .csproj file or specify it on the command line:&#xD;&#xA;dotnet build -p:GameDir=&quot;path\to\game&quot;&#xD;&#xA;&#xD;&#xA;IN CLI USE ONLY ABSOLUTE PATHS (without '..\' or etc.)" />
   </Target>
@@ -58,6 +64,7 @@
     <EmbeddedResource Remove="libs\LegacyUIFramework\**" />
     <None Remove="libs\LegacyUIFramework\**" />
     <None Remove="src\BigCityLegacy\Resources\about-bcl-logo.png" />
+    <EmbeddedResource Include="src\BigCityLegacy\Resources\profile-restore.ps1" LogicalName="BigCityLegacy.ProfileRestore.ps1" />
     <EmbeddedResource Include="src\BigCityLegacy\Resources\about-bcl-logo.png">
 	  <LogicalName>bcl-logo.png</LogicalName>
 	</EmbeddedResource>

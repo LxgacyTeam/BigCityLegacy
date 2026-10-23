@@ -34,6 +34,7 @@ internal static class LegacyCommandLine
         KillChatEnabled = !HasArg("-noKillChat");
 
         LegacyServerLimits.UpdateFromArgs(args);
+        LegacyServerVinylLimit.Configure(args);
         LegacyIdleKickTimeout.UpdateFromArgs(args);
         LegacyCarSpawnTimeout.UpdateFromArgs(args);
 

@@ -43,6 +43,18 @@ public static class LegacyHelpers
         }
     }
 
+    internal static bool isDebugBuild
+    {
+        get
+        {
+            #if DEBUG
+                return true;
+            #else
+                return false;
+            #endif
+        }
+    }
+
     public static string FormatSeconds(long seconds)
     {
         var time = TimeSpan.FromSeconds(seconds);

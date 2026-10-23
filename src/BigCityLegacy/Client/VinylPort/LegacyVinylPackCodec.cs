@@ -22,6 +22,7 @@ internal static class LegacyVinylPackCodec
     internal const int CurrentVersion = 4;
     internal const string PartsNode = "EnhancedBodyPaint";
     internal const int MaxCharacters = 2 * 1024 * 1024;
+    internal const int MaxLayers = 4096;
     private static readonly string[] parts = { "Body", "Hood", "Front", "Trunk", "Rear", "Doors" };
 
     internal static XmlDocument ReadXml(string xml)
@@ -30,6 +31,10 @@ internal static class LegacyVinylPackCodec
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null,
             MaxCharactersInDocument = MaxCharacters, IgnoreComments = true, IgnoreWhitespace = true,
             IgnoreProcessingInstructions = true };
+        // Bound nesting before creating a DOM which the game later traverses recursively.
+        using (var source = new StringReader(xml))
+        using (var reader = XmlReader.Create(source, settings))
+            while (reader.Read()) if (reader.Depth > 64) throw new XmlException("XML nesting exceeds 64 levels.");
         using (var source = new StringReader(xml))
         using (var reader = XmlReader.Create(source, settings)) document.Load(reader);
         if (document.FirstChild is XmlDeclaration) document.RemoveChild(document.FirstChild);
@@ -58,7 +63,7 @@ internal static class LegacyVinylPackCodec
         var result = new LegacyVinylPack { Document = document, Car = packCar, Version = number };
         XmlElement paint = Single(root, "CarPaint", true);
         XmlElement items = Single(paint, "Items", true);
-        if (items.ChildNodes.Count > 256) Fail("Items");
+        if (items.ChildNodes.Count > MaxLayers) Fail("Items");
         foreach (XmlNode child in items.ChildNodes)
         {
             if (!(child is XmlElement item) || item.Name != "Item") Fail("Items");
@@ -146,7 +151,7 @@ internal static class LegacyVinylPackCodec
             if (item.HasAttribute(scalar))
             {
                 float value = Number(item.GetAttribute(scalar), false, "Geometry");
-                if (scalar == "depth" ? value <= 0 : value == 0) Fail("Geometry");
+                if (scalar == "depth" ? value < 0 : value == 0) Fail("Geometry");
             }
     }
 

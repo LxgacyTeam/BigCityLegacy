@@ -13,10 +13,11 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 
 | Section | Options |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
 | `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList` |
-| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noLogFile`, `noUpdCheck` |
+| `console` | `noServerConsole`, `noServerCli`, `verboseServerConsole`, `noUpdCheck` |
+| `logging` | `logsDir`, `noLogging`, `logLevel`, `serverDiagnostics` |
 | `repository` | `repositorySource`: `GitHub`, `Codeberg`, or an empty string to use the saved PlayerPrefs choice |
 
 Example configuration:
@@ -32,9 +33,11 @@ Mode = "None"
 lang = "en"
 maxCars = 100
 maxCarsByPlayer = 15
+maxVinylLayers = 1024
 CarSpawnTimeout = 1000
 maxNikLength = 20
 idleKickTimeout = "120s"
+disconnectedKickTimeout = "30s"
 noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
@@ -56,8 +59,12 @@ banList = ''
 noServerConsole = false
 noServerCli = false
 verboseServerConsole = false
-noLogFile = true
 noUpdCheck = false
+
+[logging]
+logsDir = ''
+noLogging = false
+logLevel = "Log"
 ```
 
 The game server can generally work in 2 modes: **Master** and **Base**.
@@ -108,7 +115,7 @@ Mirror server configuration is stored in a separate JSON config. By default, it 
       "lang": "ru",
       "menuGroup": "FreeRoam",
       "serverMode": "None",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": true
@@ -143,7 +150,7 @@ Mirror server configuration is stored in a separate JSON config. By default, it 
 
 `serverMode` - game mode on the server.
 
-`onlineProtocolVersion` - online protocol version. For game version 9.4, it is 93.
+`onlineProtocolVersion` is the online protocol version, default `94`. The global value is the `OnlineProtocolVersion` constant in `BigCityLegacyPlugin.cs`. The mirror uses that value for its own `self` entry. Entries for other servers may explicitly specify their version. The client option `-onlineVersion:93` lowers the version; values above the global version are capped at the global value.
 
 `includeInAuto` - whether the server is included in auto-connect selection.
 
@@ -157,6 +164,8 @@ A Master server is required if you want to run several game servers at once and 
 
 # Administration and CLI interface
 
+In an interactive Linux console (including tmux), ↑/↓ browse up to 100 recent nonempty commands. Consecutive duplicates are omitted. Moving down past the newest entry restores the unfinished input. ←/→, Home/End, Backspace/Delete and Ctrl+U (clear line) are supported. Long input scrolls horizontally; the line limit is 4096 characters. History lasts for the current process only. Log output preserves the input text. Redirected input and `TERM=dumb` use ordinary line input without interactive history.
+
 While the game server is running, it can be controlled through the interactive CLI interface in the server console window. The following commands are supported:
 
 
@@ -165,8 +174,14 @@ While the game server is running, it can be controlled through the interactive C
 | players | Display the current list of players on the server. |
 | playerinfo {PlayerID} | Display information about a player. |
 | kick {PlayerID} | Kick a player. |
-| ban {PlayerID} {1/2} | Ban a player; 1 = ban by GUID, 2 = ban by IP. |
+| kill {PlayerID} | Kill a player character. |
+| ban {PlayerID} {1/2} [time] | Ban a player; 1 = ban by GUID, 2 = ban by IP. |
 | unban {BanID} | Unban a player by BanID. |
+| setprop {PlayerID} {prop} {0/1} [time] | Set/remove a property; `help setprop` |
+| tp {PlayerID} {preset/x y z/json} [wcar] | Teleport to coordinates; `help tp` |
+| tpto {PlayerID} {to PlayerID} [wcar] | Teleport to a player |
+| clearchat | Clear chat |
+| help [setprop/tp] | Command help |
 | reloadcfg | Reload configs: EventsList, RespawnPoints, BanList. |
 | msg {text} | Send a message as the server. See note. |
 | cleardrop | Clear all drops on the server: medkits and weapons. |
@@ -182,29 +197,75 @@ While the game server is running, it can be controlled through the interactive C
 
 Each player on the server is assigned a temporary unique **PlayerID** valid within their current game session. The PlayerID counter advances on every new player connection, is never cleared, and never decreases. If a player reconnects to the server, they receive a new PlayerID, and the old one will never be used again. PlayerIDs are displayed in the player list shown by the `players` command.
 
-#### Ban system
+#### Bans and player properties
 
-A player can be banned in 2 different ways: by player GUID and by player IP.
+`ban <PlayerID> <1|2> [time]` blocks connections by GUID (`1`) or IP (`2`). The optional duration is a positive integer followed by `s`, `m`, `h` or `d`, for example `30s`, `15m`, `12h` or `5d`. Omitting it makes the ban permanent. Example: `ban 15 1 12h`. The command does not accept type `0`.
 
-GUID is a unique game profile identifier stored in PlayerPrefs and generated every time the game creates a new profile/save. In practice, a GUID ban can be easily bypassed by simply deleting the game save.
+GUID identifies a game profile and is stored in PlayerPrefs. Deleting the save creates another GUID, so a GUID ban does not prevent a new profile.
 
-A player is unbanned by **BanID**, which is printed to the console after a ban, never changes, and is stored in the ban list.
+`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time]` enables (`1`) or removes (`0`) a property. Durations follow the ban syntax and are ignored when removing a property. Assigning it again replaces its duration. Examples: `setprop 15 nochat 1 15m`, `setprop 15 nochat 0`.
 
-The ban list is stored in `BanList.json`. If several server copies are launched, each one can use its own file specified through a launch argument.
-Each ban entry is stored in the following format:
+| Property | Effect |
+| --- | --- |
+| `noweapon` | Blocks shooting and bomb placement/activation; switches the selected weapon to hands. |
+| `nomove` | Freezes the character and ejects it from a vehicle. The server rejects movement and vehicle entry; BCL clients also suppress movement controls. Stock clients receive position corrections through the normal terrain/teleport handshake. |
+| `nocars` | Blocks car spawning; existing cars remain. |
+| `nochat` | Suppresses the player's chat messages. |
+| `invisible` | Hides overhead nickname/health and the map marker on BCL clients, while keeping the character visible. The stock client has no network flag for this and retains its normal UI rules. No chat announcement is sent. |
+
+Bans and properties are stored in `BigCityLegacy/config/BanList.json`, whose path can be set with `banList`. Properties match only by GUID, including on an IP-ban record. `until` is a Unix timestamp in UTC seconds; JSON numbers and numeric strings are accepted. Omitting `until` means permanent. Ban and property durations are independent. Expired restrictions are ignored immediately and periodically removed from disk. Use `reloadcfg` after manual edits.
 
 ```json
+{
+  "Version": 1,
+  "Bans": [
     {
       "BanID": 1,
       "GUID": "1d9b4ba4-76f9-417f-b275-49e863726cb7",
       "IP": "1.2.3.4",
-      "Type": 1,
-      "Nickname": "BadPlayer"
+      "Type": 0,
+      "Nickname": "BadPlayer",
+      "Props": [
+        { "Prop": "noweapon", "until": 1792388642 },
+        { "Prop": "nochat" }
+      ]
     }
-
+  ]
+}
 ```
-`Type` defines the ban type: 1 = GUID, 2 = IP.
 
-Example command to ban a player by IP with PlayerID 52: `ban 52 2`.
+`Type`: `0` = properties only, `1` = GUID ban, `2` = IP ban. A temporary ban has its own `until` field beside `Type` and `Nickname`.
 
-Example command to unban a player with BanID 37: `unban 37`.
+`unban <BanID>` removes the ban. Entries with properties remain as `Type: 0`; otherwise they are deleted. It does not remove properties. `playerinfo <PlayerID>` includes an active-property line such as `Props: noweapon (5h), nochat (perm)`.
+
+Kick/ban chat events describe the reason and ban duration instead of the normal disconnect message. Weapon, car, chat and movement restrictions are announced when chat events are enabled.
+
+#### Teleportation and chat cleanup
+
+`tp <PlayerID> <preset|x y z|json> [wcar]` accepts a preset name, decimal-dot coordinates or Point Tool JSON: `tp 15 police`, `tp 15 100.5 20 -30`, or `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`. JSON requires `x`, `y`, `z`; `yaw` is optional. Presets include coordinates and heading: police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm. Names are case insensitive. Without yaw, rotation is preserved. `tpto <PlayerID> <to PlayerID> [wcar]` moves to another player’s current position. With `wcar`, a seated character travels with the vehicle and all its passengers; otherwise the character exits the vehicle. Teleportation preserves health and uses the stock terrain-loading handshake; frozen players remain frozen at the destination. Example: `tpto 15 16 wcar`.
+
+`kill <PlayerID>` sets the character’s health to zero through the stock server death system. `kick` and `ban` immediately remove the game session and character. `disconnectedKickTimeout` applies to lost connections rather than administrative removal.
+
+`clearchat` clears server history and replaces stock-client chat history with empty messages through the existing RPC. No new client protocol is required. Empty-row highlighting fades with the normal chat highlight timer.
+
+`help` lists commands; `help setprop` and `help tp` provide detailed examples.
+
+During active CS/CS_Sur matches, a freeroam character is killed after five seconds inside the arena. Vehicles driven into the arena are also removed after five seconds, even if the driver gets out. Vehicles that leave the zone or carry event participants are retained; passengers are ejected before removal.
+
+## Logging and diagnostics
+
+Each server start creates a separate `BigCityLegacy/logs/port_yyyy-MM-dd_HH-mm-ss-fff.log` file. Filenames and record timestamps use UTC. It captures Unity messages from all threads, BepInEx logs without duplicating Unity messages, and BCL console output including entered CLI commands. Records include severity, source, thread ID and any stack trace supplied by Unity. Each record is flushed immediately; BCL retains no in-memory history. Atomic file creation prevents overwriting another instance's log when startup timestamps coincide. Existing logs are retained without automatic deletion.
+
+The `[logging]` options also accept launch arguments:
+
+| TOML | Argument | Purpose |
+| --- | --- | --- |
+| `logsDir = ''` | `-logsDir:"server-logs/instance-1"` | Log directory. An empty value uses `BigCityLegacy/logs`. Relative paths resolve from the game directory; absolute paths are supported. The directory is created automatically. |
+| `noLogging = false` | `-noLogging` | Disable the BCL file log, which is enabled by default. |
+| `logLevel = "Log"` | `-logLevel:Warning` | Minimum severity: `Log`, `Warning`, `Error`, `Exception`, from least to most severe. `Assert` maps to `Error`. |
+| `serverDiagnostics = false` | `-serverDiagnostics` | Enable detailed diagnostic tracing. Use `logLevel = "Log"` for a complete trace. |
+
+Diagnostics writes `ENTER`/`EXIT`/`THROW` records with operation ID, parent ID and nesting depth around network buffer reception, UNet dispatch, player initialization, car spawning, XML loading and parent assignment. It records string/buffer sizes, reader positions, message type, channel, connection ID and network object ID when available. It does not consume or modify packets or save packet/XML contents. Managed stacks are recorded at nesting depths 32 and 64; memory, GC and player counts are sampled every 30 seconds. Tracing increases disk traffic and is intended for investigations. `noLogging = true` disables diagnostics; ordinary runs do not install its network patches.
+
+The native `m_log_<port>.log` is disabled by default. The launch-only **`-mlog`** flag enables it independently of BCL logging
+

@@ -14,7 +14,7 @@ internal static class NetConnectAndControlPatches
     [HarmonyPrefix]
     private static bool NetInputControl_CheckDisconnect_Prefix(NetInputControl __instance)
     {
-        if (!NetManager.isServer || !LegacyIdleKickTimeout.HasOverride)
+        if (!NetManager.isServer)
         {
             return true;
         }
@@ -85,6 +85,7 @@ internal static class NetConnectAndControlPatches
             return true;
         }
 
+        if (LegacyPlayerProperties.Has(__instance, "nocars")) return false;
         if (!LegacyCarSpawnTimeout.CanSpawn(__instance)) return false;
 
         Net_BaseEvent curEvent = __instance.curEvent;
@@ -171,7 +172,7 @@ internal static class NetConnectAndControlPatches
         connect.InitInputControl(setPlayerXml, platform);
     }
 
-    private static bool IsServerPlayerCreateReady(out string reason)
+    internal static bool IsServerPlayerCreateReady(out string reason)
     {
         reason = string.Empty;
         bool spawnsReady = RaceAndWorldPatches.TryEnsureNetSpawns();
@@ -246,6 +247,7 @@ internal static class NetConnectAndControlPatches
     [HarmonyPrefix]
     private static bool NetInputControl_CmdAddMessage_Prefix(NetInputControl __instance, string s)
     {
+        if (LegacyPlayerProperties.Has(__instance, "nochat")) return false;
         LegacyHelpers.EnsureServerNetChat(NetManager.me);
         if (NetChat.me)
         {
@@ -378,8 +380,17 @@ internal static class NetConnectAndControlPatches
         }
 
         Quaternion identity = Quaternion.identity;
-        Net_BaseEvent.isNeedAutoRespaumWhenDeadStatic(__instance.netInput, ref spawnPos, ref identity);
+        bool eventSpawn = Net_BaseEvent.isNeedAutoRespaumWhenDeadStatic(__instance.netInput, ref spawnPos, ref identity);
+        bool rotate = !eventSpawn && !LegacyCsKillZone.IsParticipant(__instance.netInput);
+        if (rotate)
+        {
+            Vector3 rotated;
+            if (LegacyNearestPointRespawn.TryGetRotatingRespawnPoint(__instance.netInput, currentPlayerPos, out rotated)) spawnPos = rotated;
+        }
+        else LegacyRespawnHistory.Forget(__instance.netInput);
+        float deathTime = currentPlayer.timeLiveZero;
         __instance.Spawn(spawnPos, identity, true, true);
+        if (rotate) LegacyNearestPointRespawn.RecordRespawn(__instance.netInput, __instance.pos, deathTime);
         return false;
     }
 

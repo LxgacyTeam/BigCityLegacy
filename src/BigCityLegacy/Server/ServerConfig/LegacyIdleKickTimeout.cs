@@ -5,17 +5,22 @@ using UnityEngine;
 internal static class LegacyIdleKickTimeout
 {
     private const float DefaultIdleTimeoutMs = 120000f;
-    private const float DefaultDetachedInputExtraMs = 40000f;
+    private const float DefaultDisconnectedTimeoutMs = 30000f;
     private const string ArgName = "-idleKickTimeout";
+    private const string DisconnectedArgName = "-disconnectedKickTimeout";
 
     private static bool initialized;
+    private static bool disconnectedInitialized;
 
     internal static bool HasOverride { get; private set; }
     internal static bool TimeoutEnabled { get; private set; } = true;
     internal static float IdleTimeoutMs { get; private set; } = DefaultIdleTimeoutMs;
+    internal static float DisconnectedTimeoutMs { get; private set; } = DefaultDisconnectedTimeoutMs;
+    internal static bool DisconnectedTimeoutEnabled { get; private set; } = true;
 
     internal static void UpdateFromArgs(string[] args)
     {
+        UpdateDisconnectedTimeout(args);
         string value = LegacyCommandLine.GetArgValue(args, ArgName);
         bool hasOverride = !string.IsNullOrEmpty(value);
 
@@ -85,6 +90,27 @@ internal static class LegacyIdleKickTimeout
         }
     }
 
+    private static void UpdateDisconnectedTimeout(string[] args)
+    {
+        string value = LegacyCommandLine.GetArgValue(args, DisconnectedArgName);
+        float timeout = DefaultDisconnectedTimeoutMs;
+        if (!string.IsNullOrEmpty(value) && !TryParseTimeoutMs(value, out timeout))
+        {
+            timeout = DefaultDisconnectedTimeoutMs;
+            LegacyServerConsole.LogAfterConsoleInit("Invalid " + DisconnectedArgName + " value '" + value +
+                "'. Using disconnected session timeout " + FormatMs(timeout) + ".", LogType.Warning);
+        }
+        bool enabled = timeout > 0f;
+        timeout = enabled ? Mathf.Max(1000f, timeout) : 0f;
+        bool changed = !disconnectedInitialized || enabled != DisconnectedTimeoutEnabled ||
+            Math.Abs(timeout - DisconnectedTimeoutMs) > 0.5f;
+        DisconnectedTimeoutEnabled = enabled;
+        DisconnectedTimeoutMs = timeout;
+        disconnectedInitialized = true;
+        if (changed) LegacyServerConsole.LogAfterConsoleInit("Disconnected session timeout: " +
+            (enabled ? FormatMs(timeout) : "disabled by " + DisconnectedArgName) + ".", LogType.Log);
+    }
+
     internal static void CheckIdleDisconnect(NetInputControl input)
     {
         if (input == null)
@@ -93,6 +119,15 @@ internal static class LegacyIdleKickTimeout
         }
 
         float now = input.autoDisconnectChechTime = nTime.GameThisFrame;
+        // Transport timeout/removal and NetConnect.OnDestroy set netConnect to
+        // null and record removeNetConnectTime. A detached session must not be
+        // retained by a long/disabled AFK timer, stale movement or reconnect asks.
+        if (!input.netConnect)
+        {
+            if (DisconnectedTimeoutEnabled && now - input.removeNetConnectTime >= DisconnectedTimeoutMs)
+                QueueKick(input);
+            return;
+        }
         if (!TimeoutEnabled)
         {
             return;
@@ -125,33 +160,13 @@ internal static class LegacyIdleKickTimeout
             }
         }
 
-        if (!shouldKick && !input.netConnect)
-        {
-            float detachedTimeoutMs = GetDetachedInputTimeoutMs();
-            if (now - input.removeNetConnectTime > timeoutMs && now - input.lastTimeAskThisConnectID > 10000f)
-            {
-                shouldKick = true;
-            }
-            else if (now - input.removeNetConnectTime > detachedTimeoutMs)
-            {
-                shouldKick = true;
-            }
-        }
-
-        if (shouldKick && NetManager.me != null)
-        {
-            NetManager.me.needKikByNotMoveTime.Add(input);
-        }
+        if (shouldKick) QueueKick(input);
     }
 
-    private static float GetDetachedInputTimeoutMs()
+    private static void QueueKick(NetInputControl input)
     {
-        if (!TimeoutEnabled)
-        {
-            return float.PositiveInfinity;
-        }
-
-        return IdleTimeoutMs + DefaultDetachedInputExtraMs;
+        if (NetManager.me != null && !NetManager.me.needKikByNotMoveTime.Contains(input))
+            NetManager.me.needKikByNotMoveTime.Add(input);
     }
 
     private static bool TryParseTimeoutMs(string raw, out float timeoutMs)
@@ -188,7 +203,7 @@ internal static class LegacyIdleKickTimeout
         }
 
         timeoutMs = numeric * multiplier;
-        return true;
+        return !float.IsNaN(timeoutMs) && !float.IsInfinity(timeoutMs);
     }
 
     private static string FormatMs(float ms)

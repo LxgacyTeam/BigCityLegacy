@@ -32,7 +32,7 @@ internal static class ServerCarPresentationPatches
             if (!enabled.HasValue)
             {
                 enabled = LegacyServerHeadlessBootstrap.IsCpuOptimizationEnabled &&
-                          !LegacyCommandLine.HasArg("-noServerCarPresentationOptimization");
+                          !DebugOnlyArgs.noServerCarPresentationOptimization;
             }
             return enabled.Value;
         }

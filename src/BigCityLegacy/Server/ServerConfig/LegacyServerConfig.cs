@@ -71,6 +71,8 @@ internal static class LegacyServerConfig
             string key = line.Substring(0, equal).Trim();
             if (!Regex.IsMatch(key, @"^[A-Za-z0-9_-]+$")) throw Error(i, "Invalid option key.");
             key = "-" + key.TrimStart('-');
+            if (key.Equals("-mlog", StringComparison.OrdinalIgnoreCase))
+                throw Error(i, "mlog is a launch-argument-only option.");
             if (key.Equals("-bend_GameServer", StringComparison.OrdinalIgnoreCase) ||
                 key.StartsWith("-noServerObject", StringComparison.OrdinalIgnoreCase) ||
                 key.StartsWith("-noServerCpu", StringComparison.OrdinalIgnoreCase) ||
@@ -100,8 +102,18 @@ internal static class LegacyServerConfig
                 else throw Error(i, "Expected a quoted string, boolean or decimal number.");
             }
             if ((key.Equals("-bend_GameServer", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("-serverDiagnostics", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("-csDiagnostics", StringComparison.OrdinalIgnoreCase) ||
                  key.StartsWith("-no", StringComparison.OrdinalIgnoreCase)) && !(value is bool))
                 throw Error(i, key + " must be a boolean.");
+            if (key.Equals("-logsDir", StringComparison.OrdinalIgnoreCase) && !(value is string))
+                throw Error(i, "logsDir must be a string.");
+            if (key.Equals("-logLevel", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!(value is string)) throw Error(i, "logLevel must be a string.");
+                try { LegacyServerLogWriter.ParseLevel((string)value); }
+                catch (ArgumentException ex) { throw Error(i, ex.Message); }
+            }
             if (new[] { "-port", "-masterPort", "-connectPort" }.Contains(key, StringComparer.OrdinalIgnoreCase))
             {
                 if (!(value is long) || (long)value < 1 || (long)value > 65535) throw Error(i, key + " must be an integer in 1..65535.");
@@ -111,6 +123,12 @@ internal static class LegacyServerConfig
                 if (!(value is long) || (long)value < 0 || (key.Equals("-maxConn", StringComparison.OrdinalIgnoreCase) &&
                     ((long)value < 1 || (long)value > 100))) throw Error(i, "Invalid limit " + key);
             }
+            if (key.Equals("-csDiagnosticsMaxShotsPerSecond", StringComparison.OrdinalIgnoreCase) &&
+                (!(value is long) || (long)value < 1 || (long)value > 1000))
+                throw Error(i, "csDiagnosticsMaxShotsPerSecond must be an integer in 1..1000.");
+            if (key.Equals("-maxVinylLayers", StringComparison.OrdinalIgnoreCase) &&
+                (!(value is long) || (long)value < 0 || (long)value > LegacyVinylPackCodec.MaxLayers))
+                throw Error(i, "maxVinylLayers must be an integer in 0..4096 (0 = transport maximum).");
             if (key.Equals("-CarSpawnTimeout", StringComparison.OrdinalIgnoreCase) &&
                 (!(value is long) || (long)value < 0 || (long)value > int.MaxValue))
                 throw Error(i, "CarSpawnTimeout must be an integer in 0..2147483647 milliseconds.");
@@ -204,5 +222,5 @@ internal static class LegacyServerConfig
         }
         return result.ToArray();
     }
-    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoLogFile = true\nnoUpdCheck = false\n";
+    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nmaxVinylLayers = 1024\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\ndisconnectedKickTimeout = \"30s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoUpdCheck = false\n\n[logging]\n# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.\nlogsDir = ''\nnoLogging = false\nlogLevel = \"Log\"\ncsDiagnostics = false\ncsDiagnosticsMaxShotsPerSecond = 60\n";
 }

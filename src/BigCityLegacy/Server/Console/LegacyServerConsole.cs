@@ -11,8 +11,6 @@ using Debug = UnityEngine.Debug;
 
 public sealed class LegacyServerConsole : MonoBehaviour
 {
-    private const int MaxLogLinesCount = 1000000;
-
     private const uint AttachParentProcess = 0xFFFFFFFFU;
     private const int ErrorAccessDenied = 5;
     private const string AttachParentConsoleArg = "-attachParentConsole";
@@ -58,6 +56,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
     private static ConsoleCtrlHandler consoleCtrlHandler;
     private static UnixSignalHandler unixSignalHandler;
     private static Thread commandReaderThread;
+    private static volatile LegacyUnixConsoleInput linuxInput;
 
     private static IntPtr windowsConsoleInput = IntPtr.Zero;
     private static IntPtr windowsConsoleOutput = IntPtr.Zero;
@@ -68,7 +67,6 @@ public sealed class LegacyServerConsole : MonoBehaviour
     private static bool readyStatusPrinted;
     private static IntPtr cachedBatchWindow = IntPtr.Zero;
 
-    private int logLinesCount;
     private bool batchWindowHideLogged;
     private bool batchWindowHideStopped;
     private int batchWindowHideAttempts;
@@ -191,15 +189,10 @@ public sealed class LegacyServerConsole : MonoBehaviour
         TryHideBatchModeWindow();
         ProcessPendingCommands();
 
-        if (logLinesCount > MaxLogLinesCount)
-        {
-            LegacyServerShutdown.Request("log line limit exceeded (" + logLinesCount.ToString() + ")");
-        }
     }
 
     private void HandleLog(string message, string stackTrace, LogType type)
     {
-        logLinesCount++;
         TryPrintServerReadyStatus(message);
 
         if (ShouldSuppressServerConsoleLog(message, stackTrace, type))
@@ -252,6 +245,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         if (WriteServerConsoleText(false, text + Environment.NewLine))
         {
+            LegacyServerLog.Record(LegacyServerLogLevel.Log, "Console", text);
             return;
         }
 
@@ -368,6 +362,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
             try
             {
+                LegacyServerLog.Record(LegacyServerLogLevel.Log, "Console", "> " + command);
                 LegacyServerCli.Execute(command);
             }
             catch (Exception ex)
@@ -419,8 +414,12 @@ public sealed class LegacyServerConsole : MonoBehaviour
         {
             if (!quitRequested && !LegacyServerShutdown.IsRequested)
             {
-                Debug.LogWarning("Server CLI input stopped: " + ex.Message);
+                Debug.LogWarning("Server CLI input stopped: " + ex);
             }
+        }
+        finally
+        {
+            linuxInput?.Dispose();
         }
     }
 
@@ -433,7 +432,11 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
         if (linuxReady)
         {
-            return Console.In.ReadLine();
+            if (linuxInput == null) linuxInput = new LegacyUnixConsoleInput(ConsoleWriteSync,
+                text => WriteLinuxConsoleRaw(false, text), linuxSupportsAnsiLineClear &&
+                !string.Equals(Environment.GetEnvironmentVariable("TERM"), "dumb", StringComparison.OrdinalIgnoreCase));
+            if (quitRequested || LegacyServerShutdown.IsRequested) return null;
+            return linuxInput.ReadLine();
         }
 
         return null;
@@ -465,6 +468,11 @@ public sealed class LegacyServerConsole : MonoBehaviour
 
             if (linuxReady)
             {
+                if (linuxInput != null && linuxInput.WriteOutput(recordWithSpacer))
+                {
+                    inputSpacerActive = false;
+                    return true;
+                }
                 PrepareLinuxInputSpacerForOutput();
                 WriteLinuxConsoleRaw(false, recordWithSpacer);
                 inputSpacerActive = true;
@@ -537,6 +545,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
     internal static void SignalCommandReaderShutdown()
     {
         quitRequested = true;
+        linuxInput?.RestoreTerminal();
         CommandProcessed.Set();
 
         if (windowsReady && IsValidConsoleHandle(windowsConsoleInput))
@@ -1027,7 +1036,7 @@ public sealed class LegacyServerConsole : MonoBehaviour
         }
 
         readyStatusPrinted = true;
-        WriteServerConsoleText(false, "[Status] Server ready. World loaded successfully." + Environment.NewLine);
+        WriteAdminLine("[Status] Server ready. World loaded successfully.");
         StartCommandReaderIfNeeded();
     }
 

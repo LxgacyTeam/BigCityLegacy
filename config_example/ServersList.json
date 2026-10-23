@@ -13,7 +13,7 @@
       "lang": "ru",
       "menuGroup": "FreeRoam",
       "serverMode": "None",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": true
@@ -28,7 +28,7 @@
       "lang": "en",
       "menuGroup": "Race",
       "serverMode": "Race",
-      "onlineProtocolVersion": 93,
+      "onlineProtocolVersion": 94,
       "includeInAuto": true,
       "showIfOffline": false,
       "self": false

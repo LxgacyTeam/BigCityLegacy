@@ -9,6 +9,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.bigcitylegacy.baseplugin";
     public const string PluginName = "BigCityLegacy";
+    public const int OnlineProtocolVersion = 94;
     public const bool IsPrerelease = false;
 
     internal static ManualLogSource Log;
@@ -24,9 +25,12 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
         LegacyUI.ScaleSettings.BaseScale = 1.1f;
 
         // Validate before patching or letting native server startup use its defaults.
-        try { LegacyServerConfig.Apply(LegacyCommandLine.GetRawProcessArgs()); }
+        string[] rawArgs = LegacyCommandLine.GetRawProcessArgs();
+        LegacyServerLog.Begin(rawArgs);
+        try { LegacyServerLog.Configure(LegacyServerConfig.Apply(rawArgs)); }
         catch (System.Exception ex)
         {
+            LegacyServerLog.Configure(rawArgs, startupFailed: true);
             Logger.LogError("Server configuration prevents startup: " + ex);
             enabled = false;
             UnityEngine.Application.Quit();
@@ -43,7 +47,9 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             if (LegacyCompatibility.IsFullMode)
             {
                 LegacyCommandLine.UpdateFromArgs();
+                LegacyOnlineProtocol.Apply();
                 _serverProcess = LegacyCommandLine.HasServerArg();
+                LegacyCsDiagnostics.Initialize();
 
                 LegacyServerConsole.PrepareForServerMode();
                 LegacyServerShutdown.Initialize();
@@ -52,6 +58,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 // Do not instantiate/register client-only systems on a dedicated server.
                 if (!_serverProcess)
                 {
+                    LegacyRemoteLook.Configure(Config);
                     LegacyPointTool.InitIfNeeded();
                     LegacyCustomSettings.Register();
                     LegacyPublicMirror.Start(this);
@@ -79,10 +86,12 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 
     private void Update()
     {
+        LegacyCsDiagnostics.Tick();
         if (_serverProcess)
         {
             LegacyServerShutdown.Tick();
             LegacyChatEventQueue.Tick();
+            LegacyServerDiagnostics.Tick();
             return;
         }
 
@@ -99,5 +108,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             Harmony.UnpatchSelf();
             Harmony = null;
         }
+        LegacyServerLog.Shutdown();
+        LegacyCsDiagnostics.Shutdown();
     }
 }

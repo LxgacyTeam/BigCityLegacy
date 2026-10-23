@@ -1,12 +1,14 @@
-using System.Reflection;
-using HarmonyLib;
-using UnityEngine;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
+using HarmonyLib;
+using RootMotion;
+using UnityEngine;
 
 /// Small runtime fixes that must not alter the player's persistent client settings.
 /// Also fixed a bug where the camera continued to rotate when the cursor was activated by clicking the middle-mouse button.
 [HarmonyPatch]
-internal static class RuntimeQualityAndCursorPatches
+internal static class InputPatches
 {
     private static bool _serverSettingsSkipLogged;
     private static bool _transientGraphicsApplied;
@@ -112,46 +114,14 @@ internal static class RuntimeQualityAndCursorPatches
         __result -= mouseAxis;
     }
 
-    [HarmonyPatch]
-    private static class InputBut_BlockLeftClickFireWhenCursorUnlocked
+    // Suppress the game binding, leaving Unity's raw mouse events available to IMGUI.
+    [HarmonyPatch(typeof(InputBut), "GetInputKey")]
+    [HarmonyPrefix]
+    private static bool InputBut_GetInputKey_Prefix(InputBut.KeyValue kv, ref float __result)
     {
-        private static readonly FieldInfo KeyBoardCodeField =
-            AccessTools.Field(
-                AccessTools.Method(typeof(InputBut), "GetInputKey").GetParameters()[0].ParameterType,
-                "keyBoardKode"
-            );
-
-        private static MethodBase TargetMethod()
-        {
-            return AccessTools.Method(typeof(InputBut), "GetInputKey");
-        }
-
-        private static bool Prefix(object kv, int typeOfButton, ref float __result)
-        {
-            if (!IsMiddleClickCursorActive())
-            {
-                return true;
-            }
-
-            bool isFireButton =
-                typeOfButton == (int)InputBut.But.Car_Fire ||
-                typeOfButton == (int)InputBut.But.Human_Fire;
-
-            if (!isFireButton || kv == null || KeyBoardCodeField == null)
-            {
-                return true;
-            }
-
-            object keyValue = KeyBoardCodeField.GetValue(kv);
-
-            if (!(keyValue is KeyCode) || (KeyCode)keyValue != KeyCode.Mouse0)
-            {
-                return true;
-            }
-
-            __result = 0f;
-            return false;
-        }
+        if (kv == null || kv.keyBoardKode != KeyCode.Mouse0 || !IsCursorUnlockedByMiddleMouse()) return true;
+        __result = 0f;
+        return false;
     }
 
     [HarmonyPatch(typeof(FlyCamera), "UpRotate")]
@@ -166,7 +136,7 @@ internal static class RuntimeQualityAndCursorPatches
         );
 
         MethodInfo filteredGetAxis = AccessTools.Method(
-            typeof(RuntimeQualityAndCursorPatches),
+            typeof(InputPatches),
             nameof(GetFlyCameraMouseAxis)
         );
 
@@ -181,11 +151,37 @@ internal static class RuntimeQualityAndCursorPatches
         }
     }
 
+    [HarmonyPatch(typeof(FlyCamera), "GetMove")]
+    [HarmonyTranspiler]
+    private static IEnumerable<CodeInstruction> FlyCamera_GetMove_Transpiler(
+    IEnumerable<CodeInstruction> instructions)
+    {
+        var speedField = AccessTools.Field(
+            typeof(FlyCamera), "cam_fly_speed_normal");
+
+        var getSpeed = AccessTools.Method(
+            typeof(InputPatches), nameof(GetCapsLockSpeed));
+
+        foreach (var instruction in instructions)
+        {
+            yield return instruction;
+
+            if (instruction.LoadsField(speedField))
+                yield return new CodeInstruction(OpCodes.Call, getSpeed);
+        }
+    }
+    
+
     [HarmonyPatch(typeof(FlyCamera), "Create")]
     [HarmonyPrefix]
     private static bool FlyCamera_Create_Prefix()
     {
         return !LegacyHelpers.IsCsOrSurvivalMatchRunning;
+    }
+
+    private static float GetCapsLockSpeed(float normalSpeed)
+    {
+        return Input.GetKey(KeyCode.CapsLock) ? 4f : normalSpeed;
     }
 
     private static float GetFlyCameraMouseAxis(string axisName)
@@ -201,11 +197,11 @@ internal static class RuntimeQualityAndCursorPatches
 
     private static bool IsMiddleClickCursorActive()
     {
-        if (!hCursor.NeedHideMouse())
-        {
-            return false;
-        }
+        return hCursor.NeedHideMouse() && IsCursorUnlockedByMiddleMouse();
+    }
 
+    private static bool IsCursorUnlockedByMiddleMouse()
+    {
         if (_hiddenByMiddleMouseField == null)
         {
             return false;

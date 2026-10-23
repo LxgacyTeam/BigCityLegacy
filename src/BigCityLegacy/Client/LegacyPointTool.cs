@@ -151,15 +151,8 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
         hotkeysHint.normal.textColor = new Color32(255, 255, 255, 192);
         GUI.Label(new Rect(x + 125f, y + 57f, 300f, 50f), "<b>F9</b> - copy | <b>X</b> - remove last | <b>Z</b> - save", hotkeysHint);
 
-        string teleportButtonLabel = ShowTeleportWindow ? "▲ Close" : "▼ Teleport";
-
-        if (!NetManager.isOnlineClient)
-        {
-            if (LegacyUI.Button(new Rect(rectMainX, rectLine2Y, rectButtonWidth, rectHeight), teleportButtonLabel))
-            {
-                ShowTeleportWindow = !ShowTeleportWindow;
-            }
-        }
+        Rect TeleportButton = new Rect(rectMainX, rectLine2Y, rectButtonWidth, rectHeight);
+        DrawTeleportButton(TeleportButton);
 
         if (LegacyUI.DangerButton(new Rect(rectMainX + 365f, rectLine2Y, rectButtonWidth, rectHeight), "Clear All"))
         {
@@ -221,11 +214,29 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
         if (ShowTeleportWindow)
         {
-            if (NetManager.isOnlineClient) { ShowTeleportWindow = !ShowTeleportWindow; }
+            if (!LegacyHelpers.isDebugBuild)
+            {
+                if (NetManager.isOnlineClient) { ShowTeleportWindow = !ShowTeleportWindow; }
+            }
             DrawTeleportContent(new Rect(x, y + 180f, 460f, 80f), cameraPos, rectHeight);
         }
     }
 
+    private void DrawTeleportButton(Rect TeleportButton)
+    {
+        if (!LegacyHelpers.isDebugBuild)
+        {
+            if (!NetManager.isOnlineClient) { return; }
+        }
+
+        string teleportButtonLabel = ShowTeleportWindow ? "▲ Close" : "▼ Teleport";
+
+        if (LegacyUI.Button(TeleportButton, teleportButtonLabel))
+        {
+            ShowTeleportWindow = !ShowTeleportWindow;
+        }
+    }
+        
     private void DrawTeleportContent(Rect area, Vector3 cameraPos, float rectHeight)
     {
         LegacyUI.Separator(new Rect(area.x, area.y - 8f, area.width, 1f));

@@ -59,6 +59,17 @@ internal static class LegacyCustomSettings
                 defaultValue: false,
                 onChanged: value => LegacyPointTool.InitIfNeeded()));
 
+        LegacySettingsMenuHelper.RegisterToggle(
+            id: "user.remote_head_look",
+            group: "User",
+            position: new Vector2(0f, -445f),
+            label: new LegacyLocalizedText("Character head movement", "Поворот головы персонажей"),
+            binding: new LegacyBoolSettingBinding
+            {
+                Get = () => LegacyRemoteLook.Enabled,
+                Set = value => LegacyRemoteLook.Enabled = value
+            });
+
         LegacyShadowFix.EnsureDefault();
         LegacySettingsMenuHelper.RegisterToggle(
             id: "render.shadow_fix",
@@ -71,6 +82,7 @@ internal static class LegacyCustomSettings
                 Set = LegacyShadowFix.SetEnabled
             });
         LegacyWeatherLock.EnsureDefault();
+
         LegacySettingsMenuItem weatherLock = LegacySettingsMenuHelper.RegisterToggle(
             id: "todo.weather_lock",
             group: "TODO",
@@ -85,6 +97,16 @@ internal static class LegacyCustomSettings
             });
         weatherLock.UseAnchoredPosition = false;
         weatherLock.OnCreated = PlaceWeatherLockUnderWeatherRow;
+
+        LegacySettingsMenuItem profile = LegacySettingsMenuHelper.RegisterButton(
+            id: "todo.player_profile",
+            group: "TODO",
+            position: Vector2.zero,
+            label: new LegacyLocalizedText("Player profile", "Профиль игрока"),
+            action: LegacyProfileWindow.Show);
+        profile.UseAnchoredPosition = false;
+        profile.OnCreated = PlaceProfileUnderWeatherLock;
+
         LegacySettingsMenuHelper.RegisterButton(
             id: "user.about",
             group: "User",
@@ -95,6 +117,22 @@ internal static class LegacyCustomSettings
         // Use HideStockItem ONLY AFTER registering custom elements.
         LegacySettingsMenuHelper.HideStockItem("User", "Restore Purchases");
         LegacySettingsMenuHelper.HideStockItem("User", "Change Button Poses");
+    }
+
+    private static void PlaceProfileUnderWeatherLock(GameObject clone)
+    {
+        if (!clone || !clone.transform.parent) return;
+        Transform anchor = clone.transform.parent.Find("BigCityLegacySetting_todo.weather_lock") ?? clone.transform.parent.Find("TimeWeather");
+        RectTransform row = anchor as RectTransform, target = clone.transform as RectTransform;
+        if (!row || !target) return;
+        float shift = row.sizeDelta.y + 8f;
+        target.anchoredPosition = row.anchoredPosition - new Vector2(0f, shift);
+        foreach (Transform sibling in clone.transform.parent)
+        {
+            if (sibling == anchor || sibling == clone.transform) continue;
+            RectTransform rect = sibling as RectTransform;
+            if (rect && rect.anchoredPosition.y < row.anchoredPosition.y - 1f) rect.anchoredPosition -= new Vector2(0f, shift);
+        }
     }
 
     private static void PlaceWeatherLockUnderWeatherRow(GameObject clone)

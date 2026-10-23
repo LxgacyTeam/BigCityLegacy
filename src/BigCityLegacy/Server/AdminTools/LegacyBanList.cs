@@ -62,177 +62,189 @@ internal static class LegacyBanList
 
     internal static bool IsBanned(string guid, string ip, out BanEntry matchedEntry)
     {
-        matchedEntry = null;
         EnsureLoaded();
-
-        string normalizedGuid = NormalizeGuid(guid);
-        string normalizedIp = NormalizeIp(ip);
-
+        string normalizedGuid = NormalizeGuid(guid), normalizedIp = NormalizeIp(ip);
+        long now = LegacyAdminTime.Now;
         lock (Sync)
         {
-            if (config == null || config.Bans == null)
+            foreach (BanEntry entry in config.Bans)
             {
-                return false;
-            }
-
-            for (int i = 0; i < config.Bans.Count; i++)
-            {
-                BanEntry entry = config.Bans[i];
-                if (entry == null)
-                {
-                    continue;
-                }
-
-                if (entry.Type == BanTypeGuid &&
-                    !string.IsNullOrEmpty(normalizedGuid) &&
-                    string.Equals(NormalizeGuid(entry.GUID), normalizedGuid, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedEntry = entry;
-                    return true;
-                }
-
-                if (entry.Type == BanTypeIp &&
-                    !string.IsNullOrEmpty(normalizedIp) &&
-                    string.Equals(NormalizeIp(entry.IP), normalizedIp, StringComparison.OrdinalIgnoreCase))
+                if (entry == null || !LegacyAdminTime.IsActive(entry.Until, now)) continue;
+                if ((entry.Type == BanTypeGuid && normalizedGuid.Length > 0 && SameGuid(entry.GUID, normalizedGuid)) ||
+                    (entry.Type == BanTypeIp && normalizedIp.Length > 0 && string.Equals(entry.IP, normalizedIp, StringComparison.OrdinalIgnoreCase)))
                 {
                     matchedEntry = entry;
                     return true;
                 }
             }
         }
-
+        matchedEntry = null;
         return false;
     }
 
-    internal static bool AddBan(LegacyServerAdminService.ServerPlayerSnapshot player, int type, out BanEntry entry, out string error)
+    internal static List<PlayerProp> GetProps(string guid)
     {
-        entry = null;
-        error = null;
-
-        if (player == null)
-        {
-            error = "Player was not found.";
-            return false;
-        }
-
-        if (type != BanTypeGuid && type != BanTypeIp)
-        {
-            error = "Ban type must be 1 (GUID) or 2 (IP).";
-            return false;
-        }
-
-        string guid = NormalizeGuid(player.Guid);
-        string ip = NormalizeIp(player.Ip);
-
-        if (type == BanTypeGuid && string.IsNullOrEmpty(guid))
-        {
-            error = "The selected player has no GUID.";
-            return false;
-        }
-
-        if (type == BanTypeIp && string.IsNullOrEmpty(ip))
-        {
-            error = "The selected player has no IP address.";
-            return false;
-        }
-
         EnsureLoaded();
-
+        var result = new List<PlayerProp>();
+        guid = NormalizeGuid(guid);
+        if (guid.Length == 0) return result;
+        long now = LegacyAdminTime.Now;
         lock (Sync)
         {
-            if (config == null)
+            foreach (BanEntry entry in config.Bans)
             {
-                config = new BanListConfig();
-            }
-            if (config.Bans == null)
-            {
-                config.Bans = new List<BanEntry>();
-            }
-
-            for (int i = 0; i < config.Bans.Count; i++)
-            {
-                BanEntry existing = config.Bans[i];
-                if (existing == null || existing.Type != type)
+                if (entry == null || !SameGuid(entry.GUID, guid) || entry.Props == null) continue;
+                foreach (PlayerProp prop in entry.Props)
                 {
-                    continue;
-                }
-
-                bool alreadyExists = type == BanTypeGuid
-                    ? string.Equals(NormalizeGuid(existing.GUID), guid, StringComparison.OrdinalIgnoreCase)
-                    : string.Equals(NormalizeIp(existing.IP), ip, StringComparison.OrdinalIgnoreCase);
-
-                if (alreadyExists)
-                {
-                    entry = existing;
-                    error = "This ban already exists (BanID " + existing.BanID.ToString() + ").";
-                    return false;
+                    if (prop == null || !IsKnownProp(prop.Prop) || !LegacyAdminTime.IsActive(prop.Until, now)) continue;
+                    PlayerProp previous = result.Find(p => p.Prop == prop.Prop);
+                    if (previous == null) result.Add(new PlayerProp { Prop = prop.Prop, Until = prop.Until });
+                    else if (!prop.Until.HasValue || (previous.Until.HasValue && prop.Until > previous.Until)) previous.Until = prop.Until;
                 }
             }
+        }
+        return result;
+    }
 
-            entry = new BanEntry
+    internal static bool HasProp(string guid, string prop)
+    {
+        return GetProps(guid).Exists(p => p.Prop == prop);
+    }
+
+    internal static bool IsKnownProp(string prop)
+    {
+        return prop == "noweapon" || prop == "nomove" || prop == "nocars" || prop == "nochat" || prop == "invisible";
+    }
+
+    private static bool SameGuid(string a, string b)
+    {
+        return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool AddBan(LegacyServerAdminService.ServerPlayerSnapshot player, int banType, long? until, out BanEntry addedEntry, out string error)
+    {
+        addedEntry = null;
+        error = null;
+        if (player == null || (banType != BanTypeGuid && banType != BanTypeIp))
+        { error = "Ban type must be 1 (GUID) or 2 (IP)."; return false; }
+        string guid = NormalizeGuid(player.Guid), ip = NormalizeIp(player.Ip);
+        if ((banType == BanTypeGuid && guid.Length == 0) || (banType == BanTypeIp && ip.Length == 0))
+        { error = "The player has no identifier for this ban type."; return false; }
+        EnsureLoaded();
+        lock (Sync)
+        {
+            foreach (BanEntry entry in config.Bans)
+                if (entry != null && entry.Type == banType && LegacyAdminTime.IsActive(entry.Until, LegacyAdminTime.Now) &&
+                    (banType == BanTypeGuid ? SameGuid(entry.GUID, guid) : string.Equals(entry.IP, ip, StringComparison.OrdinalIgnoreCase)))
+                { error = "This ban already exists as BanID " + entry.BanID + "."; return false; }
+            BanListConfig previous = CloneConfig();
+            BanEntry added = config.Bans.Find(e => e != null && e.Type == 0 && guid.Length > 0 && SameGuid(e.GUID, guid));
+            if (added == null)
             {
-                BanID = GetNextBanIdLocked(),
-                GUID = guid,
-                IP = ip,
-                Type = type,
-                Nickname = player.Nickname ?? string.Empty
-            };
+                added = new BanEntry { BanID = GetNextBanIdLocked(), GUID = guid, IP = ip };
+                config.Bans.Add(added);
+            }
+            added.Type = banType;
+            added.Nickname = player.Nickname ?? string.Empty;
+            added.Until = until;
+            if (!SaveLocked(out error)) { config = previous; return false; }
+            addedEntry = added;
+            return true;
+        }
+    }
 
-            config.Bans.Add(entry);
+    internal static bool SetProp(LegacyServerAdminService.ServerPlayerSnapshot player, string name, bool enabled, long? until, out string error)
+    {
+        error = null;
+        if (player == null || string.IsNullOrEmpty(NormalizeGuid(player.Guid)))
+        { error = "The player has no GUID."; return false; }
+        if (!IsKnownProp(name)) { error = "Unknown property."; return false; }
+        EnsureLoaded();
+        lock (Sync)
+        {
+            BanListConfig previous = CloneConfig();
+            BanEntry destination = null;
+            foreach (BanEntry entry in config.Bans)
+            {
+                if (entry == null || !SameGuid(entry.GUID, NormalizeGuid(player.Guid))) continue;
+                if (destination == null) destination = entry;
+                if (entry.Props != null) entry.Props.RemoveAll(p => p != null && p.Prop == name);
+            }
+            if (enabled)
+            {
+                if (destination == null)
+                {
+                    destination = new BanEntry { BanID = GetNextBanIdLocked(), GUID = NormalizeGuid(player.Guid), IP = NormalizeIp(player.Ip), Type = 0 };
+                    config.Bans.Add(destination);
+                }
+                destination.Nickname = player.Nickname ?? string.Empty;
+                if (destination.Props == null) destination.Props = new List<PlayerProp>();
+                destination.Props.Add(new PlayerProp { Prop = name, Until = until });
+            }
+            PruneLocked(LegacyAdminTime.Now);
+            if (!SaveLocked(out error)) { config = previous; return false; }
+            return true;
+        }
+    }
+
+    internal static bool RemoveBan(int banId, out BanEntry removedEntry, out string error)
+    {
+        removedEntry = null;
+        error = null;
+        EnsureLoaded();
+        lock (Sync)
+        {
+            BanEntry entry = config.Bans.Find(e => e != null && e.BanID == banId);
+            if (entry == null || entry.Type == 0) { error = "Active ban not found for BanID " + banId + "."; return false; }
+            BanListConfig previous = CloneConfig();
+            entry.Type = 0;
+            entry.Until = null;
+            PruneLocked(LegacyAdminTime.Now);
+            if (!SaveLocked(out error)) { config = previous; return false; }
+            removedEntry = entry;
+            return true;
+        }
+    }
+
+    internal static void ExpireRestrictions()
+    {
+        EnsureLoaded();
+        lock (Sync)
+        {
+            long now = LegacyAdminTime.Now;
+            if (!config.Bans.Exists(e => e != null &&
+                ((e.Type != 0 && !LegacyAdminTime.IsActive(e.Until, now)) ||
+                 (e.Type == 0 && (e.Props == null || e.Props.Count == 0)) ||
+                 (e.Props != null && e.Props.Exists(p => p == null || !LegacyAdminTime.IsActive(p.Until, now)))))) return;
+            BanListConfig previous = CloneConfig();
+            PruneLocked(now);
+            string error;
             if (!SaveLocked(out error))
             {
-                config.Bans.Remove(entry);
-                entry = null;
-                return false;
+                config = previous; // Reads still ignore expired restrictions; retry persistence on the next tick.
+                Debug.LogWarning("[Server] Failed to save expired restrictions: " + error);
             }
         }
-
-        return true;
     }
 
-    internal static bool RemoveBan(int banId, out BanEntry removed, out string error)
+    private static bool PruneLocked(long now)
     {
-        removed = null;
-        error = null;
-
-        if (banId <= 0)
+        bool changed = false;
+        for (int i = config.Bans.Count - 1; i >= 0; i--)
         {
-            error = "BanID must be a positive number.";
-            return false;
+            BanEntry e = config.Bans[i];
+            if (e == null) continue;
+            if (e.Type != 0 && !LegacyAdminTime.IsActive(e.Until, now)) { e.Type = 0; e.Until = null; changed = true; }
+            if (e.Props != null && e.Props.RemoveAll(p => p == null || !LegacyAdminTime.IsActive(p.Until, now)) > 0) changed = true;
+            if (e.Type == 0 && (e.Props == null || e.Props.Count == 0)) { config.Bans.RemoveAt(i); changed = true; }
         }
+        return changed;
+    }
 
-        EnsureLoaded();
-
-        lock (Sync)
-        {
-            if (config == null || config.Bans == null)
-            {
-                error = "Ban list is empty.";
-                return false;
-            }
-
-            for (int i = 0; i < config.Bans.Count; i++)
-            {
-                BanEntry entry = config.Bans[i];
-                if (entry == null || entry.BanID != banId)
-                {
-                    continue;
-                }
-
-                config.Bans.RemoveAt(i);
-                if (!SaveLocked(out error))
-                {
-                    config.Bans.Insert(i, entry);
-                    return false;
-                }
-
-                removed = entry;
-                return true;
-            }
-        }
-
-        error = "BanID " + banId.ToString() + " was not found.";
-        return false;
+    private static BanListConfig CloneConfig()
+    {
+        // Mutations are infrequent. A full rollback also preserves properties spread over multiple entries.
+        return JsonConvert.DeserializeObject<BanListConfig>(JsonConvert.SerializeObject(config));
     }
 
     internal static string NormalizeGuid(string value)
@@ -348,8 +360,11 @@ internal static class LegacyBanList
             entry.GUID = NormalizeGuid(entry.GUID);
             entry.IP = NormalizeIp(entry.IP);
             entry.Nickname = entry.Nickname ?? string.Empty;
+            if (entry.Props != null)
+                foreach (PlayerProp prop in entry.Props)
+                    if (prop != null) prop.Prop = (prop.Prop ?? string.Empty).Trim().ToLowerInvariant();
 
-            if (entry.Type != BanTypeGuid && entry.Type != BanTypeIp)
+            if (entry.Type != 0 && entry.Type != BanTypeGuid && entry.Type != BanTypeIp)
             {
                 Debug.LogWarning("Ignoring invalid ban type for BanID " + entry.BanID.ToString() + ". It will never match until fixed.");
             }
@@ -463,5 +478,21 @@ internal static class LegacyBanList
 
         [JsonProperty("Nickname")]
         public string Nickname;
+
+        [JsonProperty("until", NullValueHandling = NullValueHandling.Ignore)]
+        public long? Until;
+
+        [JsonProperty("Props", NullValueHandling = NullValueHandling.Ignore)]
+        public List<PlayerProp> Props;
+    }
+
+    [Serializable]
+    internal sealed class PlayerProp
+    {
+        [JsonProperty("Prop")]
+        public string Prop;
+
+        [JsonProperty("until", NullValueHandling = NullValueHandling.Ignore)]
+        public long? Until;
     }
 }
