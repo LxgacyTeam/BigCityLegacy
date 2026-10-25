@@ -8,6 +8,7 @@
       "githubDl": "https://github.com/LxgacyTeam/EnhancedCarTuning/releases/download/1.1.0/EnhancedCarTuning-1.1.0-windows.zip",
       "codebergRepo": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning",
       "codebergDl": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning/releases/download/1.1.0/EnhancedCarTuning-1.1.0-windows.zip",
+      "size": 6347954,
       "keyFiles": [
         "EnhancedCarTuning/EnhancedCarTuning.dll",
         "EnhancedCarTuning/EnhancedCarTuning.Resources.dll"
