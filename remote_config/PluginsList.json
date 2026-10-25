@@ -35,7 +35,7 @@
       "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
       "size": 10184,
       "keyFiles": [
-        "CinematicCameraPlus/CinematicCameraPlus.dll"
+        "CinematicCameraPlus.dll"
       ]
     }
   ]
