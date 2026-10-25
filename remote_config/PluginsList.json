@@ -22,7 +22,9 @@
       "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/RadioReplacer",
       "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/RadioReplacer/releases/RadioReplacer-3.0.0.zip",
       "size": 10443,
-      "keyFiles": ["RadioReplacer/RadioReplacer.dll"]
+      "keyFiles": [
+        "RadioReplacer/RadioReplacer.dll"
+      ]
     },
     {
       "name": "CinematicCameraPlus (by Mr_Dodep)",
@@ -32,7 +34,9 @@
       "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/CinematicCameraPlus",
       "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
       "size": 10184,
-      "keyFiles": ["CinematicCameraPlus.dll"]
+      "keyFiles": [
+        "CinematicCameraPlus.dll"
+      ]
     }
   ]
 }
