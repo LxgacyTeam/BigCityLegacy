@@ -13,6 +13,26 @@
         "EnhancedCarTuning/EnhancedCarTuning.dll",
         "EnhancedCarTuning/EnhancedCarTuning.Resources.dll"
       ]
+    },
+    {
+      "name": "RadioReplacer (by Mr_Dodep)",
+      "version": "3.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/RadioReplacer",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/RadioReplacer/releases/RadioReplacer-3.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/RadioReplacer",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/RadioReplacer/releases/RadioReplacer-3.0.0.zip",
+      "size": 10443,
+      "keyFiles": ["RadioReplacer/RadioReplacer.dll"]
+    },
+    {
+      "name": "CinematicCameraPlus (by Mr_Dodep)",
+      "version": "5.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/CinematicCameraPlus",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/CinematicCameraPlus",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
+      "size": 10184,
+      "keyFiles": ["CinematicCameraPlus.dll"]
     }
   ]
 }
