@@ -19,8 +19,8 @@
       "version": "1.0.0",
       "githubRepo": "https://github.com/zzest-dev/LegacyMapExpansion",
       "githubDl": "https://github.com/zzest-dev/LegacyMapExpansion/releases/download/v1.0.0/LegacyMapExpansion-1.0.0.zip",
-      "codebergRepo": "",
-      "codebergDl": "",
+      "codebergRepo": "https://github.com/zzest-dev/LegacyMapExpansion",
+      "codebergDl": "https://github.com/zzest-dev/LegacyMapExpansion/releases/download/v1.0.0/LegacyMapExpansion-1.0.0.zip",
       "size": 142436829,
       "keyFiles": [
         "LegacyMapExpansion/LegacyMapExpansion.dll"
