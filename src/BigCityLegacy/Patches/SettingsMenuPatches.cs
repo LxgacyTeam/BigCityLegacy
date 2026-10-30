@@ -28,6 +28,7 @@ internal static class SettingsMenuPatches
     private static void Postfix(MenuGroup __instance)
     {
         LegacySettingsMenuHelper.ApplyToGroup(__instance);
+        LegacyUserSettingsScroll.Ensure(__instance);
     }
 }
 
