@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "allowClientsWithoutManifest": false,
+  "allowClientsWithoutBclVersion": false,
+  "bcl": {
+    "minVersion": "1.4.2",
+    "message": "BigCityLegacy {pluginVersion} is not supported. Required: {requiredVersion}."
+  },
+  "hardlist": [
+    {
+      "guid": "com.bigcitylegacy.enhancedcartuning",
+      "name": "EnhancedCarTuning",
+      "minVersion": "1.0.0",
+      "extra": "Install the required plugin before reconnecting."
+    }
+  ],
+  "blacklist": [
+    {
+      "guid": "com.example.prohibited",
+      "message": "Remove {pluginName} before joining."
+    }
+  ]
+}

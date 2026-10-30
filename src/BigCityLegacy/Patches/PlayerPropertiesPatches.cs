@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Smooth;
+using System.Collections.Generic;
 using UnityEngine;
 
 [HarmonyPatch]
@@ -100,5 +101,53 @@ internal static class PlayerPropertiesPatches
         if (!LegacyPlayerProperties.Has(__instance.netInput, "invisible")) return true;
         __result = false;
         return false;
+    }
+
+    [HarmonyPatch(typeof(NetUI_PlayersList), "UpdateList")]
+    [HarmonyPostfix]
+    private static void PlayerList(NetUI_PlayersList __instance, List<NetUI_PlayerListItem> ___items)
+    {
+        if (!NetManager.isOnlineClient || ___items == null || !__instance.baseItem) return;
+        RectTransform template = __instance.baseItem.GetComponent<RectTransform>();
+        if (!template) return;
+        float x = template.anchoredPosition.x;
+        float y = template.anchoredPosition.y;
+        float step = template.sizeDelta.y + 2f;
+        int index = 0;
+        foreach (NetUI_PlayerListItem item in ___items)
+        {
+            if (!item) continue;
+            bool visible = !LegacyPlayerProperties.Has(item.netInput, "invisible");
+            item.gameObject.SetActive(visible);
+            if (!visible) continue;
+            item.SetIndex(++index);
+            RectTransform row = item.GetComponent<RectTransform>();
+            if (row) row.anchoredPosition = new Vector2(x, y);
+            y -= step;
+        }
+    }
+
+    [HarmonyPatch(typeof(NetUI_ServerInfo), "UpdateList")]
+    [HarmonyPostfix]
+    private static void ServerInfoList(NetUI_ServerInfo __instance, List<NetUI_ServerInfoPlayerItem> ___items)
+    {
+        if (!NetManager.isOnlineClient || ___items == null || !__instance.baseItem) return;
+        RectTransform template = __instance.baseItem.GetComponent<RectTransform>();
+        if (!template) return;
+        float x = template.anchoredPosition.x;
+        float y = template.anchoredPosition.y;
+        float step = template.sizeDelta.y + 2f;
+        int index = 0;
+        foreach (NetUI_ServerInfoPlayerItem item in ___items)
+        {
+            if (!item) continue;
+            bool visible = !LegacyPlayerProperties.Has(item.netInput, "invisible");
+            item.gameObject.SetActive(visible);
+            if (!visible) continue;
+            item.index.text = (++index).ToString();
+            RectTransform row = item.GetComponent<RectTransform>();
+            if (row) row.anchoredPosition = new Vector2(x, y);
+            y -= step;
+        }
     }
 }

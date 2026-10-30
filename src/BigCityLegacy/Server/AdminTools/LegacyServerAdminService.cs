@@ -74,7 +74,8 @@ internal static class LegacyServerAdminService
             ", Type=" + entry.Type.ToString() + ")."
         );
 
-        Disconnect(connect);
+        LegacyPluginNetwork.Moderation(connect, "banRejected", entry, nickname: nickname);
+        Disconnect(connect, true);
         return true;
     }
 
@@ -169,7 +170,7 @@ internal static class LegacyServerAdminService
         return true;
     }
 
-    internal static bool KickPlayer(int playerId, out string error)
+    internal static bool KickPlayer(int playerId, out string error, string reason = null)
     {
         error = null;
         PlayerSession session;
@@ -179,12 +180,23 @@ internal static class LegacyServerAdminService
             return false;
         }
 
+        LegacyPluginNetwork.Moderation(session.Connect, "kicked", reason: reason);
         ChatEventsPatches.SendAdminDisconnect(session.Connect, "was kicked from server");
         Disconnect(session.Connect, true);
         return true;
     }
 
-    internal static bool BanAndKickPlayer(int playerId, int banType, long? until, out LegacyBanList.BanEntry ban, out string error)
+    internal static void KickForLockedVehicle(NetInputControl input)
+    {
+        if (!input || !input.netConnect) return;
+        NetConnect connect = input.netConnect;
+        const string reason = "Suspicion of cheat usage";
+        LegacyPluginNetwork.Moderation(connect, "kicked", reason: reason);
+        ChatEventsPatches.SendAdminDisconnect(connect, "was kicked from server");
+        Disconnect(connect, true);
+    }
+
+    internal static bool BanAndKickPlayer(int playerId, int banType, long? until, out LegacyBanList.BanEntry ban, out string error, string reason = null)
     {
         ban = null;
         error = null;
@@ -196,7 +208,7 @@ internal static class LegacyServerAdminService
             return false;
         }
 
-        if (!LegacyBanList.AddBan(player, banType, until, out ban, out error))
+        if (!LegacyBanList.AddBan(player, banType, until, out ban, out error, reason))
         {
             return false;
         }
@@ -204,6 +216,7 @@ internal static class LegacyServerAdminService
         NetInputControl input;
         if (TryGetInput(playerId, out input) && input.netConnect)
         {
+            LegacyPluginNetwork.Moderation(input.netConnect, "banned", ban);
             ChatEventsPatches.SendAdminDisconnect(input.netConnect, until.HasValue ?
                 "was banned for " + LegacyAdminTime.Remaining(until) : "was permanently banned");
             Disconnect(input.netConnect, true);
@@ -596,6 +609,9 @@ internal static class LegacyServerAdminService
                input.gameObject.activeInHierarchy;
     }
 
+    internal static ServerPlayerSnapshot SnapshotForInput(NetInputControl input)
+    { var session = FindPlayerForInput(input); return session == null ? null : CreateSnapshot(session); }
+
     internal static string GetNicknameForInput(NetInputControl input)
     {
         PlayerSession session = FindPlayerForInput(input);
@@ -730,7 +746,7 @@ internal static class LegacyServerAdminService
         }
         try
         {
-            if (connect.conn != null)
+            if (connect.conn != null && !LegacyPluginNetwork.DelayDisconnect(connect))
             {
                 connect.conn.Disconnect();
             }

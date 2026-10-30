@@ -13,18 +13,14 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 
 
 
-每辆车的贴花图层上限通过 `[server]` 中的 `maxVinylLayers` 或 `-maxVinylLayers:<数量>` 设置。默认值为 `1024`，车身与玻璃图层合并计数。可用值为 `1..4096`；`0` 使用传输上限 `4096`。超过限制的车辆生成或涂装更新会被拒绝并写入服务器日志，不会截断贴花。
-
-角色生命值由服务器控制，范围为 `0..100`，并定期同步给所属客户端。修理命令仅适用于车辆。医疗包保留原有的服务器拾取检查和恢复机制；修改本地 HP 不会恢复服务器上的生命值。
-
 | 节 | 参数 |
 | --- | --- |
-| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
+| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`maxVinylLayers`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
+| `plugins` | `noPluginsPolicyAndAlerts` |
 | `mirror` | `masterServer`（默认 `true`）、`masterPort`（默认 `35000`）、`masterDebug` |
-| `files` | `serversList`、`eventsDir`、`respawnPoints`、`banList` |
+| `files` | `serversList`、`eventsDir`、`respawnPoints`、`banList`、`pluginsPolicy`、`alerts` |
 | `console` | `noServerConsole`、`noServerCli`、`verboseServerConsole`、`noUpdCheck` |
-| `logging` | `logsDir`, `noLogging`, `logLevel`, `serverDiagnostics` |
-| `repository` | `repositorySource`：`GitHub`、`Codeberg`，或留空以使用 PlayerPrefs 保存的选择 |
+| `logging` | `logsDir`, `noLogging`, `chatLogging`, `logLevel` |
 
 配置示例：
 
@@ -49,6 +45,9 @@ noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
 
+[plugins]
+noPluginsPolicyAndAlerts = false
+
 [mirror]
 masterServer = true
 masterPort = 35000
@@ -60,6 +59,8 @@ serversList = ''
 eventsDir = ''
 respawnPoints = ''
 banList = ''
+pluginsPolicy = ''
+alerts = ''
 
 [console]
 noServerConsole = false
@@ -70,6 +71,7 @@ noUpdCheck = false
 [logging]
 logsDir = ''
 noLogging = false
+chatLogging = false
 logLevel = "Log"
 ```
 
@@ -179,22 +181,28 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | --------------------- | ------------------------------------------------------------------------------------------------- |
 | players | 显示服务器当前的玩家列表。 |
 | playerinfo {PlayerID} | 显示某位玩家的信息。 |
-| kick {PlayerID} | 踢出玩家。 |
+| banlist | 显示当前有效的封禁列表。 |
+| kick {PlayerID} [reason] | 踢出玩家。 |
 | kill {PlayerID} | 杀死玩家角色。 |
-| ban {PlayerID} {1/2} [time] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
+| ban {PlayerID} {1/2} [time] [reason] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
 | unban {BanID} | 根据 BanID 解除封禁。 |
 | setprop {PlayerID} {prop} {0/1} [time] | 设置或移除属性；`help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | 按坐标传送；`help tp` |
 | tpto {PlayerID} {to PlayerID} [wcar] | 传送到玩家 |
 | clearchat | 清理聊天 |
-| help [setprop/tp] | 命令帮助 |
-| reloadcfg | 重新加载配置：EventsList、RespawnPoints、BanList。 |
+| help [setprop/tp/alert] | 命令帮助 |
+| reloadmirror | Mirror 运行时重载当前 ServersList.json。 |
+| reloadcfg | 重新加载配置：EventsList、RespawnPoints、BanList、PluginsPolicy、Alerts。 |
+| alert {PlayerID/all} {message} {small/large/hint} [seconds] | 向指定玩家或所有人显示提示；`help alert` |
 | msg {text} | 以服务器名义发送消息。详见下方说明。 |
 | cleardrop | 清理服务器上的所有掉落物：医疗包和武器。 |
 | delcars all | 删除服务器上的所有车辆。 |
 | delcars {PlayerID} | 删除指定玩家的所有车辆。 |
 | stats | 显示资源消耗和加载统计信息。 |
+| showcfg | 显示当前生效的服务器配置。 |
 | stop | 停止服务器。 |
+
+`reloadmirror` 仅在 Mirror 运行时可用：重新读取 ServersList.json，无需重启游戏服务器，出错时保留旧列表。`banlist` 显示有效封禁，不包含已过期封禁和 Type 0 记录。`showcfg` 显示启动时加载的 ServerConfig 值，包括默认值及启动参数覆盖。
 
 > [!WARNING]
 > 目前，`msg` 命令要求服务器上至少有一名玩家，并且实质上以该玩家的名义发送消息，仅将昵称替换为 "Server"。这是由游戏当前的聊天架构造成的。
@@ -205,7 +213,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 #### 封禁与玩家属性
 
-`ban <PlayerID> <1|2> [time]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
+`ban <PlayerID> <1|2> [time] [reason]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
 
 GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另一个 GUID，因此按 GUID 封禁不能阻止创建新存档。
 
@@ -217,7 +225,9 @@ GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另�
 | `nomove` | 冻结角色并使其离开车辆。服务器拒绝移动和进入车辆；BCL 客户端还会屏蔽移动输入。原版客户端通过原有的地形加载与传送流程修正位置。 |
 | `nocars` | 禁止生成车辆，不删除已有车辆。 |
 | `nochat` | 不发送该玩家的聊天消息。 |
-| `invisible` | 在 BCL 客户端隐藏头顶昵称、生命条及地图标记，角色本身仍可见。原版客户端没有对应网络标志，继续按原有规则显示。此属性不发送聊天公告。 |
+| `invisible` | 在 BCL 客户端隐藏头顶昵称、生命条、地图标记和玩家列表中的该玩家。服务器不发送关于该玩家的连接、重连、断线、改名及击杀聊天事件；隐身玩家击杀他人时不会暴露其昵称。角色本身仍可见。原版客户端没有对应的 UI 隐藏网络标志，继续按原有规则显示。 |
+
+玩家进入车辆时，服务器检查车辆在服务器上的锁定状态。进入锁定车辆会删除该车，并以 `Suspicion of cheat usage` 为由踢出玩家。伪造请求若指向远处车辆或无效座位，玩家仍会被踢出，但车辆不会被删除。
 
 封禁与属性保存在 `BigCityLegacy/config/BanList.json`，可用 `banList` 指定路径。属性仅按 GUID 匹配，即使同一记录按 IP 封禁。`until` 为 UTC 秒数形式的 Unix 时间戳，支持 JSON 数字或数字字符串；省略表示永久。封禁与各属性分别计时，过期后立即失效并由服务器定期从文件中清理。手动编辑后使用 `reloadcfg`。
 
@@ -260,18 +270,148 @@ CS/CS_Sur 比赛进行时，自由模式角色在竞技区内停留五秒后会�
 
 ## 日志与诊断
 
-服务器每次启动都会创建独立文件 `BigCityLegacy/logs/port_yyyy-MM-dd_HH-mm-ss-fff.log`。文件名和记录时间均使用 UTC。日志收集所有线程的 Unity 消息、BepInEx 日志（避免重复记录 Unity 消息），以及 BCL 控制台输出和输入的 CLI 命令。每条记录包含级别、来源、线程 ID 及 Unity 提供的堆栈信息。记录会立即刷新到文件系统，BCL 不在内存中保留历史列表。采用原子文件创建方式，即使多个实例同时启动也不会覆盖彼此的文件。旧日志不会自动删除。
+服务器每次启动都会创建独立文件 `serverlog_<port>_<yyyy-MM-dd_HH-mm-ss-fff>.log`。文件名和记录时间均使用 UTC。日志收集所有线程的 Unity 消息、BepInEx 日志（避免重复记录 Unity 消息），以及 BCL 控制台输出和输入的 CLI 命令。每条记录包含级别、来源、线程 ID 及 Unity 提供的堆栈信息。记录会立即刷新到文件系统，BCL 不在内存中保留历史列表。采用原子文件创建方式，即使多个实例同时启动也不会覆盖彼此的文件。旧日志不会自动删除。
 
-`[logging]` 配置项也可通过启动参数设置：
+`[logging]` 中的 `chatLogging = true` 或 `-chatLogging` 启用独立的 `chatlog_<port>_<yyyy-MM-dd_HH-mm-ss-fff>.log` 文件。该设置独立于 `noLogging` 和服务器日志级别。
 
-| TOML | 启动参数 | 说明 |
+日志默认保存在 `BigCityLegacy/logs`。
+
+`[logging]` 中的参数也可通过启动参数设置：
+
+| TOML | 启动参数 | 用途 |
 | --- | --- | --- |
-| `logsDir = ''` | `-logsDir:"server-logs/instance-1"` | 日志目录。空值使用 `BigCityLegacy/logs`。相对路径以游戏目录为基准，也支持绝对路径。目录会自动创建。 |
-| `noLogging = false` | `-noLogging` | 禁用默认启用的 BCL 文件日志。 |
-| `logLevel = "Log"` | `-logLevel:Warning` | 最低级别，按严重程度递增：`Log`、`Warning`、`Error`、`Exception`。`Assert` 归为 `Error`。 |
-| `serverDiagnostics = false` | `-serverDiagnostics` | 启用详细诊断跟踪。完整跟踪需使用 `logLevel = "Log"`。 |
+| `logsDir = ''` | `-logsDir:"server-logs/instance-1"` | 日志目录。空值使用 `BigCityLegacy/logs`；相对路径以游戏目录为基准，也支持绝对路径。目录会自动创建。 |
+| `noLogging = false` | `-noLogging` | 关闭默认启用的 BCL 文件日志。 |
+| `chatLogging = true` | `-chatLogging` | 启用聊天日志，默认关闭。 |
+| `logLevel = "Log"` | `-logLevel:Warning` | 最低级别，按严重程度递增为 `Log`、`Warning`、`Error`、`Exception`；`Assert` 按 `Error` 记录。 |
 
-诊断会在网络缓冲区接收、UNet 消息分发、玩家初始化、车辆生成、XML 加载和父对象设置前后记录 `ENTER`、`EXIT` 或 `THROW`，包含操作 ID、父操作 ID 和嵌套深度。还会记录字符串/缓冲区大小、读取位置、消息类型、通道，以及可用的连接 ID 和网络对象 ID。诊断不会读取或修改数据包，也不会保存数据包或 XML 的内容。嵌套深度达到 32 和 64 时记录托管堆栈；每 30 秒记录内存、GC 和玩家数量。诊断会增加磁盘负载，适合排查故障时启用。`noLogging = true` 会禁用诊断；普通启动不会安装诊断所用的网络补丁。
+详细诊断仅在 Debug 构建中通过 `-serverDiagnostics` 启用；完整追踪需设置 `logLevel = "Log"`。诊断会在网络缓冲区接收、UNet 分发、玩家初始化、车辆生成、XML 加载和父对象设置周围记录 `ENTER`/`EXIT`/`THROW`，包含操作 ID、父操作 ID 和嵌套深度。可用时还记录字符串/缓冲区长度、读取位置、消息类型、通道、连接 ID 和网络对象 ID。追踪不会读取或修改数据包，也不会保存数据包或 XML 的内容。在深度 32 和 64 时记录 managed stack trace；每 30 秒记录内存、GC 和玩家数。诊断会增加磁盘负载，适用于问题调查。`noLogging = true` 会禁用诊断；普通运行不安装这些网络追踪补丁。
 
-原生 `m_log_<port>.log` 默认禁用，只能通过启动参数 **`-mlog`** 单独启用；
+原生 `m_log_<port>.log` 默认关闭。仅在启动时传入 **`-mlog`** 可独立于 BCL 日志启用它。
 
+## 插件准入与 BCL 版本
+
+连接时，BCL 客户端上报自身 BigCityLegacy 版本，以及已加载的 BepInEx 插件 GUID、版本和名称。依赖 DLL 和未被 BepInEx 作为插件加载的文件不在列表中。服务器在创建玩家角色之前决定是否允许进入。`playerinfo <PlayerID>` 显示收到的插件列表。
+
+规则保存在 `BigCityLegacy/config/PluginsPolicy.json`。`allowClientsWithoutManifest` 和 `allowClientsWithoutBclVersion` 分别控制是否允许缺少插件列表或 BCL 版本的客户端。两者默认均为 `true`，`bcl` 默认为 `null`，两个列表均为空，因此原版和旧版客户端可以进入。若要求完整上报，将两个设置均设为 `false`。
+
+`[plugins] noPluginsPolicyAndAlerts = true` 或 `-noPluginsPolicyAndAlerts` 完全关闭服务器的插件/BCL 版本检查和 Alerts 发送。两个文件均不读取，普通封禁仍然有效。该设置在启动时生效。
+
+```json
+{
+  "version": 1,
+  "allowClientsWithoutManifest": false,
+  "allowClientsWithoutBclVersion": false,
+  "bcl": {
+    "minVersion": "1.4.2",
+    "message": "BigCityLegacy {pluginVersion} is not supported. Required: {requiredVersion}.",
+    "messageRu": "BigCityLegacy версии {pluginVersion} не поддерживается. Необходима версия: {requiredVersion}."
+  },
+  "hardlist": [
+    {
+      "guid": "com.bigcitylegacy.enhancedcartuning",
+      "name": "EnhancedCarTuning",
+      "minVersion": "1.0.0",
+      "extra": "Install the required plugin before reconnecting.",
+      "extraRu": "Перед повторным подключением установите необходимый плагин."
+
+    }
+  ],
+  "blacklist": [
+    {
+      "guid": "com.example.prohibited",
+      "message": "Remove {pluginName} before joining.",
+      "messageRu": "Удалите {pluginName} перед подключением."
+    }
+  ]
+}
+```
+
+`hardlist` 要求存在指定 GUID 且版本符合规则。`blacklist` 禁止指定 GUID；若设置了版本或范围，则仅禁止匹配的版本。GUID 比较不区分大小写，名称仅用于显示。`version` 要求精确匹配，`minVersion` 和 `maxVersion` 为包含边界的范围；可选择精确版本，或单独/同时使用上下限。缺少的数字段补零（`1.4 == 1.4.0.0`）；预发行版低于对应正式版，build metadata 不参与比较。`bcl` 独立限制 BCL 版本；已上报但不符合规则的版本始终被拒绝，即使允许不报版本。
+
+规则中的 `message` 替换该插件的全局不兼容模板，`extra` 追加一个段落，`bcl` 规则也支持这些字段。所有不兼容项合并显示。缺少插件名称时，使用规则的 `name` 或 GUID。
+
+允许缺少上报时，服务器无法检查该客户端的 hardlist/blacklist；允许缺少 BCL 版本时也不检查该版本。已提交但损坏的上报会被拒绝，不视为缺失。该机制依赖客户端报告的兼容性信息，不能证明客户端没有作弊：修改后的客户端可以伪造上报。
+
+上报限制：最多 256 个插件；GUID/名称各 128 字符；版本 64 字符；二进制列表 20000 字节；包含列表的完整连接 XML 30000 字节。完整列表放不下时，客户端取消连接并显示原因，不发送残缺列表。通道使用原生登录 XML 的附加属性，旧服务器会忽略它们。在线协议版本保持 94。
+
+## 玩家提示
+
+模板保存在 `BigCityLegacy/config/Alerts.toml`。节包括 `plugins`、`missingManifest`、`missingBclVersion`、`invalidManifest`、`banRejected`、`banned`、`kicked`、`welcome`。每节支持 `enabled`、`title`、`message`、`display`、`duration`。省略的节使用内置默认模板。Welcome 默认关闭，其余默认开启；默认类型为 `small`，Welcome 为 `large`。
+
+`small` 使用带 HintBox 的可拖动窗口；`large` 使用 ScrollView；`hint` 在屏幕顶部显示 HintBoxAlt，持续 `duration` 秒（0.1–3600，默认 6）。较长的 small 消息自动启用滚动。Hint 不阻止输入；打开的对话框显示鼠标并阻止点击穿透至游戏。拒绝连接和踢出消息在断线后仍保留。队列大小有限；hint 的计时从实际显示时开始，而非接收时。
+
+Alerts.toml 每节都可选填 `titleRu` 和 `messageRu`。客户端按当前游戏语言选择俄语文本；俄语字段缺少或为空时回退至主要字段。PluginsPolicy.json 的每条规则也支持 `messageRu` 和 `extraRu`，包括 `bcl`。
+
+```toml
+[welcome]
+enabled = true
+title = "Server rules"
+titleRu = "Правила сервера"
+display = "large"
+message = """
+Welcome, {nickname}!
+1. Respect other players.
+2. Follow the server rules.
+"""
+messageRu = """
+Добро пожаловать, {nickname}!
+1. Уважай других игроков.
+2. Соблюдай правила сервера.
+"""
+updatedAt = 1793150000
+
+[kicked]
+title = "Disconnected by administrator"
+titleRu = "Отключен администратором"
+message = "{nickname}, you were kicked.\nReason: {reason}"
+messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
+display = "small"
+
+[plugins]
+title = "Plugin compatibility"
+titleRu = "Совместимость плагинов"
+message = "{reason}\n{pluginName}: {pluginVersion}\nRequired: {requiredVersion}"
+messageRu = "{reason}\n{pluginName}: {pluginVersion}\nНеобходима: {requiredVersion}"
+display = "small"
+
+[banned]
+title = "Banned!"
+titleRu = "Вы были забанены!"
+message = "{nickname}\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
+messageRu = "{nickname}\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
+display = "hint"
+duration = 15
+```
+
+双引号字符串使用 `\n` 换行、`\t` 制表；长消息支持三重双引号。TOML 单引号字符串为字面量。JSON 中的 `message`/`extra` 使用标准 JSON 转义。变量仅替换一次，不会再次解析转义序列或 rich text。
+
+| 变量 | 适用范围 |
+| --- | --- |
+| `{nickname}`、`{serverPort}`、`{bclVersion}`、`{reason}` | 通用模板及手动消息；未知版本为 `not reported`，未指定原因为 `Not specified`。 |
+| `{playerId}` | 创建服务器会话后可用，准入前为空字符串。 |
+| `{banId}`、`{until}`、`{duration}` | 封禁 ID、到期 Unix 时间戳或 `permanent`、剩余时长或 `perm`。原因来自 `BanList.json` 的 `Reason`。 |
+| `{pluginGuid}`、`{pluginName}`、`{pluginVersion}`、`{requiredVersion}`、`{rule}` | 插件/BCL 不兼容；规则为 `hardlist`、`blacklist` 或 `bcl`，未安装插件的版本为 `not installed`。 |
+
+命令：
+
+```text
+alert <PlayerID|all> <message> <small|large|hint> [seconds] [title="Text"] [titleRu="Текст"] [messageRu="Текст"]
+alert all "Welcome, {nickname}!\nRead the rules." large
+alert all "Maintenance soon" hint 10 title="Notice" titleRu="Объявление" messageRu="Скоро техработы"
+help alert
+```
+
+封禁时长使用 `s/m/h/d`，不指定则为永久。原因随封禁保存，可用于后续连接被拒绝时的消息。`all` 会为每位接收者分别替换变量。旧版/原版客户端不接收 alert；拒绝连接、踢出或封禁时按原有流程断开，提示 UI 需要 BCL 1.4.2+。服务器立即清理游戏会话，同时最多保留两秒传输时间等待 alert 确认；未收到确认不会保留会话。
+
+启动和执行 `reloadcfg` 时，服务器分别记录 PluginsPolicy 和 Alerts 加载成功或失败的信息。
+
+`reloadcfg` 原子重载 PluginsPolicy 和 Alerts；错误时保留之前可用的一对配置。规则仅影响后续连接，不会自动踢出已连接玩家。启动时配置损坏会阻止服务器启动。可通过 ServerConfig.toml 的 `[files] pluginsPolicy = '...'`、`alerts = '...'`，或 `-pluginsPolicy:"path"`、`-alerts:"path"` 指定路径。相对路径以游戏目录为基准；明确指定但不存在的文件视为错误。
+
+Welcome 等待游戏世界加载、角色生成和 fade 完全结束后显示。
+
+Welcome 带有“不再显示”开关。选择及 `updatedAt` 按服务器实际 IP:port 分别保存到 PlayerPrefs。修改规则时，将 `updatedAt` 设为新的 Unix 时间戳（UTC 整数秒，默认 `0`），并执行 `reloadcfg`。值变化后取消隐藏，再次显示更新后的消息。
+
+客户端 C# API 另见：[BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_ZH.md)。
+
+`banRejected` 用于已被封禁的玩家尝试连接；`banned` 用于封禁已连接玩家。两个模板分别配置。

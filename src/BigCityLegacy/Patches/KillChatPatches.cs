@@ -14,7 +14,7 @@ internal static class KillChatPatches
         }
 
         NetInputControl victim = __instance.GetInputFromMinusLive() ? __instance.GetInputFromMinusLive().netInput : null;
-        if (victim == null)
+        if (victim == null || LegacyPlayerProperties.Has(victim, "invisible"))
         {
             return;
         }
@@ -28,7 +28,7 @@ internal static class KillChatPatches
         NetInputControl killer = who.netInputControl;
         string message;
 
-        if (killer == null)
+        if (killer == null || LegacyPlayerProperties.Has(killer, "invisible"))
         {
             message = "\u2620 died";
         }

@@ -90,6 +90,33 @@ public class LegacyMasterServer : MonoBehaviour
         this.PollListedServersIfNeed();
     }
 
+    internal static bool ReloadList(out string error)
+    {
+        error = null;
+        var instance = NetManager.me ? NetManager.me.GetComponent<LegacyMasterServer>() : null;
+        if (!IsMasterServerRequested() || !instance || !instance.enabled || instance.receiver == null)
+        { error = "Mirror mode is not active or has not finished starting."; return false; }
+        return instance.ReloadConfiguration(out error);
+    }
+    private bool ReloadConfiguration(out string error)
+    {
+        error = null; Config previous = config; var oldEntries = entries; var oldLive = live; float oldNextPoll = nextPollTimeMs;
+        int oldPort = masterPort, oldPoll = pollIntervalMs, oldStale = staleAfterMs;
+        try
+        {
+            if (new FileInfo(configPath).Length > 1024*1024) throw new FormatException("ServersList exceeds 1 MiB.");
+            Config parsed = LegacyMasterReload.Parse(File.ReadAllText(configPath));
+            config = parsed; entries = new List<ServerEntry>(); NormalizeConfig();
+            live = new Dictionary<string,LiveSnapshot>(); nextPollTimeMs = 0f; PollListedServersIfNeed();
+            Debug.Log("[MasterServer] Reloaded " + configPath + "; entries=" + entries.Count); return true;
+        }
+        catch (Exception ex)
+        {
+            config = previous; entries = oldEntries; live = oldLive; nextPollTimeMs = oldNextPoll; masterPort = oldPort; pollIntervalMs = oldPoll; staleAfterMs = oldStale;
+            error = ex.Message; Debug.LogError("[MasterServer] Reload failed; keeping previous list: " + error); return false;
+        }
+    }
+
     private void LoadAndStart()
     {
         this.configPath = LegacyHelpers.GetJsonPath("-serversList", "ServersList.json");

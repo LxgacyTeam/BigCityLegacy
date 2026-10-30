@@ -25,12 +25,12 @@ internal static class NetConnectAndControlPatches
 
     [HarmonyPatch(typeof(NetConnect), "Cmd_SetPrivateID")]
     [HarmonyPrefix]
-    private static bool NetConnect_CmdSetPrivateID_Prefix(NetConnect __instance, string setPrivateID, string setNikName, string setPlayerXml, RuntimePlatform platform)
+    private static bool NetConnect_CmdSetPrivateID_Prefix(NetConnect __instance, string setPrivateID, string setNikName, ref string setPlayerXml, RuntimePlatform platform)
     {
         string originalNikName = setNikName;
         string sanitizedNikName = LegacyServerLimits.SanitizeNikName(setNikName);
 
-        if (NetManager.isServer && LegacyServerAdminService.TryRejectBannedConnection(__instance, setPrivateID, sanitizedNikName))
+        if (NetManager.isServer && !LegacyPluginNetwork.Admit(__instance, setPrivateID, sanitizedNikName, ref setPlayerXml))
         {
             return false;
         }

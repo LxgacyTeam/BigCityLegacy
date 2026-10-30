@@ -34,6 +34,7 @@ public class LegacyVinylPort : MonoBehaviour
     private LegacyUIWindow win;
     private LegacyUIWindow warning;
     private LegacyVinylPack pendingPack;
+    private LegacyVinylPack warningDisplayPack;
     private string pendingPath;
     private CarControl pendingCar;
     private LegacyUIScrollView scroll;
@@ -51,6 +52,24 @@ public class LegacyVinylPort : MonoBehaviour
         public string name;
     }
 
+    // These queries must not use Instance: native input checks must not create UI.
+    internal static bool IsDraggingWindow
+    {
+        get
+        {
+            return instance && instance.isActiveAndEnabled &&
+                ((instance.win != null && instance.win.isDragging) ||
+                 (instance.warning != null && instance.warning.isDragging));
+        }
+    }
+
+    internal static bool IsDragHandleAtScreenPoint(Vector2 point)
+    {
+        return instance && instance.isActiveAndEnabled &&
+            ((instance.win != null && instance.win.IsDragHandleAtScreenPoint(point)) ||
+             (instance.warning != null && instance.warning.IsDragHandleAtScreenPoint(point)));
+    }
+
     private void Awake()
     {
         win = new LegacyUIWindow(
@@ -62,6 +81,8 @@ public class LegacyVinylPort : MonoBehaviour
                 WinHeight),
             new LegacyUIWindowOptions
             {
+                BackdropBlur = true,
+                BlurTintAlpha = 0.75f,
                 Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = true,
@@ -70,8 +91,8 @@ public class LegacyVinylPort : MonoBehaviour
         win.Visible = false;
         win.Closed += CancelPending;
         warning = new LegacyUIWindow("VinylPort", new Rect(0, 0, 550, 340),
-            new LegacyUIWindowOptions { Draggable = true, ClampToScreen = true, ShowCloseButton = true,
-                InputBlockMode = LegacyUIInputBlockMode.Screen, BackgroundAlpha = 0.98f });
+            new LegacyUIWindowOptions { BackdropBlur = true, BlurTintAlpha = 0.75f, Draggable = true, ClampToScreen = true, ShowCloseButton = true,
+                InputBlockMode = LegacyUIInputBlockMode.Screen });
         warning.Visible = false;
         warning.Closed += ClearPending;
 
@@ -83,6 +104,7 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void Update()
     {
+        if (warning != null && !warning.IsRendered) warningDisplayPack = null;
         if (win.Visible && CarGarageUI.me == null)
         {
             Close();
@@ -146,13 +168,13 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void OnGUI()
     {
-        if (win == null || !win.Visible)
+        if (win == null || (!win.IsRendered && !warning.IsRendered))
             return;
 
-        using (new LegacyUIGuiScope(-10000))
+        using (LegacyClientUI.Scope(-10000))
         {
-            if (warning.Visible) warning.Draw(DrawWarning);
-            else win.Draw(DrawContent);
+            if (!warning.Visible) win.Draw(DrawContent);
+            warning.Draw(DrawWarning);
         }
     }
 
@@ -306,7 +328,7 @@ public class LegacyVinylPort : MonoBehaviour
             if (pack.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText ||
                 pack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts)
             {
-                pendingPack = pack; pendingPath = path; pendingCar = CarGarageUI.me.car;
+                pendingPack = pack; warningDisplayPack = pack; pendingPath = path; pendingCar = CarGarageUI.me.car;
                 warning.Title = LegacyLocalizer.Text("VinylPort — compatibility", "VinylPort — совместимость");
                 warning.Rect = new Rect((Screen.width - 550f) / 2f, (Screen.height - 340f) / 2f, 550, 340);
                 warning.Visible = true;
@@ -320,13 +342,14 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void DrawWarning(Rect content)
     {
-        if (pendingPack == null) { CancelPending(); return; }
+        var display = pendingPack ?? warningDisplayPack;
+        if (display == null) { CancelPending(); return; }
         var ui = new LegacyUILayout(content, 8f);
         LegacyUI.Title(ui.Row(24f), LegacyLocalizer.Text("EnhancedCarTuning is required", "Нужен EnhancedCarTuning"));
-        bool textFallback = pendingPack.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText;
-        bool partsFallback = pendingPack.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts;
+        bool textFallback = display.TextCount > 0 && !LegacyVinylPortRuntime.SupportsText;
+        bool partsFallback = display.PartCount > 0 && !LegacyVinylPortRuntime.SupportsParts;
         string text = textFallback ? LegacyLocalizer.Text(
-            "Text layers: ", "Текстовых слоёв: ") + pendingPack.TextCount + LegacyLocalizer.Text(
+            "Text layers: ", "Текстовых слоёв: ") + display.TextCount + LegacyLocalizer.Text(
             ". The tuning plugin is unavailable.\nLoad with text layers hidden?\nOther vinyl layers will remain visible.",
             ". Плагин тюнинга недоступен.\nЗагрузить, скрыв текстовые слои?\nОстальные слои винилов останутся видимыми.") : LegacyLocalizer.Text(
             "This pack contains individual body part colors.\nInstall or update EnhancedCarTuning to display them.",

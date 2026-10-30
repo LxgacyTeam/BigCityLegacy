@@ -60,6 +60,19 @@ internal static class LegacyBanList
         }
     }
 
+    internal static List<BanEntry> ActiveBans()
+    {
+        EnsureLoaded(); lock (Sync)
+        {
+            long now = LegacyAdminTime.Now;
+            var result = new List<BanEntry>();
+            foreach (var entry in config.Bans)
+                if (entry != null && (entry.Type == BanTypeGuid || entry.Type == BanTypeIp) && LegacyAdminTime.IsActive(entry.Until,now))
+                    result.Add(new BanEntry { BanID=entry.BanID,Type=entry.Type,GUID=entry.GUID,IP=entry.IP,Nickname=entry.Nickname,Until=entry.Until,Reason=entry.Reason });
+            result.Sort((a,b)=>a.BanID.CompareTo(b.BanID)); return result;
+        }
+    }
+
     internal static bool IsBanned(string guid, string ip, out BanEntry matchedEntry)
     {
         EnsureLoaded();
@@ -121,7 +134,7 @@ internal static class LegacyBanList
         return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool AddBan(LegacyServerAdminService.ServerPlayerSnapshot player, int banType, long? until, out BanEntry addedEntry, out string error)
+    internal static bool AddBan(LegacyServerAdminService.ServerPlayerSnapshot player, int banType, long? until, out BanEntry addedEntry, out string error, string reason = null)
     {
         addedEntry = null;
         error = null;
@@ -147,6 +160,7 @@ internal static class LegacyBanList
             added.Type = banType;
             added.Nickname = player.Nickname ?? string.Empty;
             added.Until = until;
+            added.Reason = string.IsNullOrWhiteSpace(reason) ? null : reason;
             if (!SaveLocked(out error)) { config = previous; return false; }
             addedEntry = added;
             return true;
@@ -478,6 +492,9 @@ internal static class LegacyBanList
 
         [JsonProperty("Nickname")]
         public string Nickname;
+
+        [JsonProperty("Reason", NullValueHandling = NullValueHandling.Ignore)]
+        public string Reason;
 
         [JsonProperty("until", NullValueHandling = NullValueHandling.Ignore)]
         public long? Until;

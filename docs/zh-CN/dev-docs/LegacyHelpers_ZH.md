@@ -1,479 +1,117 @@
 # LegacyHelpers
 
-`LegacyHelpers` 是 BigCityLegacy 内部的一组小型辅助方法，用于检查游戏状态、处理路径、通过反射安全调用方法，以及执行常见的日常任务。
+当前 BCL 1.4.2 实现参考：[LegacyHelpers.cs](../../../src/BigCityLegacy/Core/LegacyHelpers.cs)。`LegacyHelpers` 为全局命名空间中的公开静态类。外部插件需引用 BigCityLegacy.dll，并声明对 `com.bigcitylegacy.baseplugin` 的 BepInEx 依赖。涉及 Unity API 的成员应在主线程调用。
 
----
-
-# `ModDataPath`
-
-返回位于游戏根目录中的 BigCityLegacy 文件夹路径。
-
-签名：
+## 公开成员
 
 ```csharp
 public static string ModDataPath { get; }
+public static string GetCurTimestamp { get; }
+public static string FormatSeconds(long seconds);
+public static void OpenFolder(string folderPath);
+public static void SafeInvoke(object instance, string methodName);
+public static void SafeInvoke(Type type, object instance, string methodName);
+public static string GetJsonPath(string arg, string json);
+public static bool CheckFileExistence(string path);
+public static bool IsGameplayRunning { get; }
+public static bool IsCsOrSurvivalMatchRunning { get; }
+public static int GetBuildVersion { get; }
+public static Texture2D LoadEmbeddedTexture(string resourceName);
 ```
 
-## 示例
+## 路径与文件
+
+`ModDataPath` 返回 `<GameRoot>/BigCityLegacy`。每次访问都会检查目录，并在缺失时尝试创建。创建失败会写入 Unity 日志，但仍返回路径。不存在 `LegacyHelpers.GameRoot` 属性；游戏根目录应使用 `BepInEx.Paths.GameRootPath`。
+
+`GetJsonPath(arg, json)` 从 BCL 的有效参数读取 `arg`，服务器进程中包含 ServerConfig 设置。未指定或值为空时，构造 `<GameRoot>/BigCityLegacy/config/<json>` 并尝试创建 `config`。所选路径的外层引号会被移除，相对路径与游戏根目录组合。显式路径不会移入 `config`，此方法也不创建其父目录。它不读取、检查或创建文件。方法名称不限制扩展名，BCL 也用它定位 Alerts.toml。
 
 ```csharp
+using BepInEx;
+using System.IO;
+
+string root = Paths.GameRootPath;
 string data = LegacyHelpers.ModDataPath;
-string config = Path.Combine(dataFolder, "config");
-```
-
-## 适用场景
-
-`BigCityLegacy` 文件夹用于存储模组的用户数据：配置、JSON 文件、辅助目录及模组本地资源。
-
----
-
-# `OpenFolder(string folderPath)`
-
-在操作系统的文件管理器中打开文件夹。
-
-签名：
-
-```csharp
-public static void OpenFolder(string folderPath)
-```
-
-行为：
-
-- 在 Windows 上，将 `/` 替换为 `\`；
-- 通过 `Directory.Exists(...)` 检查目录是否存在；
-- 在 Windows 上启动 `explorer.exe`；
-- 在 macOS 上启动 `open`；
-- 在 Linux 上启动 `xdg-open`；
-- 如果原生方式不起作用，尝试使用 `Application.OpenURL("file://" + folderPath)`；
-- 失败时向 Unity 日志写入错误消息。
-
-## 示例
-
-```csharp
-string folder = Path.Combine(LegacyHelpers.GameRoot, "BigCityLegacy");
-LegacyHelpers.OpenFolder(folder);
-```
-
-## 适用场景
-
-该方法适合用于打开配置、日志或用户文件所在文件夹的 UI 按钮。
-
-## 注意事项
-
-该方法要求传入已存在目录的路径。如果目录不存在，不会自动创建。
-
----
-
-# `SafeInvoke(object instance, string methodName)`
-
-通过反射安全调用对象上的无参数方法。
-
-签名：
-
-```csharp
-public static void SafeInvoke(object instance, string methodName)
-```
-
-该方法支持两种使用方式：
-
-```csharp
-LegacyHelpers.SafeInvoke(someObject, "SomeMethod");
-LegacyHelpers.SafeInvoke(typeof(SomeType), "SomeStaticMethod");
-```
-
-如果 `instance` 本身是一个 `Type`，则将调用转交给以下重载：
-
-```csharp
-SafeInvoke((Type)instance, null, methodName);
-```
-
-否则，通过 `instance.GetType()` 获取类型。
-
-## 示例：调用实例方法
-
-```csharp
-if (GameUI.me)
-{
-    LegacyHelpers.SafeInvoke(GameUI.me, "Refresh");
-}
-```
-
-## 示例：调用静态方法
-
-```csharp
-LegacyHelpers.SafeInvoke(typeof(PlayerPrefs), "Save");
-```
-
-## 注意事项
-
-`instance` 不得为 `null`。在当前实现中，接收对象的重载在进入第二个重载前会调用 `instance.GetType()`，因此必须事先检查是否为空。
-
-```csharp
-if (target != null)
-{
-    LegacyHelpers.SafeInvoke(target, "MethodName");
-}
-```
-
----
-
-# `SafeInvoke(Type type, object instance, string methodName)`
-
-在明确知道类型时，通过反射安全调用无参数方法。
-
-签名：
-
-```csharp
-public static void SafeInvoke(Type type, object instance, string methodName)
-```
-
-该方法使用以下标志查找 `methodName`：
-
-```csharp
-BindingFlags.Instance |
-BindingFlags.Static |
-BindingFlags.Public |
-BindingFlags.NonPublic
-```
-
-如果找到方法，则按以下方式调用：
-
-```csharp
-method.Invoke(instance, null);
-```
-
-调用错误会被捕获，并作为警告记录：
-
-```text
-[BigCityLegacy] SafeInvoke failed: <methodName> -> <message>
-```
-
-## 示例：私有实例方法
-
-```csharp
-LegacyHelpers.SafeInvoke(
-    typeof(MenuEsc),
-    MenuEsc.me,
-    "UpdateButtons");
-```
-
-## 示例：静态方法
-
-```csharp
-LegacyHelpers.SafeInvoke(
-    typeof(PlayerPrefs),
-    null,
-    "Save");
-```
-
-## 适用场景
-
-需要调用原版游戏中的方法，但不希望在编译时硬性依赖该方法的存在或访问级别时，可使用 `SafeInvoke`。
-
-该方法仅适用于**无参数**方法。对于带参数的方法，请使用单独的反射代码。
-
----
-
-# `GetJsonPath(string arg, string json)`
-
-返回 JSON 配置文件的路径。
-
-签名：
-
-```csharp
-public static string GetJsonPath(string arg, string json)
-```
-
-工作流程：
-
-1. 尝试通过 `LegacyCommandLine.GetArgValue(arg)` 获取命令行参数值；
-2. 如果未指定参数，则构建默认路径：
-
-```text
-<GameRoot>/BigCityLegacy/<json>
-```
-
-3. 返回经 `LegacyCommandLine.StripQuotes(...)` 处理后的路径。
-
-`LegacyCommandLine.GetArgValue(...)` 要求严格使用以下格式：
-
-```text
--key:value
--key:"value"
-```
-
-## 示例
-
-```csharp
-string serversListPath = LegacyHelpers.GetJsonPath(
-    "-serversList",
-    "ServersList.json");
-```
-
-命令行：
-
-```text
--serversList:"C:\Big City\ServersList.json"
-```
-
-如果未指定参数，将使用以下路径：
-
-```text
-<GameRoot>/BigCityLegacy/ServersList.json
-```
-
-## 现有配置的示例
-
-```csharp
+string ownConfig = LegacyHelpers.GetJsonPath("-exampleConfig", "ExamplePlugin.json");
 string servers = LegacyHelpers.GetJsonPath("-serversList", "ServersList.json");
-string events = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
-string respawn = LegacyHelpers.GetJsonPath("-respawnPoints", "RespawnPoints.json");
 string bans = LegacyHelpers.GetJsonPath("-banList", "BanList.json");
+string respawn = LegacyHelpers.GetJsonPath("-respawnPoints", "RespawnPoints.json");
 ```
-
----
-
-# `CheckFileExistence(string path)`
-
-检查文件是否存在；如果未找到文件，则向日志写入错误。
-
-签名：
-
-```csharp
-public static bool CheckFileExistence(string path)
-```
-
-行为：
-
-- 如果 `File.Exists(path)` 为真，返回 `true`；
-- 如果文件不存在，返回 `false`；
-- 文件缺失时，写入以下消息：
 
 ```text
-Failed to load <path>: File not found
+-exampleConfig:"C:\Big City\ExamplePlugin.json"
 ```
 
-## 示例
+ServersList 的默认路径为 `<GameRoot>/BigCityLegacy/config/ServersList.json`。事件使用 `BigCityLegacy/events/Race`、`CS`、`CS_Sur` 中的独立 JSON，以及 `-eventsDir` 参数；不再使用单一 Events.json 或 `-eventsList` 设置。
+
+`CheckFileExistence(path)` 返回 `File.Exists` 的结果。文件缺失时，将 `Failed to load <path>: File not found` 写入 Unity error log，不加载或创建文件。
+
+`OpenFolder(folderPath)` 要求目录已存在，否则记录错误并返回。在 WindowsPlayer 上将 `/` 转换为 `\` 并启动 `explorer.exe`；OSXPlayer 使用 `open`；LinuxPlayer 使用 `xdg-open`。原生启动抛出异常时，尝试 `Application.OpenURL("file://" + folderPath)`。方法不创建目录。平台判断针对 Player 构建，不保证 Unity Editor 中的行为。
 
 ```csharp
-string path = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
-
-if (!LegacyHelpers.CheckFileExistence(path))
-{
-    return;
-}
-
-string json = File.ReadAllText(path);
+LegacyHelpers.OpenFolder(LegacyHelpers.ModDataPath);
 ```
 
-## 适用场景
+## 时间
 
-该方法适用于配置文件和外部 JSON 文件，使文件缺失不会导致未处理的异常。
+`GetCurTimestamp` 返回当前**操作系统本地时间**，格式为 `yyyy-MM-dd_HH-mm-ss-fff`。它是属性而非方法，不返回 Unix 时间戳。服务器日志的文件名和记录时间独立使用 UTC。
 
----
-
-# `IsGameplayRunning`
-
-检查客户端是否处于实际进行游戏的状态。
-
-签名：
+`FormatSeconds(seconds)` 使用 `TimeSpan.FromSeconds`，最多输出两个带英文缩写的时间单位：天/小时、小时/分钟、分钟/秒，或仅秒。应传入 TimeSpan 范围内的非负时长；溢出异常不会被捕获。
 
 ```csharp
-public static bool IsGameplayRunning
+string stamp = LegacyHelpers.GetCurTimestamp;
+string shortTime = LegacyHelpers.FormatSeconds(90);     // 1 min. 30 sec.
+string longTime = LegacyHelpers.FormatSeconds(90061);   // 1 d. 1 h.
 ```
 
-以下情况下返回 `false`：
+## SafeInvoke
 
-- 正在运行服务器模式（`NetManager.isServer`）；
-- 缺少 `Nuligine.me` 或 `Nuligine.RealGame`；
-- 缺少有效的 `GameUI.me`，或 `GameUI.me.isUsed()` 返回 `false`；
-- 正在加载（`Loading.me`）；
-- 场景处于忙碌状态（`Scenes.nowBusy()`）；
-- 正在进行淡入淡出过渡（`FadeUI.fadeState != FadeUI.FadeState.Unfaded`）；
-- Esc 菜单已打开，或需要进行菜单选择（`MenuEsc.me || MenuEsc.needSelectWhere`）；
-- 手机已打开（`GamePhone.me.gameObject.activeSelf`）；
-- 缺少本地 `InputControl`；
-- 本地输入缺少 `current` 或 `currentOrParent`。
+两个重载均通过反射调用无参数方法，查找范围为 `Instance | Static | Public | NonPublic`；找不到方法时跳过。调用同步执行，不返回方法结果或成功标志。接收 `Type` 的重载捕获查找/调用异常并记录 Warning。
 
-## 示例：仅在游戏过程中生效的快捷键
+在 `object` 重载中，传入 `Type` 表示静态调用。普通对象使用 `instance.GetType()`；传入 `null` 会在进入受保护的重载前抛出 `NullReferenceException`。不要传入需要参数的方法；存在多个同名重载时可能产生 `AmbiguousMatchException`，并写入日志。
+
+```csharp
+LegacyHelpers.SafeInvoke(typeof(UnityEngine.PlayerPrefs), "Save");
+if (target != null)
+    LegacyHelpers.SafeInvoke(target.GetType(), target, "Refresh");
+```
+
+## 游戏状态
+
+`IsGameplayRunning` 检查客户端游戏状态。服务器模式下返回 false；缺少 `Nuligine.me`/`Nuligine.RealGame`、活动 GameUI、本地 InputControl 或其 `current`/`currentOrParent` 时也返回 false。Loading、场景忙碌、FadeUI 尚未结束、MenuEsc/菜单选择或手机打开时均返回 false。单纯缺少 FadeUI 不会导致失败。它不是连接检查，也不判断某个具体事件。
 
 ```csharp
 private void Update()
 {
-    if (!LegacyHelpers.IsGameplayRunning)
-    {
-        return;
-    }
-
-    if (Input.GetKeyDown(KeyCode.F8))
-    {
-        LegacyPointTool.Toggle();
-    }
+    if (!LegacyHelpers.IsGameplayRunning) return;
+    if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.F8))
+        BigCityLegacy.Api.LegacyAlerts.Hint("Tool ready");
 }
 ```
 
-## 适用场景
+`IsCsOrSurvivalMatchRunning` 仅在 `NetManager.isOnlineClient` 下工作。先检查 `Net_BaseEvent.curUserInRaceInst`，再检查 `Net_BaseEvent.isCurUserAddedToPlayersListG()`。只有 `Net_CS` 处于 `Spawn_AfterLobby`、`BeginRace` 或 `Race` 时返回 true。大厅和已结束比赛不计入；检查对象为本地玩家，而非服务器上的所有比赛。
 
-该方法适用于客户端快捷键、叠加界面、调试工具，以及其他不应在菜单、加载过程、淡入淡出过渡或服务器模式中触发的功能。
+`GetBuildVersion` 读取 `AlwaysOnline.me.buildVersionAsset.text`，通过 `AlwaysOnline.GetBuildVersionFromXML(text, false)` 解析 XML，并返回 `curVersion`。发生错误（包括 AlwaysOnline 初始化前过早调用）时记录 Error 并返回 `-1`。这是游戏的数字构建版本，不是 BCL 版本或 `OnlineProtocolVersion`。
 
----
+## 内嵌纹理
 
-# `IsCsOrSurvivalMatchRunning`
+`LoadEmbeddedTexture(resourceName)` 在 **BigCityLegacy 程序集**中查找 manifest resource，不查找调用方插件。读取字节后，为新建的无 mipmaps RGBA32 纹理调用 `Texture2D.LoadImage`，并以资源名命名纹理。资源不存在时记录 Error 并返回 null。LoadImage 返回 false 时销毁新纹理、记录 Error 并返回 null。读取/解码异常没有通用捕获处理。调用方拥有返回的纹理，不再需要时应使用 `UnityEngine.Object.Destroy` 释放。
 
-检查本地玩家是否正在参加进行中的 CS 或 CS_Survival 比赛。
+加载插件自身的内嵌资源时，应使用 `typeof(MyPlugin).Assembly.GetManifestResourceStream(...)` 并自行加载 Texture2D。
 
-签名：
+## BCL 内部辅助类
 
-```csharp
-public static bool IsCsOrSurvivalMatchRunning
-```
+以下成员不是面向外部插件的公开 API：
 
-该方法仅适用于在线客户端：
+| 成员 | 用途 |
+| --- | --- |
+| `LegacyHelpers.isDebugBuild` | 由 DEBUG 编译符号决定。 |
+| `LegacyHelpers.VersionLine` | BCL 版本及 `Application.version` 字符串。 |
+| `EnsureServerNetChat(NetManager)` | 活动 UNet 服务器缺少 NetChat 时创建并生成它；检查 prefab/NetworkIdentity，记录错误。 |
+| `EnsureServerUnetSettings(NetManager)` | 活动服务器上仅在实例缺失时从 prefab 创建 UNet_Settings。 |
+| `ResetSubsStatus()` | 一次性重置 PlayerPrefs 中的 Subs_Vk/Subs_Fb/Subs_Instagram，设置 BigCityLegacy.isSubsReseted 并保存。 |
+| `LegacyCommandLine.HasArg(string)` | 内部类：在包含 ServerConfig 的有效参数中检查精确标志，忽略大小写和外层引号，不读取 `-key:value` 的值。 |
+| `LegacyServerShutdown` | 内部停止请求、控制台线程通知及主线程 Application.Quit。 |
 
-```csharp
-if (!NetManager.isOnlineClient)
-{
-    return false;
-}
-```
+`NativeErrorDialog` 也是 **internal 类**，即使其方法 `Show(title, message)` 和 `ShowAndExit(title, message, exitCode = 1)` 标为 public。`Show` 同步显示阻塞对话框：Windows 使用 MessageBoxW，Linux 使用 kdialog/zenity，macOS 使用 osascript。失败时向 Console.Error 写入 fallback 并返回 false。`ShowAndExit` 随后调用 `Application.Quit(exitCode)`。这是内部严重启动错误机制，不是公开对话框 API。插件通知应使用 [LegacyAlerts](LegacyAlerts_ZH.md)。
 
-随后检查当前活动状态的两个来源：
-
-```csharp
-Net_BaseEvent.curUserInRaceInst
-Net_BaseEvent.isCurUserAddedToPlayersListG()
-```
-
-如果活动属于 `Net_CS`，且处于以下任一状态，则视为正在进行：
-
-```csharp
-Net_BaseEvent.CurState.Spawn_AfterLobby
-Net_BaseEvent.CurState.BeginRace
-Net_BaseEvent.CurState.Race
-```
-
-大厅状态和已完成状态不视为正在进行的比赛。
-
-## 示例：在 CS/CS_Survival 期间禁用某项功能
-
-```csharp
-if (LegacyHelpers.IsCsOrSurvivalMatchRunning)
-{
-    return;
-}
-
-FlyCamera.Create();
-```
-
-## 适用场景
-
-该方法适用于不得干扰竞技模式的客户端功能，例如自由相机、调试工具、UI 工具及实验性快捷键。
-
----
-
-# `GetBuildVersion`
-
-从 `AlwaysOnline` XML 资源中返回游戏构建版本。
-如果 AlwaysOnline 尚未初始化，则向日志写入错误。
-
-签名：
-
-```csharp
-public static int GetBuildVersion
-```
-
-## 示例
-
-```csharp
-int buildVersion = LegacyHelpers.GetBuildVersion;
-Debug.Log("Game build version: " + buildVersion);
-```
-
----
-
-# `LegacyCommandLine.HasArg(string arg)`
-
-位于 `LegacyCommandLine` 类中。
-检查命令行标志是否存在，忽略大小写和引号。
-
-签名：
-
-```csharp
-internal static bool HasArg(string arg)
-```
-
-该方法遍历 `Environment.GetCommandLineArgs()`，如果参数列表中包含处理后的 `arg`，则返回 `true`。比较时忽略大小写，并去除引号。
-
-## 示例
-
-```csharp
-if (LegacyCommandLine.HasArg("-noServerCli"))
-{
-    return;
-}
-```
-
----
-
-# NativeErrorDialog
-
-`NativeErrorDialog` 是一个独立辅助类，用于显示带有确定（OK）按钮的阻塞式原生错误对话框。
-
-该类与 `LegacyHelpers` 分开，适用于常规 Unity UI 不可用或尚未初始化时发生的严重启动错误。
-
-## `Show(string title, string message)`
-
-显示错误对话框；如果成功显示图形对话框，则返回 `true`。
-
-签名：
-
-```csharp
-public static bool Show(string title, string message)
-```
-
-各平台的行为：
-
-- Windows：使用 `user32.dll` 中的 `MessageBoxW`；
-- Linux：先尝试 `kdialog`，再尝试 `zenity`；
-- macOS：通过 `/usr/bin/osascript` 执行 AppleScript 的 `display alert`；
-- 如果无法显示图形对话框，则向 `Console.Error` 写入备用消息。
-
-## 示例
-
-```csharp
-NativeErrorDialog.Show(
-    "BigCityLegacy Startup Error",
-    "Failed to load required configuration file.");
-```
-
-## `ShowAndExit(string title, string message, int exitCode = 1)`
-
-显示错误对话框，并通过 `Application.Quit(exitCode)` 退出应用程序。
-
-签名：
-
-```csharp
-public static void ShowAndExit(
-    string title,
-    string message,
-    int exitCode = 1)
-```
-
-## 示例
-
-```csharp
-NativeErrorDialog.ShowAndExit(
-    "BigCityLegacy Startup Error",
-    "Outdated plugin version detected.",
-    1);
-```
-
-## 适用场景
-
-发生继续启动可能带来风险的严重启动错误时，可使用 `NativeErrorDialog`，例如旧插件冲突、版本不兼容或必需文件缺失。
-
-对于常规运行时错误，优先使用 BepInEx 日志记录器或 Unity 的 `Debug.LogError`，避免游戏被原生对话框阻塞。
-
-在无图形界面或服务器模式下，显示对话框可能不合适。对于服务器，通常最好将错误写入控制台或日志，并通过标准服务器机制终止进程。
-
----
+[开发者文档](README.md)。

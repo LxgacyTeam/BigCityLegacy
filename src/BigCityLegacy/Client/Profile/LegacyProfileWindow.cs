@@ -42,16 +42,17 @@ internal sealed class LegacyProfileWindow : MonoBehaviour
         };
         window = new LegacyUIWindow(LegacyLocalizer.Text("Player profile", "Профиль игрока"),
             new Rect((Screen.width - windowW) * .5f, (Screen.height - windowH) * .5f, windowW, windowH),
-            new LegacyUIWindowOptions { Draggable = true, ClampToScreen = true, ShowCloseButton = true,
-                InputBlockMode = LegacyUIInputBlockMode.Screen, HeaderHeight = 36f, ScreenPadding = 8f, BackgroundAlpha = 0.9f });
-        window.Closed += () => { enabled = false; exportPassword = ""; importPassword = ""; pendingPath = null; pendingEncrypted = false; };
+            new LegacyUIWindowOptions { BackdropBlur = true, BlurTintAlpha = 0.75f, Draggable = true, ClampToScreen = true, ShowCloseButton = true,
+                InputBlockMode = LegacyUIInputBlockMode.Screen, HeaderHeight = 36f, ScreenPadding = 8f });
+
         window.Visible = false; enabled = false;
     }
     private void OnGUI()
     {
-        if (window == null || !window.Visible) return;
+        if (window == null || !window.IsRendered)
+        { enabled = false; exportPassword = ""; importPassword = ""; pendingPath = null; pendingEncrypted = false; return; }
         window.Title = LegacyLocalizer.Text("Player profile", "Профиль игрока");
-        using (new LegacyUIGuiScope(-21500)) window.Draw(Draw);
+        using (LegacyClientUI.Scope(-21500)) window.Draw(Draw);
     }
     private void Refresh()
     {

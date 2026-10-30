@@ -16,6 +16,7 @@ using UnityEngine;
 internal static class LegacyServerConfig
 {
     private static string[] effective;
+    private static Dictionary<string,object> configuredValues = new Dictionary<string,object>(StringComparer.OrdinalIgnoreCase);
     internal static string LoadedPath { get; private set; }
     internal static string[] Apply(string[] raw)
     {
@@ -38,7 +39,7 @@ internal static class LegacyServerConfig
             Directory.CreateDirectory(Path.GetDirectoryName(LoadedPath));
             File.WriteAllText(LoadedPath, DefaultText, new UTF8Encoding(false));
         }
-        try { effective = Merge(raw, Parse(File.ReadAllText(LoadedPath))); }
+        try { configuredValues = Parse(File.ReadAllText(LoadedPath)); effective = Merge(raw, configuredValues); }
         catch (Exception ex)
         {
             // Fail closed instead of silently launching a server with defaults.
@@ -104,10 +105,11 @@ internal static class LegacyServerConfig
             if ((key.Equals("-bend_GameServer", StringComparison.OrdinalIgnoreCase) ||
                  key.Equals("-serverDiagnostics", StringComparison.OrdinalIgnoreCase) ||
                  key.Equals("-csDiagnostics", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("-chatLogging", StringComparison.OrdinalIgnoreCase) ||
                  key.StartsWith("-no", StringComparison.OrdinalIgnoreCase)) && !(value is bool))
                 throw Error(i, key + " must be a boolean.");
-            if (key.Equals("-logsDir", StringComparison.OrdinalIgnoreCase) && !(value is string))
-                throw Error(i, "logsDir must be a string.");
+            if ((key.Equals("-logsDir", StringComparison.OrdinalIgnoreCase) || key.Equals("-pluginsPolicy", StringComparison.OrdinalIgnoreCase) || key.Equals("-alerts", StringComparison.OrdinalIgnoreCase)) && !(value is string))
+                throw Error(i, key + " must be a string.");
             if (key.Equals("-logLevel", StringComparison.OrdinalIgnoreCase))
             {
                 if (!(value is string)) throw Error(i, "logLevel must be a string.");
@@ -222,5 +224,27 @@ internal static class LegacyServerConfig
         }
         return result.ToArray();
     }
-    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nmaxVinylLayers = 1024\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\ndisconnectedKickTimeout = \"30s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoUpdCheck = false\n\n[logging]\n# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.\nlogsDir = ''\nnoLogging = false\nlogLevel = \"Log\"\ncsDiagnostics = false\ncsDiagnosticsMaxShotsPerSecond = 60\n";
+    internal static SortedDictionary<string,object> CurrentSettings()
+    {
+        var result = new SortedDictionary<string,object>(Parse(DefaultText), StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in configuredValues) result[pair.Key] = pair.Value;
+        foreach (string argument in effective ?? new string[0])
+        {
+            int colon = argument.IndexOf(':'); string key = colon < 0 ? argument : argument.Substring(0,colon);
+            if (key.Equals("-master",StringComparison.OrdinalIgnoreCase)) key = "-masterServer";
+            if (!result.ContainsKey(key)) continue;
+            if (colon < 0) { if (result[key] is bool) result[key] = true; }
+            else
+            {
+                string value = LegacyCommandLine.StripQuotes(argument.Substring(colon+1));
+                long integer; double real; bool boolean;
+                if (result[key] is long && long.TryParse(value,NumberStyles.Integer,CultureInfo.InvariantCulture,out integer)) result[key] = integer;
+                else if (result[key] is double && double.TryParse(value,NumberStyles.Float,CultureInfo.InvariantCulture,out real)) result[key] = real;
+                else if (result[key] is bool && bool.TryParse(value,out boolean)) result[key] = boolean;
+                else result[key] = value;
+            }
+        }
+        return result;
+    }
+    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nmaxVinylLayers = 1024\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\ndisconnectedKickTimeout = \"30s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\n\n[plugins]\nnoPluginsPolicyAndAlerts = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\npluginsPolicy = ''\nalerts = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoUpdCheck = false\n\n[logging]\n# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.\nlogsDir = ''\nnoLogging = false\nchatLogging = false\nlogLevel = \"Log\"\ncsDiagnostics = false\ncsDiagnosticsMaxShotsPerSecond = 60\n";
 }

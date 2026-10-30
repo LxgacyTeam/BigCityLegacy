@@ -28,6 +28,8 @@ internal static class LegacyPatchManager
     {
         PatchClass(typeof(GeneralPatches));
         PatchClass(typeof(OnlineProtocolPatches));
+        PatchClass(typeof(PluginAdmissionPatches));
+        PatchClass(typeof(ServerPolishPatches));
         PatchClass(typeof(TerrainShadowPatches));
         PatchClass(typeof(ExistingTerrainShadowPatches));
         PatchClass(typeof(PlayerHealthPatches));
@@ -47,8 +49,10 @@ internal static class LegacyPatchManager
         PatchClass(typeof(ServerReliableSendPatches));
         PatchClass(typeof(RaceAndWorldPatches));
         PatchClass(typeof(InputPatches));
+        PatchClass(typeof(VinylPortCameraPatches));
         PatchClass(typeof(ChatEventsPatches));
         PatchClass(typeof(PlayerPropertiesPatches));
+        PatchClass(typeof(LockedVehicleEntryPatches));
         PatchClass(typeof(ShadowFixPatches));
         PatchClass(typeof(RemoteLookPatches));
         PatchClass(typeof(SettingsMenuPatches));

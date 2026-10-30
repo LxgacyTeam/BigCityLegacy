@@ -51,10 +51,17 @@ internal static class LegacyPlayerProperties
         uint id; int mask;
         if (parts.Length != 2 || !uint.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out id) ||
             !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out mask) || mask < 0 || mask > 31) return;
+        int oldMask;
+        bool changed = !clientMasks.TryGetValue(id, out oldMask) ? mask != 0 : oldMask != mask;
         if (mask == 0) clientMasks.Remove(id); else clientMasks[id] = mask;
         GameObject go = ClientScene.FindLocalObject(new NetworkInstanceId(id));
         NetInputControl input = go ? go.GetComponent<NetInputControl>() : null;
         if (input && input.ui) input.ui.DisableIconByEventIfNeed();
+        if (changed && ((oldMask ^ mask) & Bit("invisible")) != 0)
+        {
+            NetUI_PlayersList.UpdateListIfEnabled();
+            NetUI_ServerInfo.UpdateListIfEnabled();
+        }
     }
 
     internal static void Refresh()

@@ -1007,7 +1007,8 @@ public sealed class LegacyServerConsole : MonoBehaviour
             || message.IndexOf("RemoveUserFromColorArray") != -1
             || message.IndexOf("FileBlocks_Loader. Fail to stop thread") != -1
             || message.IndexOf("Unknow EventType for launch: RP") != -1
-            || message.IndexOf("Obscured Cheating Detector") != -1;
+            || message.IndexOf("Obscured Cheating Detector") != -1
+            || message.IndexOf("Large state update") != -1;
     }
 
     internal static void NotifyWorldLoaded()
