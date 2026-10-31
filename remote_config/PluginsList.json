@@ -50,6 +50,18 @@
       "keyFiles": [
         "CinematicCameraPlus.dll"
       ]
+    },
+    {
+      "name": "WinterPack (by dvwhrf)",
+      "version": "1.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/WinterPack",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/WinterPack/releases/WinterPack-1.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/WinterPack",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/WinterPack/releases/WinterPack-1.0.0.zip",
+      "size": 27101650,
+      "keyFiles": [
+        "WinterPack.dll"
+      ]
     }
   ]
 }
