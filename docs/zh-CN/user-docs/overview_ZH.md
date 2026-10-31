@@ -159,3 +159,7 @@ game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Ra
 连接主服务器时，游戏会从主服务器获取服务器列表，并显示在菜单中。地址和端口会被保存。
 
 使用直接连接时，游戏会根据 IP 和端口立即连接游戏服务器。在这种情况下，菜单中不会显示在线状态。
+
+## 连接标识
+
+BCL 启动时无需提权采集最小机器 fingerprint，仅发送给您连接的服务器。可用的主板、操作系统安装、系统磁盘和物理网卡标识被打包为可逆编码的 HEX 字符串。Linux machine-id 仅以独立的应用派生 ID 发送。服务器将其用于封禁，详见[服务器文档](server_ZH.md#按机器封禁)。

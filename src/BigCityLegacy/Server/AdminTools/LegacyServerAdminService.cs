@@ -61,7 +61,7 @@ internal static class LegacyServerAdminService
 
         string ip = GetConnectionAddress(connect.conn);
         LegacyBanList.BanEntry entry;
-        if (!LegacyBanList.IsBanned(guid, ip, out entry))
+        if (!LegacyBanList.IsBanned(guid, ip, LegacyConnectionStamp.Get(connect), out entry))
         {
             return false;
         }
@@ -1026,6 +1026,7 @@ internal static class LegacyServerAdminService
             Nickname = session.Nickname ?? string.Empty,
             Guid = session.Guid ?? string.Empty,
             Ip = session.Ip ?? string.Empty,
+            Fingerprint = LegacyConnectionStamp.Get(session.Connect),
             ConnectedSeconds = Math.Max(0f, Time.realtimeSinceStartup - session.ConnectedAt),
             ActiveCars = activeCars,
             TotalCarsSpawned = session.TotalCarsSpawned,
@@ -1405,6 +1406,7 @@ internal static class LegacyServerAdminService
         internal string Nickname;
         internal string Guid;
         internal string Ip;
+        internal string Fingerprint;
         internal float ConnectedSeconds;
         internal int ActiveCars;
         internal int TotalCarsSpawned;

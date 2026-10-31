@@ -69,6 +69,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 // Do not instantiate/register client-only systems on a dedicated server.
                 if (!_serverProcess)
                 {
+                    LegacyRuntimeStamp.Begin();
                     LegacyClientUI.Initialize(gameObject);
                     gameObject.AddComponent<LegacyAlertUI>();
                     LegacyRemoteLook.Configure(Config);

@@ -161,3 +161,7 @@ There are 2 tabs: **Master Connection** and **Direct Connection**.
 When connecting to a Master, the game receives the server list from it and displays it in the menu. The address and port are saved.
 
 When using direct connection, the game immediately connects to the game server by IP and port. In this case, the online status will not be shown in the menu.
+
+## Connection identifiers
+
+At startup BCL collects a minimal machine fingerprint without elevation and sends it only to the server you join. Available board, OS installation, system disk and physical NIC identifiers are packed in a reversibly encoded HEX string. Linux machine-id is sent only as a separate application-derived ID. Servers use this for bans; see the [server guide](server_EN.md#machine-bans) for details and limitations.

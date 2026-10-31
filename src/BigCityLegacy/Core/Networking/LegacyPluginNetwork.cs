@@ -23,14 +23,14 @@ internal static class LegacyPluginNetwork
     private static uint nextMessage;
     internal static void StartServer()
     {
-        peers.Clear();
+        peers.Clear(); LegacyConnectionStamp.Clear();
         if (LegacyAdmissionConfig.Policy == null)
         { try { LegacyAdmissionConfig.Initialize(); } catch { NetworkServer.Shutdown(); throw; } }
         if (LegacyAdmissionConfig.Enabled) NetworkServer.RegisterHandler(MessageId, ReceiveServer);
     }
-    internal static void StopServer() { peers.Clear(); }
+    internal static void StopServer() { peers.Clear(); LegacyConnectionStamp.Clear(); }
     internal static void StartClient(NetworkClient client) { LegacyWelcomeClient.Clear(); client.RegisterHandler(MessageId, ReceiveClient); }
-    internal static void Forget(NetworkConnection connection) { if (connection != null) peers.Remove(connection); }
+    internal static void Forget(NetworkConnection connection) { if (connection != null) peers.Remove(connection); LegacyConnectionStamp.Forget(connection); }
 
     internal static bool Attach(ref string xml)
     {
@@ -43,7 +43,7 @@ internal static class LegacyPluginNetwork
                 records.Add(new LegacyPluginRecord { Guid = info.Metadata.GUID, Name = info.Metadata.Name, Version = info.Metadata.Version.ToString() });
             }
             records.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Guid, b.Guid));
-            xml = LegacyPluginManifest.Attach(xml, records, VersionInfo.ModVersionName); return true;
+            xml = LegacyPluginManifest.Attach(LegacyConnectionStamp.Attach(xml), records, VersionInfo.ModVersionName); return true;
         }
         catch (Exception ex)
         {
@@ -57,6 +57,8 @@ internal static class LegacyPluginNetwork
     internal static bool Admit(NetConnect connect, string guid, string nickname, ref string xml)
     {
         if (!NetworkServer.active || !connect || connect.conn == null) return true;
+        try { LegacyConnectionStamp.Capture(connect, ref xml); }
+        catch { Debug.LogWarning("[Server] Invalid connection metadata; connection rejected."); LegacyServerAdminService.Disconnect(connect,true); return false; }
         if (!LegacyAdmissionConfig.Enabled) return !LegacyServerAdminService.TryRejectBannedConnection(connect, guid, nickname);
         Peer previous;
         if (peers.TryGetValue(connect.conn, out previous) && (previous.Closing || previous.Accepted)) return false;

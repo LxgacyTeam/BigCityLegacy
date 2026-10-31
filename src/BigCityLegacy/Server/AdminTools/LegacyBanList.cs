@@ -13,6 +13,8 @@ internal static class LegacyBanList
 {
     internal const int BanTypeGuid = 1;
     internal const int BanTypeIp = 2;
+    internal const int BanTypeNode = 3, BanTypeNodeIp = 4;
+    private const int MaxIPs = 256, MaxNodes = 128, MaxGuids = 256;
 
     private const string ConfigArg = "-banList";
     private const string ConfigFileName = "BanList.json";
@@ -67,32 +69,56 @@ internal static class LegacyBanList
             long now = LegacyAdminTime.Now;
             var result = new List<BanEntry>();
             foreach (var entry in config.Bans)
-                if (entry != null && (entry.Type == BanTypeGuid || entry.Type == BanTypeIp) && LegacyAdminTime.IsActive(entry.Until,now))
-                    result.Add(new BanEntry { BanID=entry.BanID,Type=entry.Type,GUID=entry.GUID,IP=entry.IP,Nickname=entry.Nickname,Until=entry.Until,Reason=entry.Reason });
+                if (entry != null && (entry.Type >= BanTypeGuid && entry.Type <= BanTypeNodeIp) && LegacyAdminTime.IsActive(entry.Until,now))
+                    result.Add(new BanEntry { BanID=entry.BanID,Type=entry.Type,GUID=entry.GUID,IP=entry.IP,Nickname=entry.Nickname,Until=entry.Until,Reason=entry.Reason,GUIDs=entry.GUIDs == null ? null : new List<string>(entry.GUIDs),IPs=entry.IPs == null ? null : new List<string>(entry.IPs),Fingerprints=entry.Fingerprints == null ? null : new List<string>(entry.Fingerprints) });
             result.Sort((a,b)=>a.BanID.CompareTo(b.BanID)); return result;
         }
     }
 
     internal static bool IsBanned(string guid, string ip, out BanEntry matchedEntry)
+    { return IsBanned(guid, ip, null, out matchedEntry); }
+
+    internal static bool IsBanned(string guid, string ip, string fingerprint, out BanEntry matchedEntry)
     {
         EnsureLoaded();
         string normalizedGuid = NormalizeGuid(guid), normalizedIp = NormalizeIp(ip);
+        bool usable = LegacyNodeCodec.Usable(fingerprint);
+        if (usable) fingerprint = fingerprint.ToUpperInvariant();
         long now = LegacyAdminTime.Now;
         lock (Sync)
         {
+            matchedEntry = null; BanListConfig rollback = null;
             foreach (BanEntry entry in config.Bans)
             {
-                if (entry == null || !LegacyAdminTime.IsActive(entry.Until, now)) continue;
-                if ((entry.Type == BanTypeGuid && normalizedGuid.Length > 0 && SameGuid(entry.GUID, normalizedGuid)) ||
-                    (entry.Type == BanTypeIp && normalizedIp.Length > 0 && string.Equals(entry.IP, normalizedIp, StringComparison.OrdinalIgnoreCase)))
-                {
-                    matchedEntry = entry;
-                    return true;
-                }
+                if (entry == null || entry.Type < BanTypeGuid || entry.Type > BanTypeNodeIp || !LegacyAdminTime.IsActive(entry.Until, now)) continue;
+                bool byGuid = MatchesGuid(entry,normalizedGuid);
+                bool byIp = normalizedIp.Length > 0 && (string.Equals(entry.IP, normalizedIp, StringComparison.OrdinalIgnoreCase) ||
+                    entry.IPs != null && entry.IPs.Contains(normalizedIp));
+                bool byNode = usable && entry.Fingerprints != null && entry.Fingerprints.Exists(f => LegacyNodeCodec.Matches(f,fingerprint));
+                bool match = byGuid ||
+                    entry.Type == BanTypeIp && byIp || entry.Type == BanTypeNode && byNode || entry.Type == BanTypeNodeIp && (byNode || byIp);
+                if (!match) continue;
+                if (matchedEntry == null) matchedEntry = entry;
+                if (entry.Type != BanTypeNodeIp) continue;
+                bool addGuid = normalizedGuid.Length > 0 && !byGuid && (entry.GUIDs == null || entry.GUIDs.Count < MaxGuids);
+                bool addIp = normalizedIp.Length > 0 && !byIp && (entry.IPs == null || entry.IPs.Count < MaxIPs);
+                bool addNode = usable && (entry.Fingerprints == null || !entry.Fingerprints.Contains(fingerprint) && entry.Fingerprints.Count < MaxNodes);
+                if (!addGuid && !addIp && !addNode) continue;
+                if (rollback == null) rollback = CloneConfig();
+                if (entry.GUIDs == null) entry.GUIDs = new List<string>();
+                if (entry.IPs == null) entry.IPs = new List<string>();
+                if (entry.Fingerprints == null) entry.Fingerprints = new List<string>();
+                if (addGuid) entry.GUIDs.Add(normalizedGuid);
+                if (addIp) entry.IPs.Add(normalizedIp);
+                if (addNode) entry.Fingerprints.Add(fingerprint);
             }
+            if (rollback != null)
+            {
+                string error;
+                if (!SaveLocked(out error)) { config = rollback; Debug.LogError("[Server] Failed to persist learned ban aliases: " + error); }
+            }
+            return matchedEntry != null;
         }
-        matchedEntry = null;
-        return false;
     }
 
     internal static List<PlayerProp> GetProps(string guid)
@@ -134,21 +160,33 @@ internal static class LegacyBanList
         return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool MatchesGuid(BanEntry entry, string guid)
+    {
+        return guid.Length > 0 && (SameGuid(entry.GUID,guid) || entry.Type == BanTypeNodeIp &&
+            entry.GUIDs != null && entry.GUIDs.Exists(value => SameGuid(value,guid)));
+    }
+
     internal static bool AddBan(LegacyServerAdminService.ServerPlayerSnapshot player, int banType, long? until, out BanEntry addedEntry, out string error, string reason = null)
     {
         addedEntry = null;
         error = null;
-        if (player == null || (banType != BanTypeGuid && banType != BanTypeIp))
-        { error = "Ban type must be 1 (GUID) or 2 (IP)."; return false; }
+        if (player == null || (banType < BanTypeGuid || banType > BanTypeNodeIp))
+        { error = "Ban type must be 1 (GUID), 2 (GUID/IP), 3 (GUID/fingerprint) or 4 (linked GUID/IP/fingerprint)."; return false; }
         string guid = NormalizeGuid(player.Guid), ip = NormalizeIp(player.Ip);
-        if ((banType == BanTypeGuid && guid.Length == 0) || (banType == BanTypeIp && ip.Length == 0))
+        string fingerprint = player.Fingerprint;
+        if (banType >= BanTypeNode && !LegacyNodeCodec.Usable(fingerprint))
+        { error = "Client has no usable fingerprint (at least two independent groups required)."; return false; }
+        if (banType >= BanTypeNode) fingerprint = fingerprint.ToUpperInvariant();
+        if (guid.Length == 0 || ((banType == BanTypeIp || banType == BanTypeNodeIp) && ip.Length == 0))
         { error = "The player has no identifier for this ban type."; return false; }
         EnsureLoaded();
         lock (Sync)
         {
             foreach (BanEntry entry in config.Bans)
                 if (entry != null && entry.Type == banType && LegacyAdminTime.IsActive(entry.Until, LegacyAdminTime.Now) &&
-                    (banType == BanTypeGuid ? SameGuid(entry.GUID, guid) : string.Equals(entry.IP, ip, StringComparison.OrdinalIgnoreCase)))
+                    (MatchesGuid(entry,guid) || (banType == BanTypeGuid ? false : banType == BanTypeIp ? string.Equals(entry.IP, ip, StringComparison.OrdinalIgnoreCase) :
+                        entry.Fingerprints != null && entry.Fingerprints.Exists(f => LegacyNodeCodec.Matches(f,fingerprint)) ||
+                        banType == BanTypeNodeIp && (entry.IP == ip || entry.IPs != null && entry.IPs.Contains(ip)))))
                 { error = "This ban already exists as BanID " + entry.BanID + "."; return false; }
             BanListConfig previous = CloneConfig();
             BanEntry added = config.Bans.Find(e => e != null && e.Type == 0 && guid.Length > 0 && SameGuid(e.GUID, guid));
@@ -158,6 +196,9 @@ internal static class LegacyBanList
                 config.Bans.Add(added);
             }
             added.Type = banType;
+            added.GUIDs = banType == BanTypeNodeIp ? new List<string> { guid } : null;
+            added.IPs = banType >= BanTypeNode ? new List<string> { ip } : null;
+            added.Fingerprints = banType >= BanTypeNode ? new List<string> { fingerprint } : null;
             added.Nickname = player.Nickname ?? string.Empty;
             added.Until = until;
             added.Reason = string.IsNullOrWhiteSpace(reason) ? null : reason;
@@ -378,7 +419,34 @@ internal static class LegacyBanList
                 foreach (PlayerProp prop in entry.Props)
                     if (prop != null) prop.Prop = (prop.Prop ?? string.Empty).Trim().ToLowerInvariant();
 
-            if (entry.Type != 0 && entry.Type != BanTypeGuid && entry.Type != BanTypeIp)
+            if (entry.Type == BanTypeNodeIp)
+            {
+                if (entry.GUIDs != null && entry.GUIDs.Count > MaxGuids) throw new InvalidDataException("Too many ban GUID aliases.");
+                var guids = new List<string>();
+                if (entry.GUID.Length > 0) guids.Add(entry.GUID);
+                if (entry.GUIDs != null) foreach (string alias in entry.GUIDs)
+                { string value = NormalizeGuid(alias); if (value.Length > 0 && !guids.Exists(g => SameGuid(g,value))) guids.Add(value); }
+                if (guids.Count > MaxGuids) throw new InvalidDataException("Too many ban GUID aliases.");
+                entry.GUIDs = guids;
+            }
+
+            if (entry.Type == BanTypeNode || entry.Type == BanTypeNodeIp)
+            {
+                if (entry.Fingerprints == null || entry.Fingerprints.Count == 0 || entry.Fingerprints.Count > MaxNodes ||
+                    entry.IPs != null && entry.IPs.Count > MaxIPs) throw new InvalidDataException("Invalid hardware ban aliases for BanID " + entry.BanID);
+                var nodes = new List<string>();
+                foreach (string node in entry.Fingerprints)
+                { if (!LegacyNodeCodec.Usable(node)) throw new InvalidDataException("Invalid hardware ban fingerprint."); string value = node.ToUpperInvariant(); if (!nodes.Contains(value)) nodes.Add(value); }
+                entry.Fingerprints = nodes;
+                var addresses = new List<string>();
+                if (!string.IsNullOrEmpty(entry.IP)) addresses.Add(entry.IP);
+                if (entry.IPs != null) foreach (string address in entry.IPs)
+                { string value = NormalizeIp(address); if (value.Length > 0 && !addresses.Contains(value)) addresses.Add(value); }
+                if (addresses.Count > MaxIPs) throw new InvalidDataException("Too many hardware ban IP aliases.");
+                entry.IPs = addresses;
+            }
+
+            if (entry.Type < 0 || entry.Type > BanTypeNodeIp)
             {
                 Debug.LogWarning("Ignoring invalid ban type for BanID " + entry.BanID.ToString() + ". It will never match until fixed.");
             }
@@ -486,6 +554,15 @@ internal static class LegacyBanList
 
         [JsonProperty("IP")]
         public string IP;
+
+        [JsonProperty("GUIDs", NullValueHandling = NullValueHandling.Ignore)]
+        public List<string> GUIDs;
+
+        [JsonProperty("IPs", NullValueHandling = NullValueHandling.Ignore)]
+        public List<string> IPs;
+
+        [JsonProperty("Fingerprints", NullValueHandling = NullValueHandling.Ignore)]
+        public List<string> Fingerprints;
 
         [JsonProperty("Type")]
         public int Type;

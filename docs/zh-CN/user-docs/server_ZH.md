@@ -15,7 +15,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 
 | 节 | 参数 |
 | --- | --- |
-| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`maxVinylLayers`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn` |
+| `server` | `port`（1–65535）、`maxConn`（1–100）、`Mode`（`None`、`RP`、`Race`、`CS`、`CS_Sur`）、`lang`、`maxCars`、`maxCarsByPlayer`、`maxVinylLayers`、`CarSpawnTimeout`、`maxNikLength`、`idleKickTimeout`, `disconnectedKickTimeout`、`noChatEvents`、`noKillChat`、`noCsDamageCooldown`、`useVanillaRespawn`, `requireFingerprint` |
 | `plugins` | `noPluginsPolicyAndAlerts` |
 | `mirror` | `masterServer`（默认 `true`）、`masterPort`（默认 `35000`）、`masterDebug` |
 | `files` | `serversList`、`eventsDir`、`respawnPoints`、`banList`、`pluginsPolicy`、`alerts` |
@@ -25,7 +25,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 配置示例：
 
 ```toml
-# BigCityLegacy server configuration. CLI arguments override these values. 
+# BigCityLegacy server configuration. CLI arguments override these values.
 # Keys match launch options without the leading '-'.
 
 [server]
@@ -44,6 +44,7 @@ noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
+requireFingerprint = false
 
 [plugins]
 noPluginsPolicyAndAlerts = false
@@ -184,7 +185,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | banlist | 显示当前有效的封禁列表。 |
 | kick {PlayerID} [reason] | 踢出玩家。 |
 | kill {PlayerID} | 杀死玩家角色。 |
-| ban {PlayerID} {1/2} [time] [reason] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
+| ban {PlayerID} {1/2/3/4} [time] [reason] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
 | unban {BanID} | 根据 BanID 解除封禁。 |
 | setprop {PlayerID} {prop} {0/1} [time] | 设置或移除属性；`help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | 按坐标传送；`help tp` |
@@ -213,7 +214,7 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 #### 封禁与玩家属性
 
-`ban <PlayerID> <1|2> [time] [reason]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
+`ban <PlayerID> <1|2|3|4> [time] [reason]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
 
 GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另一个 GUID，因此按 GUID 封禁不能阻止创建新存档。
 
@@ -415,3 +416,26 @@ Welcome 带有“不再显示”开关。选择及 `updatedAt` 按服务器实�
 客户端 C# API 另见：[BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_ZH.md)。
 
 `banRejected` 用于已被封禁的玩家尝试连接；`banned` 用于封禁已连接玩家。两个模板分别配置。
+
+## 按机器封禁
+
+`ban <PlayerID> <3|4> [time] [reason]` 使用 BCL 客户端在启动时一次性采集、连接时发送给所选服务器的 fingerprint。`playerinfo <PlayerID>` 显示其 HEX 字符串。现有命令新增类型：`1` 为 GUID，`2` 为 GUID 或 IP，`3` 为 GUID 或 fingerprint，`4` 关联 GUID、fingerprint 和 IP。所有类型均支持时长、原因和 `unban <BanID>`。
+
+Windows 使用 MachineGuid、主板序列号/SMBIOS UUID、系统磁盘序列号和物理网卡的永久 MAC。ProcessorId 不作为唯一 CPU 标识。Linux 使用当前用户可读取的 DMI 字段、由 machine-id 派生的独立 BCL 标识、系统磁盘序列号/根文件系统 UUID 和物理网卡永久 MAC。不请求 sudo/UAC；不可读取的值及已知 OEM 占位符会被省略。
+
+主板序列号与 SMBIOS UUID 属于同一组，磁盘序列号与根文件系统 UUID 属于另一组，其余组为操作系统安装和物理网卡。具有三或四组时允许一组不匹配；只有两组时要求全部匹配。缺失值不会互相匹配。减少新报告的字段不会降低旧报告的匹配阈值。少于两组时不能创建类型 3/4 封禁。
+
+GUID 是所有有效封禁类型的基础拦截标识。类型 `1–3` 仅增加 GUID 检查，不学习其他标识：IP 封禁通过 GUID 匹配时不添加新 IP，通过 IP/fingerprint 匹配的其他 GUID 也不保存。类型 `3` 还检查机器，但不检查 IP。
+
+类型 `4` 在任一已知 GUID、fingerprint **或** IP 匹配时拒绝连接，并在同一 BanID 的 `GUIDs`、`IPs`、`Fingerprints` 数组中保存新的非空 GUID/IP 和有效 fingerprint。主 `GUID` 和 `IP` 字段保持兼容，现有记录无需迁移即检查主 GUID。所有别名共享期限和原因；上限为 256 个 GUID、256 个 IP、128 个 fingerprint，达到上限不取消已有封禁。解封停用全部别名，并保留仍只按主 GUID 匹配的玩家属性。
+
+类型 4 会按设计将 NAT、家庭或 VPN 下共用公网 IP 的机器关联到同一封禁记录。缺少 fingerprint 的旧客户端仍检查 GUID，类型 4 还检查其 IP。设置 `[server] requireFingerprint = true` 或 `-requireFingerprint` 可强制上报（默认 false），此时缺失、不可用或损坏的报告均被拒绝。该要求及机器封禁独立于 `noPluginsPolicyAndAlerts`。
+
+```text
+ban 15 3 12h Suspicion of cheat usage
+ban 15 4
+playerinfo 15
+unban 1
+```
+
+Fingerprint 为可逆打包的字段，不是单一哈希或真实性证明。修改客户端可伪造报告，重装 Linux 或更换硬件可能改变多组标识。服务器应将机器标识作为管理数据保管。手动解码：`python scripts/decodeFingerprint.py --file fingerprint.txt`。

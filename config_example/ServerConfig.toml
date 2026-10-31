@@ -17,6 +17,7 @@ noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
+requireFingerprint = false
 
 [mirror]
 masterServer = true

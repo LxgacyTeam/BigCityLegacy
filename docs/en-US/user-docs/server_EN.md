@@ -13,7 +13,7 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 
 | Section | Options |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn`, `requireFingerprint` |
 | `plugins` | `noPluginsPolicyAndAlerts` |
 | `mirror` | `masterServer` (default `true`), `masterPort` (default `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList`, `pluginsPolicy`, `alerts` |
@@ -23,7 +23,7 @@ The `-bend_GameServer` launch flag is required and is not a TOML setting. `-serv
 Example configuration:
 
 ```toml
-# BigCityLegacy server configuration. CLI arguments override these values. 
+# BigCityLegacy server configuration. CLI arguments override these values.
 # Keys match launch options without the leading '-'.
 
 [server]
@@ -42,6 +42,7 @@ noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
+requireFingerprint = false
 
 [plugins]
 noPluginsPolicyAndAlerts = false
@@ -182,7 +183,7 @@ While the game server is running, it can be controlled through the interactive C
 | banlist | Display active bans. |
 | kick {PlayerID} [reason] | Kick a player. |
 | kill {PlayerID} | Kill a player character. |
-| ban {PlayerID} {1/2} [time] [reason] | Ban a player; 1 = ban by GUID, 2 = ban by IP. |
+| ban {PlayerID} {1/2/3/4} [time] [reason] | Ban a player; 1 = ban by GUID, 2 = ban by IP. |
 | unban {BanID} | Unban a player by BanID. |
 | setprop {PlayerID} {prop} {0/1} [time] | Set/remove a property; `help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | Teleport to coordinates; `help tp` |
@@ -211,7 +212,7 @@ Each player on the server is assigned a temporary unique **PlayerID** valid with
 
 #### Bans and player properties
 
-`ban <PlayerID> <1|2> [time] [reason]` blocks connections by GUID (`1`) or IP (`2`). The optional duration is a positive integer followed by `s`, `m`, `h` or `d`, for example `30s`, `15m`, `12h` or `5d`. Omitting it makes the ban permanent. Example: `ban 15 1 12h`. The command does not accept type `0`.
+`ban <PlayerID> <1|2|3|4> [time] [reason]` blocks connections by GUID (`1`) or IP (`2`). The optional duration is a positive integer followed by `s`, `m`, `h` or `d`, for example `30s`, `15m`, `12h` or `5d`. Omitting it makes the ban permanent. Example: `ban 15 1 12h`. The command does not accept type `0`.
 
 GUID identifies a game profile and is stored in PlayerPrefs. Deleting the save creates another GUID, so a GUID ban does not prevent a new profile.
 
@@ -413,3 +414,26 @@ Welcome includes a “Don't show again” toggle. The choice and `updatedAt` are
 The client C# API is documented separately: [BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_EN.md).
 
 `banRejected` applies when an already-banned player attempts to join; `banned` applies when banning a connected player. These templates are configured independently.
+
+## Machine bans
+
+`ban <PlayerID> <3|4> [time] [reason]` uses a fingerprint that BCL clients collect once at startup and send to the selected server when connecting. `playerinfo <PlayerID>` prints its HEX string. These extend the existing command: type `1` is GUID, `2` is GUID or IP, `3` is GUID or fingerprint, and `4` links GUIDs, fingerprints and IPs. Duration, reason and `unban <BanID>` work for every type.
+
+Windows uses MachineGuid, baseboard serial/SMBIOS UUID, system disk serial, and permanent physical NIC MAC addresses. ProcessorId is not used as a unique CPU identifier. Linux uses DMI fields readable by the current user, a separate BCL-derived machine-id identifier, system disk serial/root filesystem UUID, and permanent physical NIC MAC addresses. No sudo/UAC requests are made; unavailable values and known OEM placeholders are omitted.
+
+Board serial and SMBIOS UUID form one group; disk serial and root filesystem UUID form another. The remaining groups are OS installation and physical NICs. Three or four groups permit one mismatch; two groups must both match. Missing values do not match each other. Reducing fields in a new report does not lower the older report's threshold. Fewer than two groups cannot support a new type 3/4 ban.
+
+GUID is a base blocking identifier for every active ban type. For types `1–3`, it provides an additional check without learning other identifiers: matching a GUID on an IP ban does not add the new IP, and matching a different GUID through IP/fingerprint does not save that GUID. Type `3` additionally checks the machine, but not IP.
+
+Type `4` rejects a match on **any** known GUID, fingerprint or IP. Such a match learns new nonempty GUIDs/IPs and usable fingerprints in the same BanID's `GUIDs`, `IPs`, `Fingerprints` arrays. Primary `GUID` and `IP` fields remain compatible; existing entries use their primary GUID without migration. All aliases share the BanID's duration and reason. Limits are 256 GUIDs, 256 IPs and 128 fingerprints; reaching a limit does not cancel enforcement. Unbanning disables all aliases while preserving player properties, which still match only the primary GUID.
+
+For type 4, shared public IPs behind NAT, in a household or on a VPN link machines into one ban record by design. Older clients without a fingerprint are still checked by GUID; type 4 also checks their IP. Require a report with `[server] requireFingerprint = true` or `-requireFingerprint` (default false). Missing, unusable or corrupt reports are then rejected. This requirement and machine bans operate independently of `noPluginsPolicyAndAlerts`.
+
+```text
+ban 15 3 12h Suspicion of cheat usage
+ban 15 4
+playerinfo 15
+unban 1
+```
+
+A fingerprint contains reversibly packed fields, not a single hash or authenticity proof. A modified client can forge it; reinstalling Linux or changing hardware may alter several groups. Treat stored machine identifiers as administrative data. Manual decoder: `python scripts/decodeFingerprint.py --file fingerprint.txt`.

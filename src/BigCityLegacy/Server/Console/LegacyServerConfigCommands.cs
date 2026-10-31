@@ -19,7 +19,8 @@ internal static class LegacyServerConfigCommands
         LegacyServerConsole.WriteAdminLine("[CLI] Active bans: " + bans.Count);
         foreach (var ban in bans)
             LegacyServerConsole.WriteAdminLine("[CLI] BanID=" + ban.BanID + " type=" + ban.Type + " nickname=" + LegacyChatLog.Escape(ban.Nickname) +
-                " GUID=" + ban.GUID + " IP=" + ban.IP + " remaining=" + LegacyAdminTime.Remaining(ban.Until) +
+                " GUIDs=" + (ban.GUIDs == null ? ban.GUID : string.Join(",",ban.GUIDs.ToArray())) + " IPs=" + (ban.IPs == null ? ban.IP : string.Join(",",ban.IPs.ToArray())) +
+                " fingerprints=" + (ban.Fingerprints == null ? 0 : ban.Fingerprints.Count) + " remaining=" + LegacyAdminTime.Remaining(ban.Until) +
                 " until=" + (ban.Until.HasValue ? ban.Until.Value.ToString(CultureInfo.InvariantCulture) : "permanent") + " reason=" + LegacyChatLog.Escape(ban.Reason));
     }
     internal static void ReloadMirror()

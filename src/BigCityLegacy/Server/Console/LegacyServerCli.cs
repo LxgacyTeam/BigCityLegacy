@@ -158,7 +158,7 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   banlist\t\t\t\t\t | list active bans (excludes property-only entries)");
         LegacyServerConsole.WriteAdminLine("[CLI]   kick <PlayerID> [reason]\t\t | kick player");
         LegacyServerConsole.WriteAdminLine("[CLI]   kill <PlayerID>\t\t\t\t | kill player");
-        LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2> [time] [reason]\t | ban player; 1 = GUID, 2 = IP");
+        LegacyServerConsole.WriteAdminLine("[CLI]   ban <PlayerID> <1|2|3|4> [time] [reason] | 1 = GUID, 2 = GUID/IP, 3 = GUID/fingerprint, 4 = linked GUID/IP/fingerprint");
         LegacyServerConsole.WriteAdminLine("[CLI]   setprop <PlayerID> <prop> <0|1> [time]\t | see 'help setprop'");
         LegacyServerConsole.WriteAdminLine("[CLI]   tp <PlayerID> <preset|x y z|json> [wcar] | see 'help tp'");
         LegacyServerConsole.WriteAdminLine("[CLI]   tpto <PlayerID> <to PlayerID> [wcar]\t | teleport to a player");
@@ -213,6 +213,7 @@ internal static class LegacyServerCli
         LegacyServerConsole.WriteAdminLine("[CLI]   Nickname: " + DisplayName(player.Nickname));
         LegacyServerConsole.WriteAdminLine("[CLI]   GUID: " + EmptyAsUnknown(player.Guid));
         LegacyServerConsole.WriteAdminLine("[CLI]   IP: " + EmptyAsUnknown(player.Ip));
+        LegacyServerConsole.WriteAdminLine("[CLI]   Fingerprint: " + EmptyAsUnknown(player.Fingerprint));
         LegacyServerConsole.WriteAdminLine("[CLI]   Time on server: " + FormatDuration(player.ConnectedSeconds));
         LegacyServerConsole.WriteAdminLine("[CLI]   Cars: " + player.ActiveCars.ToString() + " active, " + player.TotalCarsSpawned.ToString() + " spawned");
         LegacyServerConsole.WriteAdminLine("[CLI]   Ping: " + (player.PingMilliseconds >= 0 ? player.PingMilliseconds.ToString() + " ms" : "unavailable"));
@@ -256,7 +257,7 @@ internal static class LegacyServerCli
         SplitCommand(arguments, out idText, out rest); SplitCommand(rest, out typeText, out tail);
         int playerId, banType;
         if (!int.TryParse(idText, out playerId) || playerId <= 0 || !int.TryParse(typeText, out banType))
-        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: ban <PlayerID> <1|2> [time] [reason]."); return; }
+        { LegacyServerConsole.WriteAdminLine("[CLI] Usage: ban <PlayerID> <1|2|3|4> [time] [reason]."); return; }
         string duration = null, reason = tail;
         if (tail.Length > 0)
         {
@@ -274,7 +275,7 @@ internal static class LegacyServerCli
             return;
         }
 
-        string value = banType == LegacyBanList.BanTypeGuid ? entry.GUID : entry.IP;
+        string value = banType == LegacyBanList.BanTypeGuid ? entry.GUID : banType == LegacyBanList.BanTypeIp ? entry.IP : "fingerprint (" + entry.Fingerprints.Count + " stored)";
         LegacyServerConsole.WriteAdminLine(
             "[CLI] PlayerID " + playerId.ToString() + " banned. BanID=" + entry.BanID.ToString() +
             ", Type=" + banType.ToString() + ", Value=" + EmptyAsUnknown(value) + ", Duration=" + LegacyAdminTime.Remaining(until) + "."

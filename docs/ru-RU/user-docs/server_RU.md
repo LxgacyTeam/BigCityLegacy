@@ -13,7 +13,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 
 | Секция | Параметры |
 | --- | --- |
-| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn` |
+| `server` | `port` (1–65535), `maxConn` (1–100), `Mode` (`None`, `RP`, `Race`, `CS`, `CS_Sur`), `lang`, `maxCars`, `maxCarsByPlayer`, `maxVinylLayers`, `CarSpawnTimeout`, `maxNikLength`, `idleKickTimeout`, `disconnectedKickTimeout`, `noChatEvents`, `noKillChat`, `noCsDamageCooldown`, `useVanillaRespawn`, `requireFingerprint` |
 | `plugins` | `noPluginsPolicyAndAlerts` |
 | `mirror` | `masterServer` (по умолчанию `true`), `masterPort` (по умолчанию `35000`), `masterDebug` |
 | `files` | `serversList`, `eventsDir`, `respawnPoints`, `banList`, `pluginsPolicy`, `alerts` |
@@ -24,7 +24,7 @@ game.exe -bend_GameServer -batchmode -nographics -serverConfig:"C:\Servers\race.
 Пример конфигурации:
 
 ```toml
-# BigCityLegacy server configuration. CLI arguments override these values. 
+# BigCityLegacy server configuration. CLI arguments override these values.
 # Keys match launch options without the leading '-'.
 
 [server]
@@ -43,6 +43,7 @@ noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
+requireFingerprint = false
 
 [plugins]
 noPluginsPolicyAndAlerts = false
@@ -184,7 +185,7 @@ Master сервер необходим, если вы хотите запуст�
 | banlist  | Отобразить текущий список банов                          |
 | kick {PlayerID} [reason]       | Кикнуть игрока                                                                       |
 | kill {PlayerID} | Убить персонажа игрока. |
-| ban {PlayerID} {1/2} [time] [reason]  | Забанить игрока; 1 = бан по GUID, 2 = бан по IP                           |
+| ban {PlayerID} {1/2/3/4} [time] [reason]  | Забанить игрока; 1 = бан по GUID, 2 = бан по IP                           |
 | unban {BanID}         | Разбанить игрока по BanID                                                        |
 | setprop {PlayerID} {prop} {0/1} [time] | Назначить или снять свойство; `help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | Телепорт по координатам; `help tp` |
@@ -213,7 +214,7 @@ Master сервер необходим, если вы хотите запуст�
 
 #### Баны и свойства игроков
 
-`ban <PlayerID> <1|2> [time] [reason]` запрещает подключение по GUID (`1`) или IP (`2`). Необязательный срок — положительное целое число с суффиксом `s`, `m`, `h` или `d`: `30s`, `15m`, `12h`, `5d`. Без срока бан постоянный. Пример: `ban 15 1 12h`. Команда `ban` не принимает тип `0`.
+`ban <PlayerID> <1|2|3|4> [time] [reason]` запрещает подключение по GUID (`1`) или IP (`2`). Необязательный срок — положительное целое число с суффиксом `s`, `m`, `h` или `d`: `30s`, `15m`, `12h`, `5d`. Без срока бан постоянный. Пример: `ban 15 1 12h`. Команда `ban` не принимает тип `0`.
 
 GUID принадлежит игровому профилю и хранится в PlayerPrefs. Удаление сохранения создаёт другой GUID; бан по GUID не является защитой от создания нового профиля.
 
@@ -415,3 +416,16 @@ Welcome отображается после загрузки игрового м
 Клиентский C# API описан отдельно: [BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_RU.md).
 
 `banRejected` используется при попытке входа уже забаненного игрока; `banned` — при выдаче бана подключённому игроку. Эти шаблоны настраиваются независимо.
+
+## Бан по машине
+
+`ban <PlayerID> <3|4> [time] [reason]` использует fingerprint, который клиент BCL собирает один раз при запуске и передаёт выбранному серверу при подключении. `playerinfo <PlayerID>` выводит его HEX-строку. Это дополнительные типы существующей команды: тип `1` — GUID, `2` — GUID или IP, `3` — GUID или fingerprint, `4` — связанные GUID, fingerprint и IP. Срок, причина и `unban <BanID>` работают для всех типов.
+
+В Windows используются MachineGuid, серийный номер платы/SMBIOS UUID, серийный номер системного диска и постоянные MAC физических сетевых адаптеров.
+В Linux используются доступные обычному пользователю DMI-поля, отдельный производный ID BCL от machine-id, серийный номер системного диска/UUID корневой файловой системы и постоянные MAC физических адаптеров.
+
+GUID — базовое основание для блокировки при любом активном типе бана. Для типов `1–3` он проверяется дополнительно и не пополняет другие идентификаторы: совпадение GUID в бане по IP не добавляет новый IP, а совпадение чужого GUID по IP/fingerprint не сохраняет этот GUID. Тип `3` также проверяет машину, но не IP.
+
+Тип `4` отклоняет при совпадении **любого** известного GUID, fingerprint или IP. При таком совпадении он сохраняет новые непустые GUID/IP и пригодный fingerprint в массивах `GUIDs`, `IPs`, `Fingerprints` того же BanID. Основные `GUID` и `IP` сохраняются для совместимости; существующие записи начинают использовать основной GUID без миграции. У одного BanID общий срок и причина. Лимиты — 256 GUID, 256 IP и 128 fingerprints; заполнение лимита не отменяет действующий бан. Удаление бана выключает все накопленные признаки; свойства игрока сохраняются и по-прежнему проверяются только по основному GUID.
+
+При типе 4 общий внешний IP связывает машины за NAT, в семье или VPN в одну бан-запись — это следствие выбранной модели. Старый клиент без fingerprint всё равно проверяется по GUID; тип 4 также проверяет его IP. Для обязательного отчёта задайте `[server] requireFingerprint = true` или `-requireFingerprint` (по умолчанию false). Тогда сервер отклоняет отсутствующий, непригодный или повреждённый fingerprint.
