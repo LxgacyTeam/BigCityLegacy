@@ -38,7 +38,6 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             return;
         }
         LegacyCompatibility.DetectFromRuntime();
-        LegacyClientUI.ConfigureDiagnostics(Config, Logger);
 
         Harmony = new Harmony(PluginGuid);
         try
