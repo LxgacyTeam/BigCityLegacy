@@ -102,7 +102,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
     private void Update()
     {
         LegacyPluginNetwork.Tick();
-        if (!_serverProcess) LegacyWelcomeClient.Tick();
+        if (!_serverProcess) { LegacyWelcomeClient.Tick(); LegacyPlayerProperties.TickClient(); }
         LegacyCsDiagnostics.Tick();
         if (_serverProcess)
         {

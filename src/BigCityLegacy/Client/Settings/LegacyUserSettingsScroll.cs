@@ -44,6 +44,7 @@ internal sealed class LegacyUserSettingsScroll : MonoBehaviour
         content.anchorMin = content.anchorMax = new Vector2(0f, 1f);
         content.pivot = new Vector2(0f, 1f);
         content.anchoredPosition = Vector2.zero;
+        viewport.localScale = content.localScale = Vector3.one;
         area.isHorizontal = false;
         area.resizeBar = false;
         area.scrollAlpha_100 = 0f;
@@ -113,6 +114,7 @@ internal sealed class LegacyUserSettingsScroll : MonoBehaviour
         foreach (var row in rows)
         {
             var rowRect = (RectTransform)row.transform;
+            if (row is MenuSettingText) rowRect.localScale = Vector3.one;
             rowRect.anchorMin = rowRect.anchorMax = new Vector2(0f, 1f);
             rowRect.pivot = new Vector2(0f, 1f);
             rowRect.sizeDelta = new Vector2(width - bar.sizeDelta.x - 8f, rowRect.sizeDelta.y);

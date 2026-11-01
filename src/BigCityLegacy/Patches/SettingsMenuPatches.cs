@@ -38,7 +38,7 @@ internal static class SuppressReporterGesturePatch
     [HarmonyPrefix]
     private static bool Reporter_IsGestureDone_Prefix(ref bool __result)
     {
-        if (!LegacyAboutWindow.SuppressReporterGesture)
+        if (!BigCityLegacy.UI.LegacyUIWindow.AnyWindowOpen)
         {
             return true;
         }

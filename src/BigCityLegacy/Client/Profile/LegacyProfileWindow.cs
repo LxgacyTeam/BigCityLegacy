@@ -103,12 +103,12 @@ internal sealed class LegacyProfileWindow : MonoBehaviour
         if (LegacyUI.Button(new Rect(x + width - 88, y, 88, 22), LegacyLocalizer.Text("Refresh", "Обновить"))) Refresh();
         y += 32;
         scroll.ViewRect = new Rect(x, y, width, 108);
+        path = LegacyUI.TextField(new Rect(x, area.yMax - 50f, width - 102, 26), Path.GetFileName(path));
         scroll.Draw(content =>
         {
             for (int i = 0; i < files.Length; i++)
                 if (LegacyUI.Button(new Rect(content.x, content.y + i * 26f, content.width, 24f), Path.GetFileName(files[i]))) path = files[i];
         });
-        path = LegacyUI.TextField(new Rect(x, area.yMax - 50f, width - 102, 26), Path.GetFileName(path));
         if (LegacyUI.GreenButton(new Rect(x + width - 98, area.yMax - 50f, 98, 26), LegacyLocalizer.Text("Import", "Импорт"))) ConfirmImport();
         GUI.enabled = previous;
         LegacyUI.Status(new Rect(x, area.yMax - 15f, width, 15f), status);

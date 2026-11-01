@@ -9,6 +9,11 @@ using UnityEngine.Networking;
 // for BCL clients; stock clients ignore that string and retain their original wire format.
 internal static class LegacyPlayerProperties
 {
+    private const string ExpiryPrefix = "BCL.admin.props.v2|";
+    private static readonly string[] names = { "noweapon", "nomove", "nocars", "nochat", "invisible" };
+    private static readonly Dictionary<uint, double[]> clientExpiry = new Dictionary<uint, double[]>();
+    private static float nextFullSync;
+    private const float ResyncInterval = 5f;
     private const string WirePrefix = "BCL.admin.props.v1|";
     private static readonly Dictionary<NetInputControl, RuntimeState> states = new Dictionary<NetInputControl, RuntimeState>();
     private static readonly Dictionary<uint, int> clientMasks = new Dictionary<uint, int>();
@@ -34,23 +39,27 @@ internal static class LegacyPlayerProperties
             }
             return LegacyBanList.HasProp(input.pirvateConnectID, name);
         }
+        TickClient();
         int mask;
         return NetManager.isOnlineClient && clientMasks.TryGetValue(input.netId.Value, out mask) && (mask & Bit(name)) != 0;
     }
 
     internal static void Reset()
     {
-        states.Clear(); sent.Clear(); ClearClient(); ChatEventsPatches.ResetAdminDisconnects();
+        states.Clear(); sent.Clear(); nextFullSync = 0; ClearClient(); ChatEventsPatches.ResetAdminDisconnects();
     }
-    internal static void ClearClient() { clientMasks.Clear(); clientAnchors.Clear(); }
+    internal static void ClearClient() { clientMasks.Clear(); clientExpiry.Clear(); clientAnchors.Clear(); }
 
     internal static void Receive(string command)
     {
-        if (!NetManager.isOnlineClient || command == null || !command.StartsWith(WirePrefix, StringComparison.Ordinal)) return;
+        if (!NetManager.isOnlineClient || command == null) return;
+        if (command.StartsWith(ExpiryPrefix, StringComparison.Ordinal)) { ReceiveExpiry(command.Substring(ExpiryPrefix.Length)); return; }
+        if (!command.StartsWith(WirePrefix, StringComparison.Ordinal)) return;
         string[] parts = command.Substring(WirePrefix.Length).Split('|');
         uint id; int mask;
         if (parts.Length != 2 || !uint.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out id) ||
             !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out mask) || mask < 0 || mask > 31) return;
+        clientExpiry.Remove(id);
         int oldMask;
         bool changed = !clientMasks.TryGetValue(id, out oldMask) ? mask != 0 : oldMask != mask;
         if (mask == 0) clientMasks.Remove(id); else clientMasks[id] = mask;
@@ -64,9 +73,44 @@ internal static class LegacyPlayerProperties
         }
     }
 
-    internal static void Refresh()
+    private static void ReceiveExpiry(string text)
+    {
+        var parts = text.Split('|');
+        uint id; int mask; long now;
+        if (parts.Length != 8 || !uint.TryParse(parts[0],out id) || !int.TryParse(parts[1],out mask) || mask < 0 || mask > 31 ||
+            !long.TryParse(parts[2],out now) || now < 0 || now > 253402300799L) return;
+        var deadlines = new double[5];
+        for (int i=0;i<5;i++)
+        {
+            long until;
+            if (!long.TryParse(parts[3+i],out until) || until < 0 || until > 253402300799L) return;
+            deadlines[i] = until == 0 ? double.PositiveInfinity : Time.realtimeSinceStartup + Math.Max(0L, until-now);
+        }
+        Receive(WirePrefix + id.ToString(CultureInfo.InvariantCulture) + "|" + mask.ToString(CultureInfo.InvariantCulture));
+        if (mask != 0) clientExpiry[id] = deadlines;
+        TickClient();
+    }
+    internal static void TickClient()
+    {
+        if (!NetManager.isOnlineClient || clientExpiry.Count == 0) return;
+        foreach (uint id in new List<uint>(clientExpiry.Keys))
+        {
+            int mask;
+            if (!clientMasks.TryGetValue(id,out mask)) { clientExpiry.Remove(id); continue; }
+            int next = mask; var deadlines = clientExpiry[id];
+            for (int i=0;i<5;i++) if (Time.realtimeSinceStartup >= deadlines[i]) next &= ~(1<<i);
+            if (next == mask) continue;
+            // Reuse the normal UI refresh path, retaining other unexpired deadlines.
+            Receive(WirePrefix + id.ToString(CultureInfo.InvariantCulture) + "|" + next.ToString(CultureInfo.InvariantCulture));
+            if (next != 0) clientExpiry[id] = deadlines;
+        }
+    }
+
+    internal static void Refresh(bool force = false)
     {
         if (!NetManager.isServer) return;
+        bool resync = force || Time.realtimeSinceStartup >= nextFullSync;
+        if (resync) { sent.Clear(); nextFullSync = Time.realtimeSinceStartup + ResyncInterval; }
         var present = new HashSet<NetInputControl>();
         foreach (InputControl input in InputControl.inputs)
         {
@@ -112,9 +156,13 @@ internal static class LegacyPlayerProperties
                 uint id = subject.netId.Value;
                 if (id == 0) continue;
                 int mask = states[subject].Mask, old;
-                if (previous.TryGetValue(id, out old) ? old == mask : mask == 0) continue;
+                if (!resync && (previous.TryGetValue(id, out old) ? old == mask : mask == 0)) continue;
                 input.onServerNetPlayer.syncPlayer.CallTarget_EventMessageHello(conn, WirePrefix +
                     id.ToString(CultureInfo.InvariantCulture) + "|" + mask.ToString(CultureInfo.InvariantCulture));
+                var deadlines = new string[5];
+                for (int i=0;i<5;i++) { long? until; deadlines[i] = states[subject].Props.TryGetValue(names[i],out until) && until.HasValue ? until.Value.ToString(CultureInfo.InvariantCulture) : "0"; }
+                input.onServerNetPlayer.syncPlayer.CallTarget_EventMessageHello(conn, ExpiryPrefix + id.ToString(CultureInfo.InvariantCulture) + "|" +
+                    mask.ToString(CultureInfo.InvariantCulture) + "|" + LegacyAdminTime.Now.ToString(CultureInfo.InvariantCulture) + "|" + string.Join("|",deadlines));
                 previous[id] = mask;
             }
             // Stop retaining despawned input IDs on long-running servers and clients.

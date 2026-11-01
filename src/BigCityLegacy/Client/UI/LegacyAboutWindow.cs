@@ -9,13 +9,10 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
     private LegacyUIDropdown repositoryDropdown;
     private string sourceError;
 
-    internal static bool SuppressReporterGesture;
-
     private Texture2D logo = LegacyHelpers.LoadEmbeddedTexture("bcl-logo.png");
 
     internal static void Show()
     {
-        SuppressReporterGesture = true;
         EnsureInstance();
         instance.window.Visible = true;
         instance.enabled = true;
@@ -62,7 +59,6 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
         window.Visible = false;
         window.Closed += () =>
         {
-            SuppressReporterGesture = false;
             repositoryDropdown.IsOpen = false;
         };
         enabled = false;

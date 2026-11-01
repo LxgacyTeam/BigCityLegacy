@@ -239,7 +239,7 @@ internal static class LegacyServerAdminService
         ServerPlayerSnapshot player;
         if (!TryGetPlayer(playerId, out player)) { error = "PlayerID was not found."; return false; }
         if (!LegacyBanList.SetProp(player, prop, enabled, until, out error)) return false;
-        LegacyPlayerProperties.Refresh();
+        LegacyPlayerProperties.Refresh(true);
         NetInputControl input;
         if (enabled && prop != "invisible" && TryGetInput(playerId, out input))
         {
@@ -804,7 +804,7 @@ internal static class LegacyServerAdminService
                 continue;
             }
 
-            UpdateSession(session, connect, guid, connect.nikName, session.RuntimePlatform);
+            UpdateSession(session, connect, guid, connect.netInput ? connect.netInput.nikName : connect.nikName, session.RuntimePlatform);
         }
 
         List<string> disconnected = new List<string>();
@@ -871,6 +871,9 @@ internal static class LegacyServerAdminService
         {
             return null;
         }
+
+        PlayerSession authenticated = FindPlayerForConnection(input.connect2player, input.pirvateConnectID);
+        if (authenticated != null) return authenticated;
 
         object directConnect = GetMemberValue(input, "connect", "netConnect", "ownerConnect");
         NetConnect asConnect = directConnect as NetConnect;

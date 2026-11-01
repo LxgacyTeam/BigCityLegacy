@@ -77,7 +77,7 @@ internal static class PlayerPropertiesPatches
     [HarmonyPatch(typeof(NetSyncPlayer), "Cmd_EventMessageHello")]
     [HarmonyPrefix]
     private static bool RejectForgedHints(string command)
-    { return command == null || !command.StartsWith("BCL.admin.props.v1|", System.StringComparison.Ordinal); }
+    { return command == null || !(command.StartsWith("BCL.admin.props.v1|", System.StringComparison.Ordinal) || command.StartsWith("BCL.admin.props.v2|", System.StringComparison.Ordinal)); }
 
     [HarmonyPatch(typeof(NetManager), "OnStopClient")]
     [HarmonyPostfix]

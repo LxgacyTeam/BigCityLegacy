@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -68,7 +68,7 @@ internal static class GeneralPatches
             LegacyHudToggle.Toggle();
             LegacyHudToggle.ToggledByMenuEsc = true;
         }
-            
+
         return true;
     }
 
@@ -189,37 +189,94 @@ internal static class GeneralPatches
         }
     }
 
+    private static MenuSettingText targetFpsMenu;
+
     [HarmonyPatch(typeof(SettingsValues.User.TargetFPS), "Init")]
     [HarmonyPrefix]
     private static bool TargetFps_Init_Prefix(MenuButton it)
     {
-        MenuSettingText setting = it as MenuSettingText;
-        if (setting)
+        targetFpsMenu = it as MenuSettingText;
+        if (targetFpsMenu)
         {
-            setting.values = new[] { "20", "30", "45", "60", "90", "120", "240", "10000" };
+            targetFpsMenu.values = new[] { "30", "45", "60", "90", "120", "240", "Monitor", "Off" };
         }
         return false;
+    }
+
+    private static int GetMonitorRefreshRate()
+    {
+        int refreshRate = Screen.currentResolution.refreshRate;
+        return refreshRate > 0 ? refreshRate : 60;
     }
 
     [HarmonyPatch(typeof(SettingsValues.User.TargetFPS), "SetValue")]
     [HarmonyPrefix]
     private static bool TargetFps_SetValue_Prefix(SettingsValues.User.TargetFPS __instance, string val)
     {
-        if (__instance.strValue == val)
+        // Normalize the former unlimited setting before loading it into the menu.
+        if (val == "10000" || val == "-1") val = "Off";
+        if (__instance.strValue == val) return false;
+
+        int fps;
+        if (val == "Off") fps = -1;
+        else if (val == "Monitor") fps = GetMonitorRefreshRate();
+        else
         {
-            return false;
+            fps = Math.Max(20, val.ToIntFafe(0));
+            val = fps.ToString();
         }
-        int fps = val.ToIntFafe(0);
-        if (fps < 20)
-        {
-            fps = 20;
-        }
-        __instance.strValue = fps.ToString();
+        __instance.strValue = val;
         SettingsValues.User.TargetFPS.targetFps = fps;
         SettingsValues.User.TargetFPS.CheckState();
         return false;
     }
 
+    [HarmonyPatch(typeof(SettingsValues.User.TargetFPS), "CheckState")]
+    [HarmonyPrefix]
+    private static void RefreshMonitorFps()
+    {
+        // CheckState also runs inside TargetFPS/User constructors, before me.user is assigned.
+        if (SettingsValues.me?.user?.targetFps?.GetValue() == "Monitor")
+            SettingsValues.User.TargetFPS.targetFps = GetMonitorRefreshRate();
+    }
+
+    [HarmonyPatch(typeof(SettingsValues.User.TargetFPS), "CheckState")]
+    [HarmonyPostfix]
+    private static void TargetFps_CheckState_Postfix()
+    {
+        if (SettingsValues.User.TargetFPS.targetFps == -1 && !NetManagerTools.isCommandLineArgBatchmode())
+        {
+            // The stock FPS_ignore_limit components force 120 FPS in some menus.
+            // Off must remain uncapped there too; VSync would otherwise impose another cap.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = -1;
+        }
+        RefreshTargetFpsLabel();
+    }
+
+    [HarmonyPatch(typeof(Localize), "LocalizeIt")]
+    [HarmonyPostfix]
+    private static void TargetFps_Localize_Postfix(Localize __instance)
+    {
+        if (targetFpsMenu && targetFpsMenu.value == __instance) RefreshTargetFpsLabel();
+    }
+
+    private static void RefreshTargetFpsLabel()
+    {
+        if (!targetFpsMenu || !targetFpsMenu.value || !targetFpsMenu.value.ui) return;
+        string key = targetFpsMenu.value.text;
+        string caption;
+        if (key == "Off") caption = LegacyLocalizer.Text("Off", "Выкл");
+        else if (key == "Monitor")
+        {
+            int fps = Application.targetFrameRate;
+            caption = LegacyLocalizer.Text("Monitor refresh rate", "По частоте монитора") + " (" + fps + "hz)";
+        }
+        else return;
+        // Keep the stable localization/save key; change only the visible text.
+        targetFpsMenu.value.ui.text = caption;
+        if (targetFpsMenu.L) targetFpsMenu.UpTr();
+    }
 
 }
 
