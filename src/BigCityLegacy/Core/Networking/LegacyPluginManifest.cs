@@ -7,6 +7,7 @@ using System.Xml;
 internal sealed class LegacyPluginRecord
 {
     public string Guid, Version, Name;
+    public bool SupportsActivation, IsEnabled=true, RequiresRestart;
 }
 
 // No JSON deserialization or compressed data on the admission path. All lengths are bounded.
@@ -85,6 +86,9 @@ internal static class LegacyPluginManifest
     {
         var document = LoadXml(xml); document.DocumentElement.SetAttribute(Attribute, Encode(records));
         if (bclVersion != null) { LegacyPluginVersion.Parse(bclVersion); document.DocumentElement.SetAttribute(VersionAttribute, bclVersion); }
+        bool controllable=false;foreach(var plugin in records)controllable|=plugin.SupportsActivation;
+        document.DocumentElement.RemoveAttribute(LegacyActivationReport.Attribute);
+        if(controllable) document.DocumentElement.SetAttribute(LegacyActivationReport.Attribute,LegacyActivationReport.Encode(records));
         string result = document.OuterXml;
         if (Utf8.GetByteCount(result) > MaxXmlBytes) throw new FormatException("Player XML and plugin manifest exceed 30000 bytes.");
         return result;
@@ -92,11 +96,13 @@ internal static class LegacyPluginManifest
     internal static List<LegacyPluginRecord> Extract(ref string xml, out bool advertised, out string bclVersion)
     {
         var document = LoadXml(xml); advertised = document.DocumentElement.HasAttribute(Attribute);
+        string activation=document.DocumentElement.HasAttribute(LegacyActivationReport.Attribute) ? document.DocumentElement.GetAttribute(LegacyActivationReport.Attribute) : null;
+        document.DocumentElement.RemoveAttribute(LegacyActivationReport.Attribute);
         bclVersion = document.DocumentElement.HasAttribute(VersionAttribute) ? document.DocumentElement.GetAttribute(VersionAttribute) : null;
         if (bclVersion != null) { LegacyPluginVersion.Parse(bclVersion); document.DocumentElement.RemoveAttribute(VersionAttribute); }
-        if (!advertised) { xml = document.OuterXml; return null; }
+        if (!advertised) { if(activation!=null)throw new FormatException("Activation state requires a plugin manifest.");xml = document.OuterXml; return null; }
         string value = document.DocumentElement.GetAttribute(Attribute);
         document.DocumentElement.RemoveAttribute(Attribute); xml = document.OuterXml;
-        return Decode(value);
+        var plugins=Decode(value);LegacyActivationReport.Apply(activation,plugins);return plugins;
     }
 }

@@ -4,6 +4,8 @@ BCL 和附加插件的全部开发文档均保存在 `docs/<语言>/dev-docs`。
 
 - [构建 BCL](Building_ZH.md)
 - [BigCityLegacy.Api.LegacyAlerts](LegacyAlerts_ZH.md)
+- [BigCityLegacy.Api.LegacyDialogs / LegacyGame](LegacyDialogs_ZH.md)
+- [BigCityLegacy.Api.LegacyPlugins](LegacyPluginActivation_ZH.md)
 - [LegacyHelpers](LegacyHelpers_ZH.md)
 - [LegacyLocalizer](LegacyLocalizer_ZH.md)
 - [LegacyPatchManager](LegacyPatchManager_ZH.md)

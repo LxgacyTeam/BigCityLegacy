@@ -23,6 +23,7 @@ internal sealed class LegacyPluginPolicy
         [JsonProperty("extra")] public string Extra;
         [JsonProperty("messageRu")] public string MessageRu;
         [JsonProperty("extraRu")] public string ExtraRu;
+        [JsonProperty("controlByStatus")] public bool ControlByStatus;
         internal bool Matches(string version)
         {
             if (Version == null && MinVersion == null && MaxVersion == null) return true;
@@ -38,6 +39,7 @@ internal sealed class LegacyPluginPolicy
     internal sealed class Violation
     {
         internal Rule Rule; internal LegacyPluginRecord Plugin; internal string Kind, Reason;
+        internal bool? ActivationTarget;
     }
     internal static LegacyPluginPolicy Parse(string json)
     {
@@ -57,8 +59,11 @@ internal sealed class LegacyPluginPolicy
                 if ((rule.Name ?? "").Length > 128 || (rule.Message ?? "").Length > 4000 || (rule.Extra ?? "").Length > 4000 || (rule.MessageRu ?? "").Length > 4000 || (rule.ExtraRu ?? "").Length > 4000) throw new FormatException("Plugin policy text is too long.");
             }
         }
+        foreach(var required in policy.Hardlist) foreach(var prohibited in policy.Blacklist)
+            if(required.ControlByStatus && prohibited.ControlByStatus && string.Equals(required.Guid,prohibited.Guid,StringComparison.OrdinalIgnoreCase))throw new FormatException("A status-controlled GUID cannot appear in both lists.");
         if (policy.Bcl != null)
         {
+            if(policy.Bcl.ControlByStatus)throw new FormatException("The BCL version rule cannot control activation.");
             // Reuse the same validation for the independent BCL version constraint.
             var wrapper = new LegacyPluginPolicy(); wrapper.Hardlist.Add(policy.Bcl);
             Parse(JsonConvert.SerializeObject(wrapper));
@@ -80,11 +85,12 @@ internal sealed class LegacyPluginPolicy
         {
             LegacyPluginRecord plugin; installed.TryGetValue(rule.Guid, out plugin);
             if (plugin == null || !rule.Matches(plugin.Version)) result.Add(new Violation { Rule = rule, Plugin = plugin, Kind = "hardlist", Reason = plugin == null ? "Required plugin is missing." : "Required plugin version does not match." });
+            else if(rule.ControlByStatus && plugin.SupportsActivation && !plugin.IsEnabled)result.Add(new Violation { Rule=rule,Plugin=plugin,Kind="hardlist",Reason="Required plugin is disabled.",ActivationTarget=true });
         }
         foreach (var rule in Blacklist)
         {
             LegacyPluginRecord plugin;
-            if (installed.TryGetValue(rule.Guid, out plugin) && rule.Matches(plugin.Version)) result.Add(new Violation { Rule = rule, Plugin = plugin, Kind = "blacklist", Reason = "Installed plugin/version is prohibited." });
+            if (installed.TryGetValue(rule.Guid, out plugin) && rule.Matches(plugin.Version) && (!rule.ControlByStatus || !plugin.SupportsActivation || plugin.IsEnabled)) result.Add(new Violation { Rule = rule, Plugin = plugin, Kind = "blacklist", Reason = "Installed plugin/version is prohibited.",ActivationTarget=rule.ControlByStatus && plugin.SupportsActivation ? (bool?)false : null });
         }
         return result;
     }

@@ -29,7 +29,7 @@ internal static class LegacyPluginNetwork
         if (LegacyAdmissionConfig.Enabled) NetworkServer.RegisterHandler(MessageId, ReceiveServer);
     }
     internal static void StopServer() { peers.Clear(); LegacyConnectionStamp.Clear(); }
-    internal static void StartClient(NetworkClient client) { LegacyWelcomeClient.Clear(); client.RegisterHandler(MessageId, ReceiveClient); }
+    internal static void StartClient(NetworkClient client) { LegacyWelcomeClient.Clear(); LegacyPluginControlClient.NewConnection(); client.RegisterHandler(MessageId, ReceiveClient); }
     internal static void Forget(NetworkConnection connection) { if (connection != null) peers.Remove(connection); LegacyConnectionStamp.Forget(connection); }
 
     internal static bool Attach(ref string xml)
@@ -40,7 +40,8 @@ internal static class LegacyPluginNetwork
             foreach (var info in Chainloader.PluginInfos.Values)
             {
                 if (info == null || info.Metadata == null) continue;
-                records.Add(new LegacyPluginRecord { Guid = info.Metadata.GUID, Name = info.Metadata.Name, Version = info.Metadata.Version.ToString() });
+                var status=LegacyPlugins.GetStatus(info.Metadata.GUID);
+                records.Add(new LegacyPluginRecord { Guid = info.Metadata.GUID, Name = info.Metadata.Name, Version = info.Metadata.Version.ToString(),SupportsActivation=status.SupportsActivation,IsEnabled=status.IsEnabled,RequiresRestart=status.RequiresRestart });
             }
             records.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Guid, b.Guid));
             xml = LegacyPluginManifest.Attach(LegacyConnectionStamp.Attach(xml), records, VersionInfo.ModVersionName); return true;
@@ -74,6 +75,7 @@ internal static class LegacyPluginNetwork
         var violations = LegacyAdmissionConfig.Policy.Evaluate(peer.Plugins, peer.BclVersion);
         if (violations.Count > 0)
         {
+            if(RequestActivation(peer,violations))return false;
             if (violations[0].Kind == "missingManifest" || violations[0].Kind == "missingBclVersion") Reject(peer, violations[0].Kind, variables);
             else
             {
@@ -105,6 +107,21 @@ internal static class LegacyPluginNetwork
         Debug.Log("[BCL plugins] BCL version from '" + nickname + "': " + (peer.BclVersion ?? "not reported"));
         Debug.Log("[BCL plugins] Accepted '" + nickname + "': " + (peer.Plugins == null ? "no manifest (allowed by policy)" : peer.Plugins.Count + " plugins"));
         return true;
+    }
+    private static bool RequestActivation(Peer peer,List<LegacyPluginPolicy.Violation> violations)
+    {
+        if(!peer.Capable || violations.Count>32)return false;
+        var changes=new List<LegacyActivationChange>();
+        foreach(var violation in violations)
+        {
+            if(!violation.ActivationTarget.HasValue || violation.Plugin==null)return false;
+            changes.Add(new LegacyActivationChange { Guid=violation.Plugin.Guid,Name=violation.Plugin.Name,Version=violation.Plugin.Version,Enabled=violation.ActivationTarget.Value });
+        }
+        try { LegacyActivationChange.Validate(changes); } catch(FormatException) { return false; }
+        uint id=++nextMessage;if(id==0)id=++nextMessage;
+        peer.Closing=true;peer.CloseId=id;peer.Deadline=Time.realtimeSinceStartup+2f;
+        if(!peer.Connect.conn.Send(MessageId,new Packet { Kind=3,Id=id,Changes=changes }))peer.Deadline=Time.realtimeSinceStartup;
+        LegacyServerAdminService.Disconnect(peer.Connect,true);return true;
     }
     private static void Reject(Peer peer, string template, Dictionary<string, string> variables)
     {
@@ -168,6 +185,11 @@ internal static class LegacyPluginNetwork
         {
             if (message.reader.Length > 60000) throw new FormatException("Alert packet is too large.");
             var packet = message.ReadMessage<Packet>();
+            if(packet.Kind==3)
+            {
+                message.conn.Send(MessageId,new Packet { Kind=2,Id=packet.Id });
+                LegacyPluginControlClient.Receive(packet.Id,packet.Changes,message.conn.address+":"+NetManager.me.networkPort);return;
+            }
             if (packet.Kind != 1) return;
             packet.Alert.Validate();
             if (packet.Alert.IsWelcome) LegacyWelcomeClient.Receive(packet.Alert, message.conn.address, NetManager.me.networkPort);
@@ -211,16 +233,18 @@ internal static class LegacyPluginNetwork
         Peer peer;
         if (!connect || connect.conn == null || !peers.TryGetValue(connect.conn, out peer)) return "not reported";
         var list = new List<string>();
-        if (peer.Plugins != null) foreach (var plugin in peer.Plugins) list.Add(plugin.Guid + "@" + plugin.Version + " (" + plugin.Name + ")");
+        if (peer.Plugins != null) foreach (var plugin in peer.Plugins) list.Add(plugin.Guid + "@" + plugin.Version + " (" + plugin.Name + "; activation=" + (plugin.SupportsActivation ? plugin.IsEnabled ? "enabled" : "disabled" : "unsupported") + ")");
         return "BCL=" + (peer.BclVersion ?? "not reported") + "; plugins=" + (peer.Plugins == null ? "not reported" : string.Join(", ", list.ToArray()));
     }
     private static string Limit(string text, int limit) { return text.Length <= limit ? text : text.Substring(0, limit - 3) + "..."; }
     internal sealed class Packet : MessageBase
     {
         internal byte Kind; internal uint Id; internal bool Close; internal LegacyAlertMessage Alert;
+        internal List<LegacyActivationChange> Changes;
         public override void Serialize(NetworkWriter writer)
         {
             writer.Write((byte)1); writer.Write(Kind); writer.Write(Id);
+            if(Kind==3) { LegacyActivationChange.Validate(Changes);writer.Write((byte)Changes.Count);foreach(var c in Changes){writer.Write(c.Guid);writer.Write(c.Name);writer.Write(c.Version);writer.Write(c.Enabled);}return; }
             if (Kind != 1) return;
             Alert.Validate(); writer.Write(Close); writer.Write((byte)Alert.Display); writer.Write(Alert.Duration); writer.Write(Alert.Title); writer.Write(Alert.Message);
             // Optional v2 tail; older alert clients still read the v1 English payload.
@@ -231,6 +255,13 @@ internal static class LegacyPluginNetwork
             if (reader.ReadByte() != 1) throw new FormatException("Unsupported alert wire version.");
             Kind = reader.ReadByte(); Id = reader.ReadUInt32();
             if (Kind == 2) return;
+            if(Kind==3)
+            {
+                int count=reader.ReadByte();if(count<1 || count>32)throw new FormatException("Invalid activation count.");
+                Changes=new List<LegacyActivationChange>();
+                for(int i=0;i<count;i++){var change=new LegacyActivationChange { Guid=reader.ReadString(),Name=reader.ReadString(),Version=reader.ReadString() };byte enabled=reader.ReadByte();if(enabled>1)throw new FormatException("Invalid activation target.");change.Enabled=enabled==1;Changes.Add(change);}
+                LegacyActivationChange.Validate(Changes);if(reader.Position!=reader.Length)throw new FormatException("Trailing activation data.");return;
+            }
             if (Kind != 1) throw new FormatException("Unknown alert packet.");
             Close = reader.ReadBoolean(); Alert = new LegacyAlertMessage { Display = (LegacyAlertDisplay)reader.ReadByte(), Duration = reader.ReadSingle(), Title = reader.ReadString(), Message = reader.ReadString() };
             if (reader.Position < reader.Length)

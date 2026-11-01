@@ -4,6 +4,8 @@ All BCL and plugin development documentation belongs in `docs/<locale>/dev-docs`
 
 - [Building BCL](Building_EN.md)
 - [BigCityLegacy.Api.LegacyAlerts](LegacyAlerts_EN.md)
+- [BigCityLegacy.Api.LegacyDialogs / LegacyGame](LegacyDialogs_EN.md)
+- [BigCityLegacy.Api.LegacyPlugins](LegacyPluginActivation_EN.md)
 - [LegacyHelpers](LegacyHelpers_EN.md)
 - [LegacyLocalizer](LegacyLocalizer_EN.md)
 - [LegacyPatchManager](LegacyPatchManager_EN.md)

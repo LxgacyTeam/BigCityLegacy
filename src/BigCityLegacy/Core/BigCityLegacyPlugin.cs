@@ -71,6 +71,8 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
                 {
                     LegacyRuntimeStamp.Begin();
                     LegacyClientUI.Initialize(gameObject);
+                    LegacyClientThread.Initialize();
+                    gameObject.AddComponent<LegacyDialogUI>();
                     gameObject.AddComponent<LegacyAlertUI>();
                     LegacyRemoteLook.Configure(Config);
                     LegacyPointTool.InitIfNeeded();

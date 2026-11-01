@@ -6,7 +6,7 @@ internal static class PluginAdmissionPatches
 {
     [HarmonyPatch(typeof(hCursor), "NeedHideMouse")]
     [HarmonyPostfix]
-    private static void Cursor(ref bool __result) { if (LegacyAlertUI.ModalVisible) __result = false; }
+    private static void Cursor(ref bool __result) { if (LegacyApiCursor.Visible) __result = false; }
     [HarmonyPatch(typeof(NetManager), "OnStartServer")]
     [HarmonyPostfix]
     private static void ServerStart() { LegacyPluginNetwork.StartServer(); }

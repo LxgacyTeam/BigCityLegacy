@@ -17,10 +17,9 @@ internal sealed class LegacyAlertUI : MonoBehaviour
     private static bool Russian { get { return LegacyLocalizer.IsRussianLanguage; } }
     private void RefreshCursor()
     {
-        bool visible = window != null && window.IsRendered;
-        if (ModalVisible == visible) return;
+        bool visible = window != null && window.IsRendered || hintBox != null && hintBox.IsRendered;
         ModalVisible = visible;
-        if (hVR.me && hVR.me.cursor) hCursor.CheckState();
+        LegacyApiCursor.Set(GetInstanceID(),visible);
     }
     private static bool Accept(LegacyAlertMessage alert)
     {
@@ -41,7 +40,7 @@ internal sealed class LegacyAlertUI : MonoBehaviour
             {
                 hint = queued; hintHidden = false; hintUntil = Time.realtimeSinceStartup + queued.Duration;
                 hintBox = new LegacyUIHintBox(new Rect(), new LegacyUIHintBoxOptions { ScaleMultiplier = 1.5f,
-                    InputBlockMode = queued.IsWelcome ? LegacyUIInputBlockMode.Window : LegacyUIInputBlockMode.None });
+                    InputBlockMode = LegacyUIInputBlockMode.Window });
             }
             else { if (dialogs.Count >= 32) dialogs.Dequeue(); dialogs.Enqueue(queued); }
         }
@@ -53,7 +52,7 @@ internal sealed class LegacyAlertUI : MonoBehaviour
             modal = alert; modalHidden = false;
             if (System.Math.Max(modal.Message.Length, (modal.MessageRu ?? "").Length) > 1000 && modal.Display == LegacyAlertDisplay.Small) modal.Display = LegacyAlertDisplay.Large;
             window = new LegacyUIWindow(alert.Caption(Russian), new Rect(100, 100, 540, 300),
-                new LegacyUIWindowOptions { ShowCloseButton = true, InputBlockMode = LegacyUIInputBlockMode.Screen });
+                new LegacyUIWindowOptions { ShowCloseButton = true, InputBlockMode = LegacyUIInputBlockMode.Window });
             scroll = new LegacyUIScrollView(new Rect()) { ShowHorizontalScrollbar = false, Padding = 8f };
             RefreshCursor(); break;
         }
@@ -114,5 +113,5 @@ internal sealed class LegacyAlertUI : MonoBehaviour
             });
         }
     }
-    private void OnDisable() { ModalVisible = false; if (hVR.me && hVR.me.cursor) hCursor.CheckState(); }
+    private void OnDisable() { if(window!=null)window.Close();if(hintBox!=null)hintBox.Visible=false;ModalVisible = false; LegacyApiCursor.Set(GetInstanceID(),false); }
 }

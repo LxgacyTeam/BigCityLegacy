@@ -328,6 +328,26 @@ BCL clients report their own BigCityLegacy version and loaded BepInEx plugins (G
 
 `hardlist` requires a GUID and matching version. `blacklist` prohibits a GUID; with a version or range, only matching versions are prohibited. GUID comparison ignores case; names are display labels. `version` means exact equality; `minVersion` and `maxVersion` are inclusive bounds. Use either exact version or one or both bounds. Missing numeric components are zero (`1.4 == 1.4.0.0`); prereleases sort below the corresponding release; build metadata is ignored. `bcl` independently constrains the reported BCL version. A reported incompatible version is rejected even if missing versions are allowed.
 
+### Plugin activation status
+
+Per-rule `controlByStatus` defaults to `false`. With `true` and explicit plugin API support, hardlist requires the enabled state, while blacklist allows an installed but disabled plugin. GUID and version checks still apply. Without API support or a status report, the usual installation check applies.
+
+```json
+{
+  "version": 1,
+  "hardlist": [
+    { "guid": "com.example.map", "minVersion": "1.0.0", "controlByStatus": true }
+  ],
+  "blacklist": [
+    { "guid": "com.example.othermap", "controlByStatus": true }
+  ]
+}
+```
+
+If state changes can resolve every incompatibility, the server ends the attempt before spawning and asks the client to enable/disable the listed plugins. The client displays the server endpoint and a restart warning for confirmation. Methods are not called before approval; declining changes nothing. Players reconnect after applying changes or restarting. Missing plugins and incompatible versions produce the normal rejection without partial changes.
+
+A request contains at most 32 plugins. `controlByStatus` is invalid on `bcl`, or on the same GUID in both hardlist and blacklist. `playerinfo` displays `enabled`, `disabled` or `unsupported`. See the [plugin activation API](../dev-docs/LegacyPluginActivation_EN.md) for implementation.
+
 Per-rule `message` replaces the global plugin-incompatibility template; `extra` appends a paragraph. This also applies to the `bcl` rule. All mismatches are combined. If the absent plugin has no reported name, the rule's `name` or GUID is used.
 
 Allowing an absent manifest means its hardlist/blacklist cannot be checked; allowing an absent BCL version skips that version check. A malformed submitted report is rejected, not treated as absent. This is compatibility metadata reported by the client, not proof that a modified client has no cheats.
@@ -338,7 +358,7 @@ Report limits: 256 plugins, GUID/name 128 characters, version 64 characters, bin
 
 Templates are stored in `BigCityLegacy/config/Alerts.toml`. Sections: `plugins`, `missingManifest`, `missingBclVersion`, `invalidManifest`, `banRejected`, `banned`, `kicked`, `welcome`. Each supports `enabled`, `title`, `message`, `display`, `duration`. Omitted sections inherit built-in defaults. Welcome is disabled by default; the others are enabled. Default display is `small`, except welcome (`large`).
 
-`small` is a draggable window with a HintBox; `large` uses a ScrollView; `hint` is a HintBoxAlt at the top of the screen for `duration` seconds (0.1–3600, default 6). Long small messages automatically gain scrolling. Hints do not block input; an open dialog shows the cursor and blocks clicks into the game. Rejection/kick messages survive disconnection. Queues are bounded; hint duration starts when shown, not when received.
+`small` is a draggable window with a HintBox; `large` uses a ScrollView; `hint` is a HintBoxAlt at the top of the screen for `duration` seconds (0.1–3600, default 6). Long small messages automatically gain scrolling. All types use `LegacyUIInputBlockMode.Window`, blocking input within their bounds. The cursor is enabled while shown; after the last Alert/Dialog closes, its previous hidden state is restored unless another native menu needs it. Rejection/kick messages survive disconnection. Queues are bounded; hint duration starts when shown, not when received.
 
 Optional `titleRu` and `messageRu` fields in each Alerts.toml section provide Russian text. The client uses its current game language; a missing or empty Russian field falls back to the primary field. PluginsPolicy.json supports per-rule `messageRu` and `extraRu`, including in `bcl`.
 

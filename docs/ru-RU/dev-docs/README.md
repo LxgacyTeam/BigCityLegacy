@@ -4,6 +4,8 @@
 
 - [Сборка BCL](Building_RU.md)
 - [BigCityLegacy.Api.LegacyAlerts](LegacyAlerts_RU.md)
+- [BigCityLegacy.Api.LegacyDialogs / LegacyGame](LegacyDialogs_RU.md)
+- [BigCityLegacy.Api.LegacyPlugins](LegacyPluginActivation_RU.md)
 - [LegacyHelpers](LegacyHelpers_RU.md)
 - [LegacyLocalizer](LegacyLocalizer_RU.md)
 - [LegacyPatchManager](LegacyPatchManager_RU.md)

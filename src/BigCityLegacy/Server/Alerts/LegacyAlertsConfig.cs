@@ -36,6 +36,7 @@ internal sealed class LegacyAlertsConfig
         var replacements = new Dictionary<string,string> {
             {"Not specified", "Не указана"}, {"perm", "постоянно"}, {"permanent", "постоянно"},
             {"not reported", "не передана"}, {"not installed", "не установлен"}, {"installed", "установлен"},
+            {"Required plugin is disabled.", "Обязательный плагин выключен."},
             {"Required plugin is missing.", "Не установлен обязательный плагин."},
             {"Required plugin version does not match.", "Версия обязательного плагина не соответствует требованиям."},
             {"Installed plugin/version is prohibited.", "Установленный плагин или его версия запрещены."},

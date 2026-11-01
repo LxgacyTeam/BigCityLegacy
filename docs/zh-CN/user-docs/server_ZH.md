@@ -330,6 +330,26 @@ CS/CS_Sur 比赛进行时，自由模式角色在竞技区内停留五秒后会�
 
 `hardlist` 要求存在指定 GUID 且版本符合规则。`blacklist` 禁止指定 GUID；若设置了版本或范围，则仅禁止匹配的版本。GUID 比较不区分大小写，名称仅用于显示。`version` 要求精确匹配，`minVersion` 和 `maxVersion` 为包含边界的范围；可选择精确版本，或单独/同时使用上下限。缺少的数字段补零（`1.4 == 1.4.0.0`）；预发行版低于对应正式版，build metadata 不参与比较。`bcl` 独立限制 BCL 版本；已上报但不符合规则的版本始终被拒绝，即使允许不报版本。
 
+### 插件启用状态
+
+每条规则的 `controlByStatus` 默认为 `false`。设为 `true` 且插件显式支持 API 时，hardlist 要求启用状态；blacklist 允许已安装但关闭的插件。GUID 与版本检查仍然有效。未支持 API 或未上报状态时，按常规安装情况检查。
+
+```json
+{
+  "version": 1,
+  "hardlist": [
+    { "guid": "com.example.map", "minVersion": "1.0.0", "controlByStatus": true }
+  ],
+  "blacklist": [
+    { "guid": "com.example.othermap", "controlByStatus": true }
+  ]
+}
+```
+
+如果所有不兼容项都能通过状态切换解决，服务器会在生成角色前结束连接尝试，并请求客户端启用/关闭列出的插件。客户端显示服务器地址及重启提醒，等待用户确认。确认前不会调用插件方法；拒绝则不做更改。应用更改或重启后，玩家需重新连接。插件缺失或版本不合适时，仅显示普通拒绝消息，不会部分切换。
+
+每次请求最多 32 个插件。`bcl` 规则不能使用 `controlByStatus`，同一 GUID 也不能在 hardlist 与 blacklist 中同时启用此选项。`playerinfo` 显示 `enabled`、`disabled` 或 `unsupported`。实现方式参见[插件启用 API](../dev-docs/LegacyPluginActivation_ZH.md)。
+
 规则中的 `message` 替换该插件的全局不兼容模板，`extra` 追加一个段落，`bcl` 规则也支持这些字段。所有不兼容项合并显示。缺少插件名称时，使用规则的 `name` 或 GUID。
 
 允许缺少上报时，服务器无法检查该客户端的 hardlist/blacklist；允许缺少 BCL 版本时也不检查该版本。已提交但损坏的上报会被拒绝，不视为缺失。该机制依赖客户端报告的兼容性信息，不能证明客户端没有作弊：修改后的客户端可以伪造上报。
@@ -340,7 +360,7 @@ CS/CS_Sur 比赛进行时，自由模式角色在竞技区内停留五秒后会�
 
 模板保存在 `BigCityLegacy/config/Alerts.toml`。节包括 `plugins`、`missingManifest`、`missingBclVersion`、`invalidManifest`、`banRejected`、`banned`、`kicked`、`welcome`。每节支持 `enabled`、`title`、`message`、`display`、`duration`。省略的节使用内置默认模板。Welcome 默认关闭，其余默认开启；默认类型为 `small`，Welcome 为 `large`。
 
-`small` 使用带 HintBox 的可拖动窗口；`large` 使用 ScrollView；`hint` 在屏幕顶部显示 HintBoxAlt，持续 `duration` 秒（0.1–3600，默认 6）。较长的 small 消息自动启用滚动。Hint 不阻止输入；打开的对话框显示鼠标并阻止点击穿透至游戏。拒绝连接和踢出消息在断线后仍保留。队列大小有限；hint 的计时从实际显示时开始，而非接收时。
+`small` 使用带 HintBox 的可拖动窗口；`large` 使用 ScrollView；`hint` 在屏幕顶部显示 HintBoxAlt，持续 `duration` 秒（0.1–3600，默认 6）。较长的 small 消息自动启用滚动。所有类型均使用 `LegacyUIInputBlockMode.Window`，只在窗口范围内屏蔽输入。显示期间启用鼠标；最后一个 Alert/Dialog 关闭后恢复先前的隐藏状态，其他原生菜单仍需要鼠标时除外。拒绝连接和踢出消息在断线后仍保留。队列大小有限；hint 的计时从实际显示时开始，而非接收时。
 
 Alerts.toml 每节都可选填 `titleRu` 和 `messageRu`。客户端按当前游戏语言选择俄语文本；俄语字段缺少或为空时回退至主要字段。PluginsPolicy.json 的每条规则也支持 `messageRu` 和 `extraRu`，包括 `bcl`。
 

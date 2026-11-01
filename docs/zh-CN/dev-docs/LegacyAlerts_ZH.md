@@ -31,7 +31,7 @@ namespace BigCityLegacy.Api
 | `Large` | 带 ScrollView 的可拖动窗口，适合规则和长文本。 |
 | `Hint` | 屏幕顶部的 HintBoxAlt，持续时间以秒计。BCL 使用 `ScaleMultiplier = 1.5f`；新 hint 替换当前 hint。 |
 
-Small/Large 窗口显示鼠标并阻止点击穿透至游戏。普通 Hint 不捕获输入。对话框使用 LegacyUIFramework 动画；HintBoxAlt 还可通过 BCL 的视觉设置使用背景和 backdrop blur。LegacyAlerts 的公开方法不提供逐条消息的样式参数。
+所有类型（包括 Hint）均使用 `LegacyUIInputBlockMode.Window`，只在窗口范围内屏蔽输入。显示期间启用鼠标；最后一个 Alert/Dialog 关闭后，如果之前隐藏鼠标，则在兼顾其他原生菜单的情况下恢复隐藏状态。对话框使用 LegacyUIFramework 动画；HintBoxAlt 还可通过 BCL 的视觉设置使用背景和 backdrop blur。LegacyAlerts 的公开方法不提供逐条消息的样式参数。
 
 ## 插件示例
 

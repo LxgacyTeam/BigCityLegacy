@@ -19,6 +19,7 @@ internal static class InputPatches
     [HarmonyPrefix]
     private static bool Settings_SettingsMayBeBad_Prefix()
     {
+        if(LegacyGameRestart.Running)return false;
         if (!IsDedicatedServerProcess())
         {
             return true;
@@ -119,7 +120,7 @@ internal static class InputPatches
     [HarmonyPrefix]
     private static bool InputBut_GetInputKey_Prefix(InputBut.KeyValue kv, ref float __result)
     {
-        if (kv == null || kv.keyBoardKode != KeyCode.Mouse0 || (!IsCursorUnlockedByMiddleMouse() && !LegacyAlertUI.ModalVisible)) return true;
+        if (kv == null || kv.keyBoardKode != KeyCode.Mouse0 || !IsCursorUnlockedByMiddleMouse()) return true;
         __result = 0f;
         return false;
     }
