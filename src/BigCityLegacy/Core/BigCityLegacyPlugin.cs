@@ -9,7 +9,7 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
 {
     public const string PluginGuid = "com.bigcitylegacy.baseplugin";
     public const string PluginName = "BigCityLegacy";
-    public const int OnlineProtocolVersion = 94;
+    public const int OnlineProtocolVersion = 95;
     public const bool IsPrerelease = false;
 
     internal static ManualLogSource Log;
