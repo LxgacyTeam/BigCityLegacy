@@ -31,7 +31,7 @@ namespace BigCityLegacy.Api
 | `Large` | Draggable window with a ScrollView, suitable for rules and long text. |
 | `Hint` | HintBoxAlt at the top of the screen, timed in seconds. BCL uses `ScaleMultiplier = 1.5f`. A new hint replaces the previous one. |
 
-All types, including Hint, use `LegacyUIInputBlockMode.Window`: input is blocked only within the window. The cursor is shown, then its previous hidden state is restored after the last Alert/Dialog closes, while respecting other native menus. Dialogs use LegacyUIFramework animations; HintBoxAlt also supports backgrounds and backdrop blur through BCL's visual settings. The public LegacyAlerts methods do not expose per-message style options.
+`Small` and `Large` use `LegacyUIInputBlockMode.Window`: input is blocked only within the window. The cursor is shown, then its previous state is restored after the last interactive Alert/Dialog closes, while respecting other native menus. `Hint` uses `LegacyUIInputBlockMode.None`: it is a noninteractive background notification that does not enable the cursor, block player controls or contribute to modal state. Dialogs use LegacyUIFramework animations; HintBoxAlt also supports backgrounds and backdrop blur through BCL's visual settings. The public LegacyAlerts methods do not expose per-message style options.
 
 ## Plugin example
 

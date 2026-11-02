@@ -10,14 +10,15 @@ internal sealed class LegacyAlertUI : MonoBehaviour
     private LegacyUIScrollView scroll;
     private LegacyUIHintBox hintBox;
     private float hintUntil;
-    private bool modalHidden, hintHidden;
+    private bool modalHidden;
     private GUIStyle textStyle;
     private readonly System.Collections.Generic.Queue<LegacyAlertMessage> dialogs = new System.Collections.Generic.Queue<LegacyAlertMessage>();
     internal static bool ModalVisible { get; private set; }
     private static bool Russian { get { return LegacyLocalizer.IsRussianLanguage; } }
     private void RefreshCursor()
     {
-        bool visible = window != null && window.IsRendered || hintBox != null && hintBox.IsRendered;
+        // Hints are passive overlays, including their fade-out; only modal windows own the cursor.
+        bool visible = window != null && window.IsRendered;
         ModalVisible = visible;
         LegacyApiCursor.Set(GetInstanceID(),visible);
     }
@@ -38,9 +39,9 @@ internal sealed class LegacyAlertUI : MonoBehaviour
             if (!Accept(queued)) continue;
             if (queued.Display == LegacyAlertDisplay.Hint)
             {
-                hint = queued; hintHidden = false; hintUntil = Time.realtimeSinceStartup + queued.Duration;
+                hint = queued; hintUntil = Time.realtimeSinceStartup + queued.Duration;
                 hintBox = new LegacyUIHintBox(new Rect(), new LegacyUIHintBoxOptions { ScaleMultiplier = 1.5f,
-                    InputBlockMode = LegacyUIInputBlockMode.Window });
+                    InputBlockMode = LegacyUIInputBlockMode.None });
             }
             else { if (dialogs.Count >= 32) dialogs.Dequeue(); dialogs.Enqueue(queued); }
         }
@@ -68,14 +69,13 @@ internal sealed class LegacyAlertUI : MonoBehaviour
         string body = hint.Text(Russian), title = hint.Caption(Russian);
         float width = Mathf.Min(650f, screen.x - 24f);
         float titleHeight = string.IsNullOrEmpty(title) ? 0f : textStyle.CalcHeight(new GUIContent(title), Mathf.Max(1f,width-24f)) + 8f;
-        float height = textStyle.CalcHeight(new GUIContent(body), Mathf.Max(1f,width-24f)) + 24f + titleHeight + (hint.IsWelcome ? 28f : 0f);
+        float height = textStyle.CalcHeight(new GUIContent(body), Mathf.Max(1f,width-24f)) + 24f + titleHeight;
         height = Mathf.Min(screen.y*.65f,height);
         hintBox.Rect = new Rect((screen.x-width)*.5f,16f,width,height);
         hintBox.Draw("", area =>
         {
             if (titleHeight > 0f) GUI.Label(new Rect(area.x,area.y,area.width,titleHeight), title, new GUIStyle(textStyle) { fontStyle = FontStyle.Bold });
-            GUI.Label(new Rect(area.x,area.y+titleHeight,area.width,Mathf.Max(1f,area.height-titleHeight-(hint.IsWelcome ? 28f : 0f))),body,textStyle);
-            if (hint.IsWelcome) WelcomeToggle(new Rect(area.x,area.yMax-24f,area.width,24f),hint,ref hintHidden);
+            GUI.Label(new Rect(area.x,area.y+titleHeight,area.width,Mathf.Max(1f,area.height-titleHeight)),body,textStyle);
         });
     }
     private void OnGUI()
