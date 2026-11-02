@@ -3,14 +3,64 @@
   "plugins": [
     {
       "name": "EnhancedCarTuning",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "githubRepo": "https://github.com/LxgacyTeam/EnhancedCarTuning",
-      "githubDl": "https://github.com/LxgacyTeam/EnhancedCarTuning/releases/download/1.0.0/BCL_EnhancedCarTuning-1.0.0.zip",
+      "githubDl": "https://github.com/LxgacyTeam/EnhancedCarTuning/releases/download/1.1.0/EnhancedCarTuning-1.1.0-windows.zip",
       "codebergRepo": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning",
-      "codebergDl": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning/releases/download/1.0.0/BigCityEnhancedCarTuning_1.0.0.zip",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/EnhancedCarTuning/releases/download/1.1.0/EnhancedCarTuning-1.1.0-windows.zip",
+      "size": 6347954,
+      "isChecked": true,
       "keyFiles": [
         "EnhancedCarTuning/EnhancedCarTuning.dll",
         "EnhancedCarTuning/EnhancedCarTuning.Resources.dll"
+      ]
+    },
+    {
+      "name": "LegacyMapExpansion",
+      "version": "1.0.0",
+      "githubRepo": "https://github.com/zzest-dev/LegacyMapExpansion",
+      "githubDl": "https://github.com/zzest-dev/LegacyMapExpansion/releases/download/v1.0.0/LegacyMapExpansion-1.0.0.zip",
+      "codebergRepo": "https://github.com/zzest-dev/LegacyMapExpansion",
+      "codebergDl": "https://github.com/zzest-dev/LegacyMapExpansion/releases/download/v1.0.0/LegacyMapExpansion-1.0.0.zip",
+      "size": 142436829,
+      "keyFiles": [
+        "LegacyMapExpansion/LegacyMapExpansion.dll"
+      ]
+    },
+    {
+      "name": "RadioReplacer (by Mr_Dodep)",
+      "version": "3.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/RadioReplacer",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/RadioReplacer/releases/RadioReplacer-3.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/RadioReplacer",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/RadioReplacer/releases/RadioReplacer-3.0.0.zip",
+      "size": 10443,
+      "keyFiles": [
+        "RadioReplacer/RadioReplacer.dll"
+      ]
+    },
+    {
+      "name": "CinematicCameraPlus (by Mr_Dodep)",
+      "version": "5.0.0",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/CinematicCameraPlus",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/CinematicCameraPlus",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/CinematicCameraPlus/releases/CinematicCameraPlus_5.0.0.zip",
+      "size": 10184,
+      "keyFiles": [
+        "CinematicCameraPlus.dll"
+      ]
+    },
+    {
+      "name": "WinterPack (by dvwhrf)",
+      "version": "1.0.1",
+      "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/WinterPack",
+      "githubDl": "https://raw.githubusercontent.com/LxgacyTeam/community-plugins/refs/heads/main/plugins/WinterPack/releases/WinterPack-1.0.1.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/community-plugins/src/branch/main/plugins/WinterPack",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/community-plugins/raw/branch/main/plugins/WinterPack/releases/WinterPack-1.0.1.zip",
+      "size": 27101650,
+      "keyFiles": [
+        "WinterPack.dll"
       ]
     }
   ]
