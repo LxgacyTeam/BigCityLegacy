@@ -9,7 +9,7 @@ internal static class LegacyClientUI
 
     internal static void Initialize(GameObject host)
     {
-        if (!backdrop) backdrop = LegacyBclBlur.Create(host, null, false);
+        if (!backdrop) backdrop = LegacyBclBlur.Create(host);
     }
 
     internal static void Panel(Rect rect, float alpha)
