@@ -240,6 +240,7 @@ internal static class LegacyServerAdminService
         if (!TryGetPlayer(playerId, out player)) { error = "PlayerID was not found."; return false; }
         if (!LegacyBanList.SetProp(player, prop, enabled, until, out error)) return false;
         LegacyPlayerProperties.Refresh(true);
+        LegacyAdminNotifications.PropertyChanged(playerId, prop, enabled, until);
         NetInputControl input;
         if (enabled && prop != "invisible" && TryGetInput(playerId, out input))
         {
@@ -296,6 +297,7 @@ internal static class LegacyServerAdminService
         PlayerControl player = input.input.currentPlayer;
         if (!player.isAlive) { error = "The player is already dead."; return false; }
         player.SetLive(0f, false, WhoKill.Init(player, Weapone.Type.Unknow));
+        LegacyAdminNotifications.Player(playerId, "You were killed by an administrator.", "Вы были убиты администратором.");
         return true;
     }
 

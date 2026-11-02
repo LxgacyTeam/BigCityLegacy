@@ -39,7 +39,7 @@ internal static class LegacyServerConfig
             Directory.CreateDirectory(Path.GetDirectoryName(LoadedPath));
             File.WriteAllText(LoadedPath, DefaultText, new UTF8Encoding(false));
         }
-        try { configuredValues = Parse(File.ReadAllText(LoadedPath)); effective = Merge(raw, configuredValues); }
+        try { configuredValues = LoadAndComplete(LoadedPath); effective = Merge(raw, configuredValues); }
         catch (Exception ex)
         {
             // Fail closed instead of silently launching a server with defaults.
@@ -49,6 +49,126 @@ internal static class LegacyServerConfig
         Debug.Log("[BCL ServerConfig] Loaded " + LoadedPath + "; explicit launch arguments take priority.");
         return effective;
     }
+    // Keep option aliases in one place so config completion cannot introduce a
+    // default that competes with an administrator's existing alias.
+    private static readonly string[][] OptionAliases =
+    {
+        new[] { "-bindIP", "-ip" }, new[] { "-masterIP", "-masterHost" },
+        new[] { "-master", "-masterServer" }, new[] { "-noUpdCheck", "-noUpdateCheck" },
+        new[] { "-noServerCli", "-noServerCLI" }, new[] { "-hideWindow", "-hideBatchWindow" },
+        new[] { "-masterDebug", "-debugMaster" }
+    };
+
+    internal static string Complete(string text)
+    {
+        // Validate before changing anything. Option names are global in this schema.
+        var present = Parse(text);
+        var additions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var order = new List<string>();
+        var comments = new List<string>();
+        string section = null;
+        foreach (string line in DefaultText.Split('\n'))
+        {
+            string clean = StripComment(line).Trim();
+            if (clean.StartsWith("["))
+            {
+                section = clean;
+                additions.Add(section, new List<string>());
+                order.Add(section);
+                comments.Clear();
+            }
+            else if (clean.Length == 0)
+            {
+                if (line.TrimStart().StartsWith("#")) comments.Add(line);
+            }
+            else
+            {
+                string key = "-" + clean.Substring(0, clean.IndexOf('=')).Trim().TrimStart('-');
+                bool exists = present.ContainsKey(key) || OptionAliases.Any(group =>
+                    group.Contains(key, StringComparer.OrdinalIgnoreCase) && group.Any(present.ContainsKey));
+                if (!exists)
+                {
+                    additions[section].AddRange(comments);
+                    additions[section].Add(line);
+                }
+                comments.Clear();
+            }
+        }
+        if (additions.Values.All(lines => lines.Count == 0)) return text;
+
+        string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+        var result = new StringBuilder();
+        Action<string> append = value =>
+        {
+            if (result.Length > 0 && result[result.Length - 1] != '\n' && result[result.Length - 1] != '\r') result.Append(newline);
+            result.Append(value).Append(newline);
+        };
+        Action<string> finishSection = name =>
+        {
+            List<string> lines;
+            if (name == null || !additions.TryGetValue(name, out lines)) return;
+            foreach (string line in lines) append(line);
+            additions.Remove(name);
+        };
+        section = null;
+        // Keep original lines (including their whitespace, comments and line endings).
+        foreach (Match match in Regex.Matches(text, @"[^\r\n]*(?:\r\n|\n|\r|$)"))
+        {
+            if (match.Length == 0) continue;
+            string clean = StripComment(match.Value.TrimEnd('\r', '\n')).Trim().TrimStart('\uFEFF');
+            if (Regex.IsMatch(clean, @"^\[[A-Za-z0-9_-]+\]$"))
+            {
+                finishSection(section);
+                section = clean;
+            }
+            result.Append(match.Value);
+        }
+        finishSection(section);
+        foreach (string name in order)
+        {
+            List<string> lines;
+            if (!additions.TryGetValue(name, out lines) || lines.Count == 0) continue;
+            append("");
+            append(name);
+            finishSection(name);
+        }
+        string completed = result.ToString();
+        Parse(completed);
+        return completed;
+    }
+
+    internal static Dictionary<string, object> LoadAndComplete(string path)
+    {
+        string original = File.ReadAllText(path);
+        string completed = Complete(original);
+        var values = Parse(completed);
+        if (completed == original) return values;
+
+        string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(bom), 1024, true)) writer.Write(completed);
+                stream.Flush(true);
+            }
+            if (File.ReadAllText(path) != original) throw new IOException("The configuration changed while it was being completed.");
+            File.Replace(temporary, path, null);
+            Debug.Log("[BCL ServerConfig] Added missing settings to " + path);
+        }
+        catch (IOException ex) { Debug.LogWarning("[BCL ServerConfig] Could not save missing settings; using completed values for this run: " + ex.Message); }
+        catch (UnauthorizedAccessException ex) { Debug.LogWarning("[BCL ServerConfig] Could not save missing settings; using completed values for this run: " + ex.Message); }
+        finally
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return values;
+    }
+
     internal static Dictionary<string, object> Parse(string text)
     {
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -205,16 +325,9 @@ internal static class LegacyServerConfig
     {
         var result = new List<string>(raw);
         var explicitKeys = new HashSet<string>(raw.Select(a => a.Split(':')[0]), StringComparer.OrdinalIgnoreCase);
-        string[][] aliases =
-        {
-            new[] { "-bindIP", "-ip" }, new[] { "-masterIP", "-masterHost" },
-            new[] { "-master", "-masterServer" }, new[] { "-noUpdCheck", "-noUpdateCheck" },
-            new[] { "-noServerCli", "-noServerCLI" }, new[] { "-hideWindow", "-hideBatchWindow" },
-            new[] { "-masterDebug", "-debugMaster" }
-        };
         foreach (var item in config)
         {
-            if (explicitKeys.Contains(item.Key) || aliases.Any(group => group.Contains(item.Key, StringComparer.OrdinalIgnoreCase) &&
+            if (explicitKeys.Contains(item.Key) || OptionAliases.Any(group => group.Contains(item.Key, StringComparer.OrdinalIgnoreCase) &&
                 group.Any(explicitKeys.Contains))) continue;
             if (item.Value is bool) { if ((bool)item.Value) result.Add(item.Key); }
             else

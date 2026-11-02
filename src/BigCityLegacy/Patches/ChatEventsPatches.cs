@@ -62,7 +62,7 @@ internal static class ChatEventsPatches
 
     internal static void SendChatMessage(NetInputControl netInput, string message)
     {
-        if (netInput == null || !LegacyCommandLine.ChatEventsEnabled ||
+        if (netInput == null || LegacyAdminNotifications.Silent || !LegacyCommandLine.ChatEventsEnabled ||
             NetManager.isServer && LegacyPlayerProperties.Has(netInput, "invisible"))
         {
             return;

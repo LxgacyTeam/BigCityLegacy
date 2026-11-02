@@ -34,7 +34,7 @@ internal sealed class LegacyAlertsConfig
     {
         var values = new Dictionary<string,string>(original, StringComparer.OrdinalIgnoreCase);
         var replacements = new Dictionary<string,string> {
-            {"Not specified", "Не указана"}, {"perm", "постоянно"}, {"permanent", "постоянно"},
+            {"Not specified", "Не указана"}, {"perm", "навсегда"}, {"permanent", "навсегда"},
             {"not reported", "не передана"}, {"not installed", "не установлен"}, {"installed", "установлен"},
             {"Required plugin is disabled.", "Обязательный плагин выключен."},
             {"Required plugin is missing.", "Не установлен обязательный плагин."},

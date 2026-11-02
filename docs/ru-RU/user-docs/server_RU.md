@@ -184,24 +184,26 @@ Master сервер необходим, если вы хотите запуст�
 | playerinfo {PlayerID} | Отобразить информацию об игроке                                       |
 | banlist  | Отобразить текущий список банов                          |
 | kick {PlayerID} [reason]       | Кикнуть игрока                                                                       |
-| kill {PlayerID} | Убить персонажа игрока. |
+| kill {PlayerID} [silent] | Убить персонажа игрока. |
 | ban {PlayerID} {1/2/3/4} [time] [reason]  | Забанить игрока; 1 = бан по GUID, 2 = бан по IP                           |
 | unban {BanID}         | Разбанить игрока по BanID                                                        |
-| setprop {PlayerID} {prop} {0/1} [time] | Назначить или снять свойство; `help setprop` |
+| setprop {PlayerID} {prop} {0/1} [time] [silent] | Назначить или снять свойство; `help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | Телепорт по координатам; `help tp` |
 | tpto {PlayerID} {to PlayerID} [wcar] | Телепорт к игроку |
-| clearchat | Очистить чат |
+| clearchat [silent] | Очистить чат |
 | help [setprop/tp/alert] | Справка по командам |
 | reloadmirror             | Перезагрузить mirror; перечитывает текущий ServersList.json                 |
 | reloadcfg             | Перезагрузить конфиги (EventsList, RespawnPoints, BanList, PluginsPolicy, Alerts)                   |
 | alert {PlayerID/all} {message} {small/large/hint} [seconds] | Сообщение игроку или всем; `help alert` |
 | msg {text}            | Отправить сообщение от имени сервера (см. примечание) |
-| cleardrop             | Отчистить весь дроп на сервере (аптечки и оружие)         |
-| delcars all           | Удалить все автомобили на сервере                                    |
-| delcars {PlayerID}    | Удалить все автомобили отдельного игрока                      |
+| cleardrop [silent]             | Отчистить весь дроп на сервере (аптечки и оружие)         |
+| delcars all [silent]           | Удалить все автомобили на сервере                                    |
+| delcars {PlayerID} [silent]    | Удалить все автомобили отдельного игрока                      |
 | stats                 | Вывести статистику потребления и загрузки ресурсов  |
 | showcfg               | Вывести текущий конфиг сервера  |
 | stop                  | Завершить работу сервера                                                    |
+
+Команды `clearchat`, `cleardrop` и `delcars all` отправляют всем поддерживаемым BCL-клиентам уведомление `hint` о результате очистки. `delcars {PlayerID}`, `kill {PlayerID}` и `setprop` отправляют личный `hint` выбранному игроку; для свойств отображаются назначение или снятие и срок действия. Сообщения доступны на английском и русском языке и учитывают глобальное отключение Alerts. Добавьте `silent` последним аргументом, чтобы выполнить действие без hint и связанных сообщений в игровом чате, включая киллчат и объявления о свойствах. Вывод результата и ошибок в консоли администратора сохраняется. Примеры: `clearchat silent`, `delcars 15 silent`, `kill 15 silent`, `setprop 15 nochat 1 15m silent`.
 
 `reloadmirror` работает только при активном mirror: перечитывает ServersList.json без перезапуска игрового сервера, при ошибке оставляет прежний список. `banlist` показывает активные баны, исключая истёкшие и записи Type 0. `showcfg` выводит загруженные при запуске значения ServerConfig с учётом стандартных значений и аргументов запуска.
 
@@ -214,11 +216,11 @@ Master сервер необходим, если вы хотите запуст�
 
 #### Баны и свойства игроков
 
-`ban <PlayerID> <1|2|3|4> [time] [reason]` запрещает подключение по GUID (`1`) или IP (`2`). Необязательный срок — положительное целое число с суффиксом `s`, `m`, `h` или `d`: `30s`, `15m`, `12h`, `5d`. Без срока бан постоянный. Пример: `ban 15 1 12h`. Команда `ban` не принимает тип `0`.
+`ban <PlayerID> <1|2|3|4> [time] [reason]` запрещает подключение к серверу по одному из идентификаторов, определяемому по типу бана (см. ниже). Необязательный срок — положительное целое число с суффиксом `s`, `m`, `h` или `d`: `30s`, `15m`, `12h`, `5d`. Без срока бан постоянный. Пример: `ban 15 1 12h`. Команда `ban` не принимает тип `0`.
 
 GUID принадлежит игровому профилю и хранится в PlayerPrefs. Удаление сохранения создаёт другой GUID; бан по GUID не является защитой от создания нового профиля.
 
-`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time]` назначает (`1`) или снимает (`0`) свойство. Срок задаётся так же, как для бана; при снятии не используется. Повторное назначение заменяет срок этого свойства. Примеры: `setprop 15 nochat 1 15m`, `setprop 15 nochat 0`.
+`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time] [silent]` назначает (`1`) или снимает (`0`) свойство. Срок задаётся так же, как для бана; при снятии не используется. Повторное назначение заменяет срок этого свойства. Примеры: `setprop 15 nochat 1 15m`, `setprop 15 nochat 0`.
 
 | Свойство | Действие |
 | --- | --- |
@@ -251,17 +253,30 @@ GUID принадлежит игровому профилю и хранится 
 }
 ```
 
-`Type`: `0` — только свойства, без бана; `1` — бан по GUID; `2` — бан по IP. Временный бан содержит собственное поле `until` рядом с `Type` и `Nickname`.
+`Type`: `0` — только свойства, без бана; `1` — бан по GUID; `2` — бан по GUID + IP; `3` — GUID + fingerprint; `4` — связанные GUID, fingerprint и IP. Временный бан содержит собственное поле `until` рядом с `Type` и `Nickname`.
 
 `unban <BanID>` снимает бан. Если есть свойства, запись сохраняется с `Type: 0`; иначе удаляется. Сами свойства команда `unban` не снимает. `playerinfo <PlayerID>` показывает активные свойства отдельной строкой, например `Props: noweapon (5h), nochat (perm)`.
 
 При кике и бане чат сообщает причину выхода и срок бана вместо обычного `- disconnected`. Назначение ограничений оружия, машин, чата и движения также объявляется в чате, если включены сообщения о событиях.
 
+GUID — базовое основание для блокировки при любом активном типе бана. Для типов `1–3` он проверяется дополнительно и не пополняет другие идентификаторы: совпадение GUID в бане по IP не добавляет новый IP, а совпадение чужого GUID по IP/fingerprint не сохраняет этот GUID. Тип `3` также проверяет машину, но не IP.
+
+Тип `4` отклоняет при совпадении **любого** известного GUID, fingerprint или IP. При таком совпадении он сохраняет новые непустые GUID/IP и пригодный fingerprint в массивах `GUIDs`, `IPs`, `Fingerprints` того же BanID. Основные `GUID` и `IP` сохраняются для совместимости; существующие записи начинают использовать основной GUID без миграции. У одного BanID общий срок и причина. Лимиты — 256 GUID, 256 IP и 128 fingerprints; заполнение лимита не отменяет действующий бан. Удаление бана выключает все накопленные признаки; свойства игрока сохраняются и по-прежнему проверяются только по основному GUID.
+
+При типе 4 общий внешний IP связывает машины за NAT, в семье или VPN в одну бан-запись — это следствие выбранной модели. Старый клиент без fingerprint всё равно проверяется по GUID; тип 4 также проверяет его IP. Для обязательного отчёта задайте `[server] requireFingerprint = true` или `-requireFingerprint` (по умолчанию false). Тогда сервер отклоняет отсутствующий, непригодный или повреждённый fingerprint.
+
+#### Бан по машине
+
+`ban <PlayerID> <3|4> [time] [reason]` использует fingerprint, который клиент BCL собирает один раз при запуске и передаёт выбранному серверу при подключении. `playerinfo <PlayerID>` выводит его HEX-строку.
+
+В Windows используются MachineGuid, серийный номер платы/SMBIOS UUID, серийный номер системного диска и постоянные MAC физических сетевых адаптеров.
+В Linux используются доступные обычному пользователю DMI-поля, отдельный производный ID BCL от machine-id, серийный номер системного диска/UUID корневой файловой системы и постоянные MAC физических адаптеров.
+
 #### Телепортация и очистка чата
 
 `tp <PlayerID> <точка|x y z|json> [wcar]` принимает имя готовой точки, координаты с десятичной точкой или JSON из Point Tool, например `tp 15 police`, `tp 15 100.5 20 -30` либо `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`. JSON обязан содержать `x`, `y`, `z`; `yaw` необязателен. Готовые точки содержат координаты и направление взгляда: police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm. Имена не зависят от регистра. Без `yaw` поворот сохраняется. `tpto <PlayerID> <to PlayerID> [wcar]` переносит к текущей позиции другого игрока. С `wcar` перемещается автомобиль вместе со всеми пассажирами, если персонаж находится в машине; без него персонаж высаживается. Телепортация сохраняет здоровье и использует штатную загрузку местности; замороженный персонаж остаётся замороженным в новой точке. Пример: `tpto 15 16 wcar`.
 
-`kill <PlayerID>` обнуляет здоровье персонажа через штатную серверную систему смерти. `kick` и `ban` немедленно удаляют игровую сессию и персонажа; `disconnectedKickTimeout` применяется только к оборванным соединениям, а не к административному удалению.
+`kill <PlayerID> [silent]` обнуляет здоровье персонажа через штатную серверную систему смерти. `kick` и `ban` немедленно удаляют игровую сессию и персонажа; `disconnectedKickTimeout` применяется только к оборванным соединениям, а не к административному удалению.
 
 `clearchat` очищает серверную историю и вытесняет текст из истории штатных клиентов пустыми сообщениями через существующий RPC. Новый клиентский протокол не требуется. Подсветка пустых строк исчезает с обычным временем подсветки чата.
 
@@ -365,6 +380,60 @@ GUID принадлежит игровому профилю и хранится 
 `titleRu` и `messageRu` в каждой секции Alerts.toml необязательны. Русский язык выбирается по текущему языку игры на клиенте. При отсутствии или пустом русском поле используется основной текст. В PluginsPolicy.json доступны `messageRu` и `extraRu` для каждого правила, включая `bcl`.
 
 ```toml
+[plugins]
+title = "Plugin compatibility"
+titleRu = "Совместимость плагинов"
+message = "{reason}\n{pluginName}: {pluginVersion}\nRequired: {requiredVersion}"
+messageRu = "{reason}\n{pluginName}: {pluginVersion}\nНеобходима: {requiredVersion}"
+display = "small"
+
+[missingManifest]
+enabled = true
+title = "Client update required"
+titleRu = "Требуется обновление клиента"
+message = "{nickname}, this server requires a plugin list. Use BigCityLegacy 1.4.2 or newer."
+messageRu = "{nickname}, сервер требует список плагинов. Используйте BigCityLegacy 1.4.2 или новее."
+display = "small"
+
+[missingBclVersion]
+enabled = true
+title = "Client update required"
+titleRu = "Требуется обновление клиента"
+message = "{nickname}, this server requires the client BigCityLegacy version. Use BCL 1.4.2 or newer."
+messageRu = "{nickname}, сервер требует версию BigCityLegacy. Используйте BCL 1.4.2 или новее."
+display = "small"
+
+[invalidManifest]
+enabled = true
+title = "Connection rejected"
+titleRu = "Подключение отклонено"
+message = "The client plugin list is invalid: {reason}"
+messageRu = "Некорректный список плагинов: {reason}"
+display = "small"
+
+[banRejected]
+enabled = true
+title = "Connection rejected"
+titleRu = "Подключение отклонено"
+message = "{nickname}, you cannot join while banned.\nDuration: {duration}\nBan ID: {banId}\nReason: {reason}"
+messageRu = "{nickname}, вход заблокирован баном.\nСрок: {duration}\nID бана: {banId}\nПричина: {reason}"
+display = "small"
+
+[banned]
+title = "Banned!"
+titleRu = "Вы были забанены!"
+message = "{nickname}\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
+messageRu = "{nickname}\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
+display = "hint"
+duration = 15
+
+[kicked]
+title = "Disconnected by administrator"
+titleRu = "Отключен администратором"
+message = "{nickname}, you were kicked.\nReason: {reason}"
+messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
+display = "small"
+
 [welcome]
 enabled = true
 title = "Server rules"
@@ -381,28 +450,6 @@ messageRu = """
 2. Соблюдай правила сервера.
 """
 updatedAt = 1793150000
-
-[kicked]
-title = "Disconnected by administrator"
-titleRu = "Отключен администратором"
-message = "{nickname}, you were kicked.\nReason: {reason}"
-messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
-display = "small"
-
-[plugins]
-title = "Plugin compatibility"
-titleRu = "Совместимость плагинов"
-message = "{reason}\n{pluginName}: {pluginVersion}\nRequired: {requiredVersion}"
-messageRu = "{reason}\n{pluginName}: {pluginVersion}\nНеобходима: {requiredVersion}"
-display = "small"
-
-[banned]
-title = "Banned!"
-titleRu = "Вы были забанены!"
-message = "{nickname}\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
-messageRu = "{nickname}\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
-display = "hint"
-duration = 15
 ```
 
 В двойных строках используйте `\n` для переноса и `\t` для табуляции; для длинных сообщений поддерживаются тройные двойные кавычки. Одинарные строки TOML буквальные. JSON-строки `message`/`extra` используют обычное JSON-экранирование. Значения переменных подставляются один раз, без повторного разбора escape-последовательностей и без rich text.
@@ -436,16 +483,3 @@ Welcome отображается после загрузки игрового м
 Клиентский C# API описан отдельно: [BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_RU.md).
 
 `banRejected` используется при попытке входа уже забаненного игрока; `banned` — при выдаче бана подключённому игроку. Эти шаблоны настраиваются независимо.
-
-## Бан по машине
-
-`ban <PlayerID> <3|4> [time] [reason]` использует fingerprint, который клиент BCL собирает один раз при запуске и передаёт выбранному серверу при подключении. `playerinfo <PlayerID>` выводит его HEX-строку. Это дополнительные типы существующей команды: тип `1` — GUID, `2` — GUID или IP, `3` — GUID или fingerprint, `4` — связанные GUID, fingerprint и IP. Срок, причина и `unban <BanID>` работают для всех типов.
-
-В Windows используются MachineGuid, серийный номер платы/SMBIOS UUID, серийный номер системного диска и постоянные MAC физических сетевых адаптеров.
-В Linux используются доступные обычному пользователю DMI-поля, отдельный производный ID BCL от machine-id, серийный номер системного диска/UUID корневой файловой системы и постоянные MAC физических адаптеров.
-
-GUID — базовое основание для блокировки при любом активном типе бана. Для типов `1–3` он проверяется дополнительно и не пополняет другие идентификаторы: совпадение GUID в бане по IP не добавляет новый IP, а совпадение чужого GUID по IP/fingerprint не сохраняет этот GUID. Тип `3` также проверяет машину, но не IP.
-
-Тип `4` отклоняет при совпадении **любого** известного GUID, fingerprint или IP. При таком совпадении он сохраняет новые непустые GUID/IP и пригодный fingerprint в массивах `GUIDs`, `IPs`, `Fingerprints` того же BanID. Основные `GUID` и `IP` сохраняются для совместимости; существующие записи начинают использовать основной GUID без миграции. У одного BanID общий срок и причина. Лимиты — 256 GUID, 256 IP и 128 fingerprints; заполнение лимита не отменяет действующий бан. Удаление бана выключает все накопленные признаки; свойства игрока сохраняются и по-прежнему проверяются только по основному GUID.
-
-При типе 4 общий внешний IP связывает машины за NAT, в семье или VPN в одну бан-запись — это следствие выбранной модели. Старый клиент без fingerprint всё равно проверяется по GUID; тип 4 также проверяет его IP. Для обязательного отчёта задайте `[server] requireFingerprint = true` или `-requireFingerprint` (по умолчанию false). Тогда сервер отклоняет отсутствующий, непригодный или повреждённый fingerprint.

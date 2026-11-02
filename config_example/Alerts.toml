@@ -1,0 +1,48 @@
+[welcome]
+enabled = true
+title = "Server rules"
+titleRu = "Правила сервера"
+display = "large"
+message = """
+Welcome, {nickname}!
+1. Respect other players.
+2. Follow the server rules.
+"""
+
+[plugins]
+title = "Plugin compatibility"
+titleRu = "Совместимость плагинов"
+message = "{reason}\n\n{pluginName} {pluginVersion}\nRequired version: {requiredVersion}\n"
+messageRu = "{reason}\n\n{pluginName} {pluginVersion}\nНеобходимая версия: {requiredVersion}\n"
+display = "small"
+
+[invalidManifest]
+enabled = true
+title = "Connection rejected"
+titleRu = "Подключение отклонено"
+message = "The client plugin list is invalid: {reason}"
+messageRu = "Клиент отдал некорректный список плагинов: {reason}"
+display = "small"
+
+[banRejected]
+enabled = true
+title = "Connection rejected by ban"
+titleRu = "Вход заблокирован баном"
+message = "{nickname}, you have been banned from this server.\n\nDuration: {duration}\nBan ID: {banId}\nReason: {reason}"
+messageRu = "{nickname}, вы были забанены на данном сервере.\n\nСрок: {duration}\nID бана: {banId}\nПричина: {reason}"
+display = "small"
+
+[banned]
+title = "Banned!"
+titleRu = "Вы были забанены!"
+message = "{nickname}, you have been banned from this server.\n\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
+messageRu = "{nickname}, вы были забанены на данном сервере.\n\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
+display = "small"
+
+[kicked]
+title = "Disconnected by administrator"
+titleRu = "Отключен администратором"
+message = "{nickname}, you were kicked.\nReason: {reason}"
+messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
+display = "hint"
+duration = 15

@@ -73,13 +73,13 @@ namespace BigCityLegacy.Api
             {
                 var c=changes[i];var s=statuses[i];restart|=s.RequiresRestart;
                 string name=s.Name ?? c.Guid;if(name.Length>64)name=name.Substring(0,64);
-                body.Append(c.Enabled?"Enable ":"Disable ").Append(name).Append(" [").Append(c.Guid).Append("]\n");
-                ru.Append(c.Enabled?"Включить ":"Выключить ").Append(name).Append(" [").Append(c.Guid).Append("]\n");
+                body.Append(c.Enabled?"Enable ":"Disable ").Append(name);
+                ru.Append(c.Enabled?"Включить ":"Выключить ").Append(name);
             }
             if(confirm)
             {
-                string prefix=server==null ? "Apply these plugin changes?\n\n" : "Server "+server+" requires these plugin changes before joining:\n\n";
-                string prefixRu=server==null ? "Применить изменения плагинов?\n\n" : "Сервер "+server+" требует изменений плагинов для подключения:\n\n";
+                string prefix=server==null ? "Apply these plugin changes?\n\n" : "Server requires these plugin changes before joining:\n\n";
+                string prefixRu=server==null ? "Применить изменения плагинов?\n\n" : "Сервер требует изменений плагинов для подключения:\n\n";
                 bool yes=await LegacyDialogs.ShowAsync(new LegacyDialogOptions { Title="Plugin activation",TitleRu="Активация плагинов",
                     Message=prefix+body+(restart?"\nThe game will restart. Reconnect after restarting.":"\nReconnect after applying the changes."),
                     MessageRu=prefixRu+ru+(restart?"\nИгра будет перезапущена. После перезапуска подключитесь повторно.":"\nПосле применения подключитесь повторно."),

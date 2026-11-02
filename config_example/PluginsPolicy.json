@@ -4,20 +4,26 @@
   "allowClientsWithoutBclVersion": false,
   "bcl": {
     "minVersion": "1.4.2",
-    "message": "BigCityLegacy {pluginVersion} is not supported. Required: {requiredVersion}."
+    "message": "BigCityLegacy {pluginVersion} is not supported.\nPlease update to {requiredVersion} version.",
+    "messageRu": "BigCityLegacy {pluginVersion} не поддерживается.\nПожалуйста обновитесь до версии {requiredVersion}."
   },
   "hardlist": [
     {
-      "guid": "com.bigcitylegacy.enhancedcartuning",
-      "name": "EnhancedCarTuning",
-      "minVersion": "1.0.0",
-      "extra": "Install the required plugin before reconnecting."
+      "guid": "com.bigcitylegacy.map1018",
+      "name": "LegacyMapExpansion",
+      "minVersion": "1.0.1",
+      "extra": "Install the required plugin before reconnecting.",
+      "extraRu": "Перед повторным подключением установите необходимый плагин.",
+      "controlByStatus": true
     }
   ],
   "blacklist": [
     {
       "guid": "com.example.prohibited",
-      "message": "Remove {pluginName} before joining."
+      "name": "Prohibited Plugin",
+      "message": "\"{pluginName}\" is prohibited on this server. Please remove it before joining.",
+      "messageRu": "Плагин \"{pluginName}\" запрещен на этом сервере. Пожалуйста, удалите его перед подключением.",
+      "controlByStatus": false
     }
   ]
 }

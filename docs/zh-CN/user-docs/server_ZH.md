@@ -184,24 +184,26 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 | playerinfo {PlayerID} | 显示某位玩家的信息。 |
 | banlist | 显示当前有效的封禁列表。 |
 | kick {PlayerID} [reason] | 踢出玩家。 |
-| kill {PlayerID} | 杀死玩家角色。 |
+| kill {PlayerID} [silent] | 杀死玩家角色。 |
 | ban {PlayerID} {1/2/3/4} [time] [reason] | 封禁玩家；1 = 按 GUID 封禁，2 = 按 IP 封禁。 |
 | unban {BanID} | 根据 BanID 解除封禁。 |
-| setprop {PlayerID} {prop} {0/1} [time] | 设置或移除属性；`help setprop` |
+| setprop {PlayerID} {prop} {0/1} [time] [silent] | 设置或移除属性；`help setprop` |
 | tp {PlayerID} {preset/x y z/json} [wcar] | 按坐标传送；`help tp` |
 | tpto {PlayerID} {to PlayerID} [wcar] | 传送到玩家 |
-| clearchat | 清理聊天 |
+| clearchat [silent] | 清理聊天 |
 | help [setprop/tp/alert] | 命令帮助 |
 | reloadmirror | Mirror 运行时重载当前 ServersList.json。 |
 | reloadcfg | 重新加载配置：EventsList、RespawnPoints、BanList、PluginsPolicy、Alerts。 |
 | alert {PlayerID/all} {message} {small/large/hint} [seconds] | 向指定玩家或所有人显示提示；`help alert` |
 | msg {text} | 以服务器名义发送消息。详见下方说明。 |
-| cleardrop | 清理服务器上的所有掉落物：医疗包和武器。 |
-| delcars all | 删除服务器上的所有车辆。 |
-| delcars {PlayerID} | 删除指定玩家的所有车辆。 |
+| cleardrop [silent] | 清理服务器上的所有掉落物：医疗包和武器。 |
+| delcars all [silent] | 删除服务器上的所有车辆。 |
+| delcars {PlayerID} [silent] | 删除指定玩家的所有车辆。 |
 | stats | 显示资源消耗和加载统计信息。 |
 | showcfg | 显示当前生效的服务器配置。 |
 | stop | 停止服务器。 |
+
+`clearchat`、`cleardrop` 和 `delcars all` 会向所有受支持的 BCL 客户端发送清理结果的 `hint` 提示。`delcars {PlayerID}`、`kill {PlayerID}` 和 `setprop` 仅向指定玩家发送个人提示；属性提示说明启用或移除状态及有效时长。提示支持英语和俄语，并遵循 Alerts 的全局开关。在命令末尾添加 `silent` 可关闭提示及相关游戏聊天通知，包括击杀消息和属性公告；管理员控制台仍显示执行结果及错误。例如：`clearchat silent`、`delcars 15 silent`、`kill 15 silent`、`setprop 15 nochat 1 15m silent`。
 
 `reloadmirror` 仅在 Mirror 运行时可用：重新读取 ServersList.json，无需重启游戏服务器，出错时保留旧列表。`banlist` 显示有效封禁，不包含已过期封禁和 Type 0 记录。`showcfg` 显示启动时加载的 ServerConfig 值，包括默认值及启动参数覆盖。
 
@@ -214,11 +216,11 @@ Mirror 服务器的配置存储在独立的 JSON 配置文件中，默认路径�
 
 #### 封禁与玩家属性
 
-`ban <PlayerID> <1|2|3|4> [time] [reason]` 按 GUID（`1`）或 IP（`2`）禁止连接。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
+`ban <PlayerID> <1|2|3|4> [time] [reason]` 根据封禁类型（见下文），使用其中一种标识符来阻止其连接至服务器。可选时长为正整数加 `s`、`m`、`h` 或 `d`，例如 `30s`、`15m`、`12h`、`5d`；省略表示永久封禁。示例：`ban 15 1 12h`。命令不接受类型 `0`。
 
 GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另一个 GUID，因此按 GUID 封禁不能阻止创建新存档。
 
-`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time]` 设置（`1`）或移除（`0`）属性。时长格式与封禁相同，移除时忽略时长。重复设置会替换该属性的时长。示例：`setprop 15 nochat 1 15m`、`setprop 15 nochat 0`。
+`setprop <PlayerID> <noweapon|nomove|nocars|nochat|invisible> <0|1> [time] [silent]` 设置（`1`）或移除（`0`）属性。时长格式与封禁相同，移除时忽略时长。重复设置会替换该属性的时长。示例：`setprop 15 nochat 1 15m`、`setprop 15 nochat 0`。
 
 | 属性 | 作用 |
 | --- | --- |
@@ -251,17 +253,29 @@ GUID 标识游戏存档并保存在 PlayerPrefs 中。删除存档会生成另�
 }
 ```
 
-`Type`：`0` 为仅属性、未封禁；`1` 按 GUID 封禁；`2` 按 IP 封禁。临时封禁在 `Type`、`Nickname` 同级使用自己的 `until` 字段。
+`Type`：`0` 为仅属性、未封禁；`1` 按 GUID 封禁；`2` 按 GUID + IP 封禁；`3` 按 GUID + fingerprint 封禁；`4` 关联 GUID、fingerprint 和 IP。临时封禁在 `Type`、`Nickname` 同级使用自己的 `until` 字段。
 
 `unban <BanID>` 解除封禁：若记录仍有属性，则保留并设置 `Type: 0`；否则删除记录。该命令不移除属性。`playerinfo <PlayerID>` 会显示有效属性，例如 `Props: noweapon (5h), nochat (perm)`。
 
 踢出与封禁公告显示具体原因和封禁时长，代替普通断开消息。启用聊天事件时，武器、车辆、聊天和移动限制也会发送公告。
 
+GUID 是所有有效封禁类型的基础拦截标识。类型 `1–3` 仅增加 GUID 检查，不学习其他标识：IP 封禁通过 GUID 匹配时不添加新 IP，通过 IP/fingerprint 匹配的其他 GUID 也不保存。类型 `3` 还检查机器，但不检查 IP。
+
+类型 `4` 在任一已知 GUID、fingerprint **或** IP 匹配时拒绝连接，并在同一 BanID 的 `GUIDs`、`IPs`、`Fingerprints` 数组中保存新的非空 GUID/IP 和有效 fingerprint。主 `GUID` 和 `IP` 字段保持兼容，现有记录无需迁移即检查主 GUID。所有别名共享期限和原因；上限为 256 个 GUID、256 个 IP、128 个 fingerprint，达到上限不取消已有封禁。解封停用全部别名，并保留仍只按主 GUID 匹配的玩家属性。
+
+类型 4 会按设计将 NAT、家庭或 VPN 下共用公网 IP 的机器关联到同一封禁记录。缺少 fingerprint 的旧客户端仍检查 GUID，类型 4 还检查其 IP。设置 `[server] requireFingerprint = true` 或 `-requireFingerprint` 可强制上报（默认 false），此时缺失、不可用或损坏的报告均被拒绝。该要求及机器封禁独立于 `noPluginsPolicyAndAlerts`。
+
+#### 按机器封禁
+
+`ban <PlayerID> <3|4> [time] [reason]` 使用 BCL 客户端在启动时一次性采集、连接时发送给所选服务器的 fingerprint。`playerinfo <PlayerID>` 显示其 HEX 字符串。
+
+Windows 使用 MachineGuid、主板序列号/SMBIOS UUID、系统磁盘序列号和物理网卡的永久 MAC。ProcessorId 不作为唯一 CPU 标识。Linux 使用当前用户可读取的 DMI 字段、由 machine-id 派生的独立 BCL 标识、系统磁盘序列号/根文件系统 UUID 和物理网卡永久 MAC。不请求 sudo/UAC；不可读取的值及已知 OEM 占位符会被省略。
+
 #### 传送与清理聊天
 
 `tp <PlayerID> <预设|x y z|json> [wcar]` 接受预设名称、小数点坐标或 Point Tool JSON，例如 `tp 15 police`、`tp 15 100.5 20 -30` 或 `tp 15 {"x":100.5,"y":20,"z":-30,"yaw":90} wcar`。JSON 必须包含 `x`、`y`、`z`，`yaw` 可选。预设包含位置和朝向：police, park, airport, sto1, sto2, sto3, sto4, desert, mountain, cemetry, derbyarena, mansion, farm。名称不区分大小写，省略 yaw 时保留原朝向。`tpto <PlayerID> <to PlayerID> [wcar]` 传送到另一玩家的当前位置。添加 `wcar` 时，车内角色会连同车辆及全部乘客一起传送；否则角色会下车。传送保留生命值并使用原有地形加载流程，冻结角色在目标位置继续冻结。例如：`tpto 15 16 wcar`。
 
-`kill <PlayerID>` 通过原有服务器死亡机制将角色生命值设为零。`kick` 和 `ban` 立即删除游戏会话与角色。`disconnectedKickTimeout` 仅用于连接丢失后的会话保留，不用于管理员移除玩家。
+`kill <PlayerID> [silent]` 通过原有服务器死亡机制将角色生命值设为零。`kick` 和 `ban` 立即删除游戏会话与角色。`disconnectedKickTimeout` 仅用于连接丢失后的会话保留，不用于管理员移除玩家。
 
 `clearchat` 清空服务器历史，并通过已有 RPC 发送空消息来替换原版客户端聊天历史，无需新客户端协议。空行高亮按原有聊天高亮时间消退。
 
@@ -365,6 +379,60 @@ CS/CS_Sur 比赛进行时，自由模式角色在竞技区内停留五秒后会�
 Alerts.toml 每节都可选填 `titleRu` 和 `messageRu`。客户端按当前游戏语言选择俄语文本；俄语字段缺少或为空时回退至主要字段。PluginsPolicy.json 的每条规则也支持 `messageRu` 和 `extraRu`，包括 `bcl`。
 
 ```toml
+[plugins]
+title = "Plugin compatibility"
+titleRu = "Совместимость плагинов"
+message = "{reason}\n{pluginName}: {pluginVersion}\nRequired: {requiredVersion}"
+messageRu = "{reason}\n{pluginName}: {pluginVersion}\nНеобходима: {requiredVersion}"
+display = "small"
+
+[missingManifest]
+enabled = true
+title = "Client update required"
+titleRu = "Требуется обновление клиента"
+message = "{nickname}, this server requires a plugin list. Use BigCityLegacy 1.4.2 or newer."
+messageRu = "{nickname}, сервер требует список плагинов. Используйте BigCityLegacy 1.4.2 или новее."
+display = "small"
+
+[missingBclVersion]
+enabled = true
+title = "Client update required"
+titleRu = "Требуется обновление клиента"
+message = "{nickname}, this server requires the client BigCityLegacy version. Use BCL 1.4.2 or newer."
+messageRu = "{nickname}, сервер требует версию BigCityLegacy. Используйте BCL 1.4.2 или новее."
+display = "small"
+
+[invalidManifest]
+enabled = true
+title = "Connection rejected"
+titleRu = "Подключение отклонено"
+message = "The client plugin list is invalid: {reason}"
+messageRu = "Некорректный список плагинов: {reason}"
+display = "small"
+
+[banRejected]
+enabled = true
+title = "Connection rejected"
+titleRu = "Подключение отклонено"
+message = "{nickname}, you cannot join while banned.\nDuration: {duration}\nBan ID: {banId}\nReason: {reason}"
+messageRu = "{nickname}, вход заблокирован баном.\nСрок: {duration}\nID бана: {banId}\nПричина: {reason}"
+display = "small"
+
+[banned]
+title = "Banned!"
+titleRu = "Вы были забанены!"
+message = "{nickname}\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
+messageRu = "{nickname}\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
+display = "hint"
+duration = 15
+
+[kicked]
+title = "Disconnected by administrator"
+titleRu = "Отключен администратором"
+message = "{nickname}, you were kicked.\nReason: {reason}"
+messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
+display = "small"
+
 [welcome]
 enabled = true
 title = "Server rules"
@@ -381,28 +449,6 @@ messageRu = """
 2. Соблюдай правила сервера.
 """
 updatedAt = 1793150000
-
-[kicked]
-title = "Disconnected by administrator"
-titleRu = "Отключен администратором"
-message = "{nickname}, you were kicked.\nReason: {reason}"
-messageRu = "{nickname}, вы были отключены от сервера.\nПричина: {reason}"
-display = "small"
-
-[plugins]
-title = "Plugin compatibility"
-titleRu = "Совместимость плагинов"
-message = "{reason}\n{pluginName}: {pluginVersion}\nRequired: {requiredVersion}"
-messageRu = "{reason}\n{pluginName}: {pluginVersion}\nНеобходима: {requiredVersion}"
-display = "small"
-
-[banned]
-title = "Banned!"
-titleRu = "Вы были забанены!"
-message = "{nickname}\nBan ID: {banId}\nDuration: {duration}\nReason: {reason}"
-messageRu = "{nickname}\nID бана: {banId}\nДлительность: {duration}\nПричина: {reason}"
-display = "hint"
-duration = 15
 ```
 
 双引号字符串使用 `\n` 换行、`\t` 制表；长消息支持三重双引号。TOML 单引号字符串为字面量。JSON 中的 `message`/`extra` 使用标准 JSON 转义。变量仅替换一次，不会再次解析转义序列或 rich text。
@@ -436,26 +482,3 @@ Welcome 带有“不再显示”开关。选择及 `updatedAt` 按服务器实�
 客户端 C# API 另见：[BigCityLegacy.Api.LegacyAlerts](../dev-docs/LegacyAlerts_ZH.md)。
 
 `banRejected` 用于已被封禁的玩家尝试连接；`banned` 用于封禁已连接玩家。两个模板分别配置。
-
-## 按机器封禁
-
-`ban <PlayerID> <3|4> [time] [reason]` 使用 BCL 客户端在启动时一次性采集、连接时发送给所选服务器的 fingerprint。`playerinfo <PlayerID>` 显示其 HEX 字符串。现有命令新增类型：`1` 为 GUID，`2` 为 GUID 或 IP，`3` 为 GUID 或 fingerprint，`4` 关联 GUID、fingerprint 和 IP。所有类型均支持时长、原因和 `unban <BanID>`。
-
-Windows 使用 MachineGuid、主板序列号/SMBIOS UUID、系统磁盘序列号和物理网卡的永久 MAC。ProcessorId 不作为唯一 CPU 标识。Linux 使用当前用户可读取的 DMI 字段、由 machine-id 派生的独立 BCL 标识、系统磁盘序列号/根文件系统 UUID 和物理网卡永久 MAC。不请求 sudo/UAC；不可读取的值及已知 OEM 占位符会被省略。
-
-主板序列号与 SMBIOS UUID 属于同一组，磁盘序列号与根文件系统 UUID 属于另一组，其余组为操作系统安装和物理网卡。具有三或四组时允许一组不匹配；只有两组时要求全部匹配。缺失值不会互相匹配。减少新报告的字段不会降低旧报告的匹配阈值。少于两组时不能创建类型 3/4 封禁。
-
-GUID 是所有有效封禁类型的基础拦截标识。类型 `1–3` 仅增加 GUID 检查，不学习其他标识：IP 封禁通过 GUID 匹配时不添加新 IP，通过 IP/fingerprint 匹配的其他 GUID 也不保存。类型 `3` 还检查机器，但不检查 IP。
-
-类型 `4` 在任一已知 GUID、fingerprint **或** IP 匹配时拒绝连接，并在同一 BanID 的 `GUIDs`、`IPs`、`Fingerprints` 数组中保存新的非空 GUID/IP 和有效 fingerprint。主 `GUID` 和 `IP` 字段保持兼容，现有记录无需迁移即检查主 GUID。所有别名共享期限和原因；上限为 256 个 GUID、256 个 IP、128 个 fingerprint，达到上限不取消已有封禁。解封停用全部别名，并保留仍只按主 GUID 匹配的玩家属性。
-
-类型 4 会按设计将 NAT、家庭或 VPN 下共用公网 IP 的机器关联到同一封禁记录。缺少 fingerprint 的旧客户端仍检查 GUID，类型 4 还检查其 IP。设置 `[server] requireFingerprint = true` 或 `-requireFingerprint` 可强制上报（默认 false），此时缺失、不可用或损坏的报告均被拒绝。该要求及机器封禁独立于 `noPluginsPolicyAndAlerts`。
-
-```text
-ban 15 3 12h Suspicion of cheat usage
-ban 15 4
-playerinfo 15
-unban 1
-```
-
-Fingerprint 为可逆打包的字段，不是单一哈希或真实性证明。修改客户端可伪造报告，重装 Linux 或更换硬件可能改变多组标识。服务器应将机器标识作为管理数据保管。手动解码：`python scripts/decodeFingerprint.py --file fingerprint.txt`。
