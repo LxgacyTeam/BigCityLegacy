@@ -22,7 +22,7 @@ internal sealed class LegacyServerLogWriter : IDisposable
     private static string PortPrefix(int port)
     {
         if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException(nameof(port));
-        return port.ToString(CultureInfo.InvariantCulture);
+        return "serverlog_" + port.ToString(CultureInfo.InvariantCulture);
     }
 
     internal LegacyServerLogWriter(string directory, LegacyServerLogLevel minimum, string prefix)

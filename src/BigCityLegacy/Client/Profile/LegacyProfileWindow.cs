@@ -42,16 +42,17 @@ internal sealed class LegacyProfileWindow : MonoBehaviour
         };
         window = new LegacyUIWindow(LegacyLocalizer.Text("Player profile", "Профиль игрока"),
             new Rect((Screen.width - windowW) * .5f, (Screen.height - windowH) * .5f, windowW, windowH),
-            new LegacyUIWindowOptions { Draggable = true, ClampToScreen = true, ShowCloseButton = true,
-                InputBlockMode = LegacyUIInputBlockMode.Screen, HeaderHeight = 36f, ScreenPadding = 8f, BackgroundAlpha = 0.9f });
-        window.Closed += () => { enabled = false; exportPassword = ""; importPassword = ""; pendingPath = null; pendingEncrypted = false; };
+            new LegacyUIWindowOptions { BackdropBlur = true, BlurTintAlpha = 0.75f, Draggable = true, ClampToScreen = true, ShowCloseButton = true,
+                InputBlockMode = LegacyUIInputBlockMode.Screen, HeaderHeight = 36f, ScreenPadding = 8f });
+
         window.Visible = false; enabled = false;
     }
     private void OnGUI()
     {
-        if (window == null || !window.Visible) return;
+        if (window == null || !window.IsRendered)
+        { enabled = false; exportPassword = ""; importPassword = ""; pendingPath = null; pendingEncrypted = false; return; }
         window.Title = LegacyLocalizer.Text("Player profile", "Профиль игрока");
-        using (new LegacyUIGuiScope(-21500)) window.Draw(Draw);
+        using (LegacyClientUI.Scope(-21500)) window.Draw(Draw);
     }
     private void Refresh()
     {
@@ -102,12 +103,12 @@ internal sealed class LegacyProfileWindow : MonoBehaviour
         if (LegacyUI.Button(new Rect(x + width - 88, y, 88, 22), LegacyLocalizer.Text("Refresh", "Обновить"))) Refresh();
         y += 32;
         scroll.ViewRect = new Rect(x, y, width, 108);
+        path = LegacyUI.TextField(new Rect(x, area.yMax - 50f, width - 102, 26), Path.GetFileName(path));
         scroll.Draw(content =>
         {
             for (int i = 0; i < files.Length; i++)
                 if (LegacyUI.Button(new Rect(content.x, content.y + i * 26f, content.width, 24f), Path.GetFileName(files[i]))) path = files[i];
         });
-        path = LegacyUI.TextField(new Rect(x, area.yMax - 50f, width - 102, 26), Path.GetFileName(path));
         if (LegacyUI.GreenButton(new Rect(x + width - 98, area.yMax - 50f, 98, 26), LegacyLocalizer.Text("Import", "Импорт"))) ConfirmImport();
         GUI.enabled = previous;
         LegacyUI.Status(new Rect(x, area.yMax - 15f, width, 15f), status);

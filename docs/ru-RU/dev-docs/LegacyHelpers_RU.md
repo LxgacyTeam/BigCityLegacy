@@ -1,6 +1,8 @@
 # LegacyHelpers
 
-`LegacyHelpers` — набор небольших внутренних helper-методов BigCityLegacy для проверок состояния игры, работы с путями, безопасного вызова методов через reflection и выполнения типовых рутинных задач.
+`LegacyHelpers` — набор helper-методов BigCityLegacy для проверок состояния игры, работы с путями, временем и ресурсами, безопасного вызова методов через reflection и выполнения типовых рутинных задач.
+
+Класс публичный и находится в глобальном пространстве имён. Для внешнего плагина нужна ссылка на BigCityLegacy.dll и зависимость BepInEx от `com.bigcitylegacy.baseplugin`. Члены с доступом `internal` отмечены в своих разделах; их примеры относятся к коду самого BCL. Методы, обращающиеся к Unity API, вызывайте в главном потоке.
 
 ---
 
@@ -14,16 +16,85 @@
 public static string ModDataPath { get; }
 ```
 
+При каждом обращении свойство проверяет каталог и пытается создать его, если он отсутствует. При ошибке создания пишет Error в Unity log, но всё равно возвращает путь.
+
 ## Пример
 
 ```csharp
 string data = LegacyHelpers.ModDataPath;
-string config = Path.Combine(dataFolder, "config");
+string config = Path.Combine(data, "config");
 ```
 
 ## Когда использовать
 
 Папка `BigCityLegacy` используется для хранения пользовательских данных мода: конфиги, JSON-файлы, вспомогательные директории, локальные ресурсы мода.
+
+---
+
+# `GetCurTimestamp`
+
+Возвращает текущую дату и время в строковом формате, подходящем для имени файла.
+
+Сигнатура:
+
+```csharp
+public static string GetCurTimestamp { get; }
+```
+
+При каждом обращении берёт `DateTime.Now` и форматирует его как `yyyy-MM-dd_HH-mm-ss-fff`, например `2026-10-31_14-25-36-123`. Используется локальное время операционной системы.
+
+## Пример
+
+```csharp
+string stamp = LegacyHelpers.GetCurTimestamp;
+string filename = "backup_" + stamp + ".json";
+```
+
+## Когда использовать
+
+Подходит для имён экспортируемых файлов, резервных копий и диагностических снимков.
+
+## Важно
+
+Это свойство, а не метод и не Unix timestamp. Серверный логгер BCL использует UTC независимо от этого helper.
+
+---
+
+# `FormatSeconds(long seconds)`
+
+Преобразует длительность в секундах в короткую строку.
+
+Сигнатура:
+
+```csharp
+public static string FormatSeconds(long seconds)
+```
+
+Использует `TimeSpan.FromSeconds(seconds)` и выбирает до двух единиц времени:
+
+- от суток — дни и часы;
+- от часа — часы и минуты;
+- от минуты — минуты и секунды;
+- меньше минуты — секунды.
+
+Сокращения фиксированы: `d.`, `h.`, `min.`, `sec.`; язык игры их не меняет.
+
+## Пример
+
+```csharp
+string a = LegacyHelpers.FormatSeconds(45);     // 45 sec.
+string b = LegacyHelpers.FormatSeconds(90);     // 1 min. 30 sec.
+string c = LegacyHelpers.FormatSeconds(3660);   // 1 h. 1 min.
+string d = LegacyHelpers.FormatSeconds(90061);  // 1 d. 1 h.
+```
+
+## Когда использовать
+
+Для отображения длительности работы, ожидания, ограничений и других временных интервалов.
+
+## Важно
+
+Передавайте неотрицательную длительность в допустимом диапазоне TimeSpan. Метод сам не ограничивает значение и не перехватывает переполнение.
 
 ---
 
@@ -50,7 +121,7 @@ public static void OpenFolder(string folderPath)
 ## Пример
 
 ```csharp
-string folder = Path.Combine(LegacyHelpers.GameRoot, "BigCityLegacy");
+string folder = Path.Combine(BepInEx.Paths.GameRootPath, "BigCityLegacy");
 LegacyHelpers.OpenFolder(folder);
 ```
 
@@ -94,7 +165,7 @@ SafeInvoke((Type)instance, null, methodName);
 ```csharp
 if (GameUI.me)
 {
-    LegacyHelpers.SafeInvoke(GameUI.me, "Refresh");
+    LegacyHelpers.SafeInvoke(GameUI.me, "UpResolution");
 }
 ```
 
@@ -152,9 +223,9 @@ method.Invoke(instance, null);
 
 ```csharp
 LegacyHelpers.SafeInvoke(
-    typeof(MenuEsc),
-    MenuEsc.me,
-    "UpdateButtons");
+    typeof(GameUI),
+    GameUI.me,
+    "CheckActualDefferedRendeing");
 ```
 
 ## Пример: static-метод
@@ -172,6 +243,8 @@ LegacyHelpers.SafeInvoke(
 
 Метод рассчитан только на методы **без параметров**. Для методов с аргументами нужно использовать отдельный reflection-код.
 
+Если метод не найден, вызов пропускается. Ошибки поиска, включая неоднозначный набор перегрузок, также попадают в Warning. Метод не возвращает результат вызванного метода или признак успеха.
+
 ---
 
 # `GetJsonPath(string arg, string json)`
@@ -186,14 +259,17 @@ public static string GetJsonPath(string arg, string json)
 
 Логика работы:
 
-1. пробует получить значение command-line аргумента через `LegacyCommandLine.GetArgValue(arg)`;
+1. получает значение через `LegacyCommandLine.GetArgValue(arg)` из действующих аргументов BCL; для серверного процесса учитываются значения ServerConfig;
 2. если аргумент не указан, строит путь по умолчанию:
 
 ```text
-<GameRoot>/BigCityLegacy/<json>
+<GameRoot>/BigCityLegacy/config/<json>
 ```
 
-3. возвращает путь после `LegacyCommandLine.StripQuotes(...)`.
+3. снимает внешние кавычки через `LegacyCommandLine.StripQuotes(...)`;
+4. если путь относительный, дополняет его через `Path.Combine(BepInEx.Paths.GameRootPath, text)`.
+
+В стандартной ветке пытается создать `BigCityLegacy/config`. Явно заданный путь не переносится в эту папку, его родительский каталог этот helper не создаёт. Метод не читает и не создаёт сам файл. Имя метода не ограничивает расширение: например, для Alerts используется TOML.
 
 `LegacyCommandLine.GetArgValue(...)` рассчитан на строгий формат:
 
@@ -219,17 +295,20 @@ CLI:
 Если аргумент не указан, будет использован путь:
 
 ```text
-<GameRoot>/BigCityLegacy/ServersList.json
+<GameRoot>/BigCityLegacy/config/ServersList.json
 ```
 
 ## Примеры для существующих конфигов
 
 ```csharp
 string servers = LegacyHelpers.GetJsonPath("-serversList", "ServersList.json");
-string events = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
+string policy = LegacyHelpers.GetJsonPath("-pluginsPolicy", "PluginsPolicy.json");
+string alerts = LegacyHelpers.GetJsonPath("-alerts", "Alerts.toml");
 string respawn = LegacyHelpers.GetJsonPath("-respawnPoints", "RespawnPoints.json");
 string bans = LegacyHelpers.GetJsonPath("-banList", "BanList.json");
 ```
+
+Ивенты хранятся отдельными JSON в `BigCityLegacy/events/Race`, `CS` и `CS_Sur`; для выбора корневой папки служит `-eventsDir`. Пример с единым Events.json для этой схемы не используется.
 
 ---
 
@@ -256,7 +335,7 @@ Failed to load <path>: File not found
 ## Пример
 
 ```csharp
-string path = LegacyHelpers.GetJsonPath("-eventsList", "Events.json");
+string path = LegacyHelpers.GetJsonPath("-exampleConfig", "ExamplePlugin.json");
 
 if (!LegacyHelpers.CheckFileExistence(path))
 {
@@ -279,7 +358,7 @@ string json = File.ReadAllText(path);
 Сигнатура:
 
 ```csharp
-public static bool IsGameplayRunning
+public static bool IsGameplayRunning { get; }
 ```
 
 Метод возвращает `false`, если:
@@ -289,7 +368,7 @@ public static bool IsGameplayRunning
 - нет активного `GameUI.me` или `GameUI.me.isUsed()` возвращает `false`;
 - активна загрузка (`Loading.me`);
 - сцены заняты (`Scenes.nowBusy()`);
-- идёт fade-переход (`FadeUI.fadeState != FadeUI.FadeState.Unfaded`);
+- идёт fade-переход (`FadeUI.me && FadeUI.fadeState != FadeUI.FadeState.Unfaded`);
 - открыто escape-меню или нужен выбор меню (`MenuEsc.me || MenuEsc.needSelectWhere`);
 - открыт телефон (`GamePhone.me.gameObject.activeSelf`);
 - нет локального `InputControl`;
@@ -307,7 +386,7 @@ private void Update()
 
     if (Input.GetKeyDown(KeyCode.F8))
     {
-        LegacyPointTool.Toggle();
+        BigCityLegacy.Api.LegacyAlerts.Hint("Tool ready");
     }
 }
 ```
@@ -320,12 +399,12 @@ private void Update()
 
 # `IsCsOrSurvivalMatchRunning`
 
-Проверяет, находится ли локальный игрок в активном матче CS или CS_Survival.
+Проверяет, находится ли локальный игрок в активном матче CS или CS_Sur.
 
 Сигнатура:
 
 ```csharp
-public static bool IsCsOrSurvivalMatchRunning
+public static bool IsCsOrSurvivalMatchRunning { get; }
 ```
 
 Метод работает только для online client:
@@ -354,7 +433,7 @@ Net_BaseEvent.CurState.Race
 
 Состояния lobby/complete не считаются активным матчем.
 
-## Пример: запрет функции во время CS/CS_Survival
+## Пример: запрет функции во время CS/CS_Sur
 
 ```csharp
 if (LegacyHelpers.IsCsOrSurvivalMatchRunning)
@@ -379,8 +458,10 @@ FlyCamera.Create();
 Сигнатура:
 
 ```csharp
-public static int GetBuildVersion
+public static int GetBuildVersion { get; }
 ```
+
+Читает `AlwaysOnline.me.buildVersionAsset.text` и получает `curVersion` через `AlwaysOnline.GetBuildVersionFromXML(text, false)`. При любой ошибке возвращает `-1`. Это build игры, а не версия BCL и не online protocol version.
 
 ## Пример
 
@@ -391,7 +472,190 @@ Debug.Log("Game build version: " + buildVersion);
 
 ---
 
+# `LoadEmbeddedTexture(string resourceName)`
+
+Загружает Texture2D из встроенного ресурса сборки BigCityLegacy.
+
+Сигнатура:
+
+```csharp
+public static Texture2D LoadEmbeddedTexture(string resourceName)
+```
+
+Логика работы:
+
+1. получает `Assembly.GetExecutingAssembly()`;
+2. открывает `GetManifestResourceStream(resourceName)` и читает байты ресурса;
+3. создаёт `Texture2D(2, 2, TextureFormat.RGBA32, false)` без mipmaps;
+4. загружает изображение через `LoadImage(data)`;
+5. присваивает текстуре имя `resourceName` и возвращает её.
+
+Если ресурса нет, пишет Error и возвращает `null`. Если `LoadImage` вернул `false`, удаляет созданную текстуру, пишет Error и возвращает `null`.
+
+## Пример
+
+```csharp
+Texture2D logo = LegacyHelpers.LoadEmbeddedTexture("bcl-logo.png");
+if (logo != null)
+{
+    Debug.Log(logo.name);
+    // Release when the UI no longer needs the texture.
+    UnityEngine.Object.Destroy(logo);
+}
+```
+
+## Когда использовать
+
+Для загрузки изображений, встроенных именно в BigCityLegacy, например логотипа для собственного UI.
+
+## Важно
+
+Метод ищет ресурс в BigCityLegacy.dll, а не в вызывающем плагине. Для ресурсов своего плагина используйте `typeof(MyPlugin).Assembly.GetManifestResourceStream(...)` и собственную загрузку Texture2D. Вызывайте метод в главном потоке Unity. Ненужную текстуру удаляйте через `UnityEngine.Object.Destroy`; общего обработчика исключений чтения и декодирования в helper нет.
+
+---
+
+# `isDebugBuild`
+
+Показывает, собран ли BCL с символом DEBUG.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static bool isDebugBuild { get; }
+```
+
+Возвращает `true` при компиляции с `#if DEBUG`, иначе `false`. Значение определяется сборкой BCL, а не `Debug.isDebugBuild` игры и не аргументом запуска.
+
+## Пример
+
+```csharp
+if (LegacyHelpers.isDebugBuild)
+{
+    Debug.Log("BCL debug diagnostics enabled");
+}
+```
+
+## Когда использовать
+
+Для включения внутренней диагностики и отладочных веток BCL.
+
+---
+
+# `VersionLine`
+
+Возвращает строку с версией мода и игры.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static string VersionLine { get; }
+```
+
+Формат: `BigCityLegacy v<VersionInfo.ModVersionName> | Game ver: <Application.version>`. Значения читаются при обращении к свойству.
+
+## Пример
+
+```csharp
+Debug.Log(LegacyHelpers.VersionLine);
+```
+
+## Когда использовать
+
+Для внутренних сообщений запуска, статуса и диагностики BCL.
+
+---
+
+# `EnsureServerNetChat(NetManager manager)`
+
+Создаёт серверный NetChat, если он ещё не существует.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static void EnsureServerNetChat(NetManager manager)
+```
+
+Работает только при наличии `manager`, серверном режиме и активном `NetworkServer`. Если `NetChat.me` уже есть, ничего не делает. Создаёт объект из `manager.chat`, проверяет NetChat и NetworkIdentity, задаёт имя `NetChat_Server` и регистрирует объект через `NetworkServer.Spawn`. Ошибки prefab/создания/регистрации пишет в лог; некорректный или не зарегистрированный экземпляр удаляет.
+
+## Пример
+
+```csharp
+if (NetManager.isServer && NetworkServer.active)
+{
+    LegacyHelpers.EnsureServerNetChat(NetManager.me);
+}
+```
+
+## Когда использовать
+
+Для подготовки чата в серверном процессе, включая headless-запуск, перед отправкой серверных сообщений.
+
+---
+
+# `EnsureServerUnetSettings(NetManager manager)`
+
+Создаёт UNet_Settings для работающего сервера при отсутствии экземпляра.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static void EnsureServerUnetSettings(NetManager manager)
+```
+
+Проверяет `manager`, серверный режим, активный NetworkServer и `manager.unet_settings`. Если `FindObjectOfType<UNet_Settings>()` нашёл экземпляр, возвращается. Иначе создаёт объект из prefab, задаёт имя `UNet_Settings_Server` и вызывает `NetworkServer.Spawn`. Общего try/catch вокруг создания и регистрации нет.
+
+## Пример
+
+```csharp
+if (NetManager.isServer && NetworkServer.active)
+{
+    LegacyHelpers.EnsureServerUnetSettings(NetManager.me);
+}
+```
+
+## Когда использовать
+
+Для инициализации штатных сетевых настроек в серверном процессе.
+
+---
+
+# `ResetSubsStatus()`
+
+Однократно сбрасывает сохранённые статусы подписок на социальные сети.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static void ResetSubsStatus()
+```
+
+Если `BigCityLegacy.isSubsReseted` в PlayerPrefs уже равен `1`, возвращается. Иначе ставит эту метку и сбрасывает существующие ключи `Subs_Vk`, `Subs_Fb`, `Subs_Instagram` в `0`, затем вызывает `PlayerPrefs.Save()`. Отсутствующие ключи подписок не создаёт.
+
+## Пример
+
+```csharp
+LegacyHelpers.ResetSubsStatus();
+```
+
+## Когда использовать
+
+Для одноразовой подготовки старого сохранения в процессе инициализации BCL.
+
+---
+
 # `LegacyCommandLine.HasArg(string arg)`
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
 
 Располагается в классе `LegacyCommandLine`.
 Проверяет наличие command-line флага без учета регистра и наличия кавычек.
@@ -402,7 +666,7 @@ Debug.Log("Game build version: " + buildVersion);
 internal static bool HasArg(string arg)
 ```
 
-Метод проходит по `Environment.GetCommandLineArgs()` и возвращает `true`, если среди аргументов присутствует обработанный `arg`. Arg сравнивается без учета регистра и кавычек.
+Метод проверяет действующие аргументы BCL, включая значения из ServerConfig в серверном процессе. Флаг сравнивается целиком, без учёта регистра и внешних кавычек. Значения формата `-key:value` нужно читать через `GetArgValue`, а не HasArg.
 
 ## Пример
 
@@ -416,6 +680,8 @@ if (LegacyCommandLine.HasArg("-noServerCli"))
 ---
 
 # NativeErrorDialog
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
 
 `NativeErrorDialog` — отдельный helper-класс для показа блокирующего нативного окна ошибки с кнопкой OK.
 
@@ -476,4 +742,40 @@ NativeErrorDialog.ShowAndExit(
 
 В headless/server mode диалог может быть нежелателен: на сервере обычно лучше писать ошибку в консоль/лог и завершать процесс штатным серверным механизмом.
 
+---# `LegacyServerShutdown`
+
+Управляет отложенным завершением серверного процесса.
+
+Внутренний член BCL; не является публичным API для внешних плагинов.
+
+Сигнатура:
+
+```csharp
+internal static bool IsRequested { get; }
+internal static void Initialize();
+internal static void Request(string requestReason);
+internal static void Tick();
+```
+
+`Initialize()` один раз подписывает обработчик `Application.quitting`. `Request(reason)` атомарно отмечает запрос остановки и подаёт сигнал консольному потоку; повторный запрос игнорируется. `IsRequested` показывает наличие запроса. `Tick()` в главном потоке один раз пишет серверное сообщение и вызывает `Application.Quit()`. Обработчик quitting также уведомляет консольный поток.
+
+## Пример
+
+```csharp
+// Once during BCL startup, on the main thread:
+LegacyServerShutdown.Initialize();
+
+// For example, from the server CLI:
+LegacyServerShutdown.Request("console stop");
+
+// In the plugin's main-thread Update:
+LegacyServerShutdown.Tick();
+```
+
+## Когда использовать
+
+Для обработки команды stop и других внутренних запросов завершения BCL. `Request` допускает вызов из консольного потока; `Initialize` и `Tick` вызываются в главном потоке Unity.
+
 ---
+
+[Документация разработчика](README.md).

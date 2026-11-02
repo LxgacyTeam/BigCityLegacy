@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -19,7 +20,8 @@ internal sealed class LegacyVinylPackException : Exception
 
 internal static class LegacyVinylPackCodec
 {
-    internal const int CurrentVersion = 4;
+    internal const int CurrentVersion = 5;
+    internal const string IncludeAttribute = "IncludeInVP";
     internal const string PartsNode = "EnhancedBodyPaint";
     internal const int MaxCharacters = 2 * 1024 * 1024;
     internal const int MaxLayers = 4096;
@@ -91,6 +93,19 @@ internal static class LegacyVinylPackCodec
                 Number(element.GetAttribute("metallic"), true, "Parts");
                 Number(element.GetAttribute("gloss"), true, "Parts");
                 result.PartCount++;
+            }
+        }
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        int layerCount = items.ChildNodes.Count;
+        foreach (XmlNode child in root.ChildNodes)
+        {
+            if (!(child is XmlElement extension) || !names.Add(extension.Name)) Fail("Duplicate");
+            var element = (XmlElement)child;
+            if (IsStandard(element.Name) || !IsIncluded(element)) continue;
+            foreach (XmlElement item in element.SelectNodes(".//Items/Item[@sprite.name]"))
+            {
+                if (++layerCount > MaxLayers) Fail("Items");
+                ValidateItem(item, result);
             }
         }
         return result;
@@ -198,6 +213,10 @@ internal static class LegacyVinylPackCodec
     }
     private static void Fail(string code) { throw new LegacyVinylPackException(code); }
 
+    private static bool IsStandard(string name) => name == "CarPaint" || name == "CarMaterial" || name == PartsNode;
+    private static bool IsIncluded(XmlElement element) =>
+        string.Equals(element.GetAttribute(IncludeAttribute), "true", StringComparison.OrdinalIgnoreCase);
+
     internal static XmlDocument Export(XmlDocument save, string car)
     {
         if (save.DocumentElement == null || save.DocumentElement.Name != "CarMat") Fail("Root");
@@ -210,6 +229,9 @@ internal static class LegacyVinylPackCodec
             XmlElement element = Single(save.DocumentElement, node, node == "CarPaint");
             if (element != null) root.AppendChild(document.ImportNode(element, true));
         }
+        foreach (XmlNode child in save.DocumentElement.ChildNodes)
+            if (child is XmlElement element && !IsStandard(element.Name) && IsIncluded(element))
+                root.AppendChild(document.ImportNode(element, true));
         return Read(document.OuterXml, car).Document;
     }
 
@@ -223,7 +245,7 @@ internal static class LegacyVinylPackCodec
         if (primitive != null)
         {
             if (primitive.Length == 0 || primitive == "ECT.Text" || primitive.StartsWith("ect.", StringComparison.Ordinal)) Fail("Primitive");
-            foreach (XmlElement item in copy.SelectNodes("CarPaint/Items/Item"))
+            foreach (XmlElement item in copy.SelectNodes(".//Items/Item"))
                 if (item.GetAttribute("sprite.name") == "ECT.Text")
                 {
                     item.SetAttribute("sprite.name", primitive);
@@ -241,6 +263,12 @@ internal static class LegacyVinylPackCodec
             Replace(root, copy["CarMaterial"], "CarMaterial");
             Replace(root, copy[PartsNode], PartsNode);
         }
+        for (int i = root.ChildNodes.Count - 1; i >= 0; i--)
+            if (root.ChildNodes[i] is XmlElement element && !IsStandard(element.Name) && IsIncluded(element))
+                root.RemoveChild(element);
+        foreach (XmlNode child in copy.ChildNodes)
+            if (child is XmlElement element && !IsStandard(element.Name) && IsIncluded(element))
+                Replace(root, element, element.Name);
         return save;
     }
     private static void Replace(XmlElement root, XmlElement source, string name)

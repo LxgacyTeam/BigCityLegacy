@@ -19,6 +19,7 @@ internal static class InputPatches
     [HarmonyPrefix]
     private static bool Settings_SettingsMayBeBad_Prefix()
     {
+        if(LegacyGameRestart.Running)return false;
         if (!IsDedicatedServerProcess())
         {
             return true;

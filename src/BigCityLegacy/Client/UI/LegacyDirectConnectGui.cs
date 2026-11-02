@@ -35,6 +35,8 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
             GetStartRect(),
             new LegacyUIWindowOptions
             {
+                BackdropBlur = true,
+                BlurTintAlpha = 0.75f,
                 Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = true,
@@ -53,9 +55,9 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
 
     public void OnGUI_Manual()
     {
-        using (new LegacyUIGuiScope(-10000))
+        using (LegacyClientUI.Scope(-10000))
         {
-            if (window.Visible)
+            if (window.IsRendered)
             {
                 window.Draw(DrawContent);
             }
@@ -69,7 +71,7 @@ internal sealed class LegacyDirectConnectGui : OnGuiGlobal.IOnGuiNeed
 
                 Vector2 screenSize = LegacyUI.VirtualScreenSize;
                 Rect showBtnRect = new Rect(screenSize.x - showBtnW - 15f, screenSize.y - showBtnH - 15f, showBtnW, showBtnH);
-                if (GUI.Button(showBtnRect, LegacyLocalizer.Text("Connection menu", "Меню подключения"), showBtnStyle))
+                if (LegacyUI.StyledButton(showBtnRect, LegacyLocalizer.Text("Connection menu", "Меню подключения"), showBtnStyle))
                 {
                     SetVisible(!window.Visible);
                 };

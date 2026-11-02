@@ -162,8 +162,6 @@ When connecting to a Master, the game receives the server list from it and displ
 
 When using direct connection, the game immediately connects to the game server by IP and port. In this case, the online status will not be shown in the menu.
 
-# Data Source
-While running, the mod retrieves certain data from its Git repository (used for public server operations and the update system).
-If GitHub is inaccessible (e.g., in China), the data source can be switched to the Codeberg mirror.
+## Connection identifiers
 
-This switch is made in the "About Mod" window and applies globally to all functions.
+At startup BCL collects a minimal machine fingerprint without elevation and sends it only to the server you join. Available board, OS installation, system disk and physical NIC identifiers are packed in a reversibly encoded HEX string. Linux machine-id is sent only as a separate application-derived ID. Servers use this for bans; see the [server guide](server_EN.md#machine-bans) for details and limitations.

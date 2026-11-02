@@ -271,9 +271,9 @@ internal sealed class LegacyPerformanceMonitor : MonoBehaviour
             InitializeOverlayTheme();
         }
 
-        using (new LegacyUIGuiScope(-15000))
+        using (LegacyClientUI.Scope(-15000))
         {
-            LegacyUI.Panel(panel, 0.65f);
+            LegacyClientUI.Panel(panel, 0.65f);
 
             float x = panel.x + OverlayPadding;
             float y = panel.y + OverlayPadding;

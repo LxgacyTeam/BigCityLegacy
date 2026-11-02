@@ -1,4 +1,4 @@
-# BigCityLegacy server configuration. CLI arguments override these values. 
+# BigCityLegacy server configuration. CLI arguments override these values.
 # Keys match launch options without the leading '-'.
 
 [server]
@@ -17,6 +17,10 @@ noChatEvents = false
 noKillChat = false
 noCsDamageCooldown = false
 useVanillaRespawn = false
+requireFingerprint = false
+
+[plugins]
+noPluginsPolicyAndAlerts = false
 
 [mirror]
 masterServer = true
@@ -29,6 +33,8 @@ serversList = ''
 eventsDir = ''
 respawnPoints = ''
 banList = ''
+pluginsPolicy = ''
+alerts = ''
 
 [console]
 noServerConsole = false
@@ -37,7 +43,7 @@ verboseServerConsole = false
 noUpdCheck = false
 
 [logging]
-# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.
 logsDir = ''
 noLogging = false
+chatLogging = false
 logLevel = "Log"

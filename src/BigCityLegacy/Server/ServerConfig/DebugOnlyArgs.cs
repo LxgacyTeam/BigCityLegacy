@@ -13,7 +13,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerCarAggressiveSleep")) { return true; }
             return false;
         }
@@ -23,7 +23,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerCarSleepFastPath")) { return true; }
             return false;
         }
@@ -33,7 +33,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerClientCarPhysicsBypass")) { return true; }
             return false;
         }
@@ -43,7 +43,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerCpuOptimization")) { return true; }
             return false;
         }
@@ -53,7 +53,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerObjectStripping")) { return true; }
             return false;
         }
@@ -63,7 +63,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerCarPresentationOptimization")) { return true; }
             return false;
         }
@@ -73,7 +73,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return false; }
+            if (!_isDebug) { return false; }
             if (LegacyCommandLine.HasArg("-noServerNetworkBufferTuning")) { return true; }
             return false;
         }
@@ -83,7 +83,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return null; }
+            if (!_isDebug) { return null; }
 
             float parsed;
             string value = LegacyCommandLine.GetArgValue("-serverCarSleepDelayMs");
@@ -103,7 +103,7 @@ internal static class DebugOnlyArgs
     {
         get
         {
-            if (_isDebug) { return null; }
+            if (!_isDebug) { return null; }
 
             int parsed;
             string value = LegacyCommandLine.GetArgValue("-serverMaxPendingBuffers");

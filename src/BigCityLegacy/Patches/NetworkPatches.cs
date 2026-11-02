@@ -58,6 +58,7 @@ internal static class NetworkPatches
         NetManager.RemoveSingleData();
         // Ban enforcement must be ready before UNet starts accepting clients.
         LegacyBanList.TryLoad();
+        LegacyAdmissionConfig.Initialize();
         LegacyServerAdminService.ResetForServerStart();
         LegacyServerDropCleanup.ResetForServerStart();
         LegacyRespawnHistory.Clear();

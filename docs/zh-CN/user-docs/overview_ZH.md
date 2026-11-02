@@ -162,10 +162,6 @@ game.exe -bend_GameServer -batchmode -nographics -port:7800 -maxConn:32 -Mode:Ra
 
 使用直接连接时，游戏会根据 IP 和端口立即连接游戏服务器。在这种情况下，菜单中不会显示在线状态。
 
-# 数据源
+## 连接标识
 
-该模组在运行期间会从其 Git 仓库获取一些数据（用于公共服务器和更新系统）。
-
-如果 GitHub 不可用（例如在中国），您可以将数据源切换到 Codeberg 镜像。
-
-此切换操作在 “About mod” 窗口中进行，并将全局应用于所有功能。
+BCL 启动时无需提权采集最小机器 fingerprint，仅发送给您连接的服务器。可用的主板、操作系统安装、系统磁盘和物理网卡标识被打包为可逆编码的 HEX 字符串。Linux machine-id 仅以独立的应用派生 ID 发送。服务器将其用于封禁，详见[服务器文档](server_ZH.md#按机器封禁)。

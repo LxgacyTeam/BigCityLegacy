@@ -9,13 +9,10 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
     private LegacyUIDropdown repositoryDropdown;
     private string sourceError;
 
-    internal static bool SuppressReporterGesture;
-
     private Texture2D logo = LegacyHelpers.LoadEmbeddedTexture("bcl-logo.png");
 
     internal static void Show()
     {
-        SuppressReporterGesture = true;
         EnsureInstance();
         instance.window.Visible = true;
         instance.enabled = true;
@@ -47,6 +44,8 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
             GetStartRect(),
             new LegacyUIWindowOptions
             {
+                BackdropBlur = true,
+                BlurTintAlpha = 0.75f,
                 Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = true,
@@ -54,15 +53,12 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
                 DragAlpha = 0.68f,
                 HeaderHeight = 38f,
                 ScreenPadding = 8f,
-                BackgroundAlpha = 0.98f,
                 InputBlockMode = LegacyUIInputBlockMode.Screen
             });
 
         window.Visible = false;
         window.Closed += () =>
         {
-            enabled = false;
-            SuppressReporterGesture = false;
             repositoryDropdown.IsOpen = false;
         };
         enabled = false;
@@ -70,12 +66,13 @@ internal sealed class LegacyAboutWindow : MonoBehaviour
 
     private void OnGUI()
     {
-        if (window == null || !window.Visible)
+        if (window == null || !window.IsRendered)
         {
+            enabled = false;
             return;
         }
 
-        using (new LegacyUIGuiScope(-21000))
+        using (LegacyClientUI.Scope(-21000))
         {
             repositoryDropdown.HandlePopupInput();
             window.Draw(DrawContent);

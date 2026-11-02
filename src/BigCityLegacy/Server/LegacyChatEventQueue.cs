@@ -9,7 +9,8 @@ internal static class LegacyChatEventQueue
 
     internal static void Enqueue(NetInputControl netInput, string message)
     {
-        if (netInput == null || !LegacyCommandLine.ChatEventsEnabled)
+        if (netInput == null || !LegacyCommandLine.ChatEventsEnabled ||
+            NetManager.isServer && LegacyPlayerProperties.Has(netInput, "invisible"))
         {
             return;
         }

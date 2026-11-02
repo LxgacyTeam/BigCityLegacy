@@ -18,29 +18,25 @@ internal static class LegacyHotkeys
             LegacyHelpers.SafeInvoke(typeof(WeatherManager), "DoRandom");
         }
 
-        if (Input.GetKeyDown(KeyCode.F6) && (!string.IsNullOrEmpty(LastSelectedCarNameApp) || !string.IsNullOrEmpty(LastSelectedCarNameShop)))
-        {
-            int F6SpawnMode = PlayerPrefs.GetInt("BigCityLegacy.F6_SpawnMode");
+        if (Input.GetKeyDown(KeyCode.F6) &&
+           (!string.IsNullOrEmpty(LastSelectedCarNameApp) || !string.IsNullOrEmpty(LastSelectedCarNameShop)) &&
+           LegacyHelpers.IsGameplayRunning)
+            {
+                int F6SpawnMode = PlayerPrefs.GetInt("BigCityLegacy.F6_SpawnMode");
 
-            if (F6SpawnMode == 1)
-            {
-                CarShop_Item.CreateDeliveryCar(LastSelectedCarNameShop, false);
+                if (F6SpawnMode == 1)
+                {
+                    CarShop_Item.CreateDeliveryCar(LastSelectedCarNameShop, false);
+                }
+                else
+                {
+                    App_DeliveryCar.CreateDeliveryCar(LastSelectedCarNameApp, false);
+                }
             }
-            else
-            {
-                App_DeliveryCar.CreateDeliveryCar(LastSelectedCarNameApp, false);
-            }
-        }
 
         if (Input.GetKeyDown(KeyCode.F1) && LegacyHelpers.IsGameplayRunning)
         {
             LegacyHudToggle.Toggle();
-        }
-
-        if (Input.GetKeyDown(KeyCode.F2))
-        {
-            string merctest = PlayerPrefs.GetString("CarSaved_Mercedes_600");
-            File.WriteAllText(Path.Combine(LegacyHelpers.ModDataPath, "CarSaved_Mercedes_600.txt"), merctest);
         }
 
 

@@ -16,6 +16,7 @@ using UnityEngine;
 internal static class LegacyServerConfig
 {
     private static string[] effective;
+    private static Dictionary<string,object> configuredValues = new Dictionary<string,object>(StringComparer.OrdinalIgnoreCase);
     internal static string LoadedPath { get; private set; }
     internal static string[] Apply(string[] raw)
     {
@@ -38,7 +39,7 @@ internal static class LegacyServerConfig
             Directory.CreateDirectory(Path.GetDirectoryName(LoadedPath));
             File.WriteAllText(LoadedPath, DefaultText, new UTF8Encoding(false));
         }
-        try { effective = Merge(raw, Parse(File.ReadAllText(LoadedPath))); }
+        try { configuredValues = LoadAndComplete(LoadedPath); effective = Merge(raw, configuredValues); }
         catch (Exception ex)
         {
             // Fail closed instead of silently launching a server with defaults.
@@ -48,6 +49,126 @@ internal static class LegacyServerConfig
         Debug.Log("[BCL ServerConfig] Loaded " + LoadedPath + "; explicit launch arguments take priority.");
         return effective;
     }
+    // Keep option aliases in one place so config completion cannot introduce a
+    // default that competes with an administrator's existing alias.
+    private static readonly string[][] OptionAliases =
+    {
+        new[] { "-bindIP", "-ip" }, new[] { "-masterIP", "-masterHost" },
+        new[] { "-master", "-masterServer" }, new[] { "-noUpdCheck", "-noUpdateCheck" },
+        new[] { "-noServerCli", "-noServerCLI" }, new[] { "-hideWindow", "-hideBatchWindow" },
+        new[] { "-masterDebug", "-debugMaster" }
+    };
+
+    internal static string Complete(string text)
+    {
+        // Validate before changing anything. Option names are global in this schema.
+        var present = Parse(text);
+        var additions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var order = new List<string>();
+        var comments = new List<string>();
+        string section = null;
+        foreach (string line in DefaultText.Split('\n'))
+        {
+            string clean = StripComment(line).Trim();
+            if (clean.StartsWith("["))
+            {
+                section = clean;
+                additions.Add(section, new List<string>());
+                order.Add(section);
+                comments.Clear();
+            }
+            else if (clean.Length == 0)
+            {
+                if (line.TrimStart().StartsWith("#")) comments.Add(line);
+            }
+            else
+            {
+                string key = "-" + clean.Substring(0, clean.IndexOf('=')).Trim().TrimStart('-');
+                bool exists = present.ContainsKey(key) || OptionAliases.Any(group =>
+                    group.Contains(key, StringComparer.OrdinalIgnoreCase) && group.Any(present.ContainsKey));
+                if (!exists)
+                {
+                    additions[section].AddRange(comments);
+                    additions[section].Add(line);
+                }
+                comments.Clear();
+            }
+        }
+        if (additions.Values.All(lines => lines.Count == 0)) return text;
+
+        string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+        var result = new StringBuilder();
+        Action<string> append = value =>
+        {
+            if (result.Length > 0 && result[result.Length - 1] != '\n' && result[result.Length - 1] != '\r') result.Append(newline);
+            result.Append(value).Append(newline);
+        };
+        Action<string> finishSection = name =>
+        {
+            List<string> lines;
+            if (name == null || !additions.TryGetValue(name, out lines)) return;
+            foreach (string line in lines) append(line);
+            additions.Remove(name);
+        };
+        section = null;
+        // Keep original lines (including their whitespace, comments and line endings).
+        foreach (Match match in Regex.Matches(text, @"[^\r\n]*(?:\r\n|\n|\r|$)"))
+        {
+            if (match.Length == 0) continue;
+            string clean = StripComment(match.Value.TrimEnd('\r', '\n')).Trim().TrimStart('\uFEFF');
+            if (Regex.IsMatch(clean, @"^\[[A-Za-z0-9_-]+\]$"))
+            {
+                finishSection(section);
+                section = clean;
+            }
+            result.Append(match.Value);
+        }
+        finishSection(section);
+        foreach (string name in order)
+        {
+            List<string> lines;
+            if (!additions.TryGetValue(name, out lines) || lines.Count == 0) continue;
+            append("");
+            append(name);
+            finishSection(name);
+        }
+        string completed = result.ToString();
+        Parse(completed);
+        return completed;
+    }
+
+    internal static Dictionary<string, object> LoadAndComplete(string path)
+    {
+        string original = File.ReadAllText(path);
+        string completed = Complete(original);
+        var values = Parse(completed);
+        if (completed == original) return values;
+
+        string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(bom), 1024, true)) writer.Write(completed);
+                stream.Flush(true);
+            }
+            if (File.ReadAllText(path) != original) throw new IOException("The configuration changed while it was being completed.");
+            File.Replace(temporary, path, null);
+            Debug.Log("[BCL ServerConfig] Added missing settings to " + path);
+        }
+        catch (IOException ex) { Debug.LogWarning("[BCL ServerConfig] Could not save missing settings; using completed values for this run: " + ex.Message); }
+        catch (UnauthorizedAccessException ex) { Debug.LogWarning("[BCL ServerConfig] Could not save missing settings; using completed values for this run: " + ex.Message); }
+        finally
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return values;
+    }
+
     internal static Dictionary<string, object> Parse(string text)
     {
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -104,10 +225,12 @@ internal static class LegacyServerConfig
             if ((key.Equals("-bend_GameServer", StringComparison.OrdinalIgnoreCase) ||
                  key.Equals("-serverDiagnostics", StringComparison.OrdinalIgnoreCase) ||
                  key.Equals("-csDiagnostics", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("-chatLogging", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("-requireFingerprint", StringComparison.OrdinalIgnoreCase) ||
                  key.StartsWith("-no", StringComparison.OrdinalIgnoreCase)) && !(value is bool))
                 throw Error(i, key + " must be a boolean.");
-            if (key.Equals("-logsDir", StringComparison.OrdinalIgnoreCase) && !(value is string))
-                throw Error(i, "logsDir must be a string.");
+            if ((key.Equals("-logsDir", StringComparison.OrdinalIgnoreCase) || key.Equals("-pluginsPolicy", StringComparison.OrdinalIgnoreCase) || key.Equals("-alerts", StringComparison.OrdinalIgnoreCase)) && !(value is string))
+                throw Error(i, key + " must be a string.");
             if (key.Equals("-logLevel", StringComparison.OrdinalIgnoreCase))
             {
                 if (!(value is string)) throw Error(i, "logLevel must be a string.");
@@ -202,16 +325,9 @@ internal static class LegacyServerConfig
     {
         var result = new List<string>(raw);
         var explicitKeys = new HashSet<string>(raw.Select(a => a.Split(':')[0]), StringComparer.OrdinalIgnoreCase);
-        string[][] aliases =
-        {
-            new[] { "-bindIP", "-ip" }, new[] { "-masterIP", "-masterHost" },
-            new[] { "-master", "-masterServer" }, new[] { "-noUpdCheck", "-noUpdateCheck" },
-            new[] { "-noServerCli", "-noServerCLI" }, new[] { "-hideWindow", "-hideBatchWindow" },
-            new[] { "-masterDebug", "-debugMaster" }
-        };
         foreach (var item in config)
         {
-            if (explicitKeys.Contains(item.Key) || aliases.Any(group => group.Contains(item.Key, StringComparer.OrdinalIgnoreCase) &&
+            if (explicitKeys.Contains(item.Key) || OptionAliases.Any(group => group.Contains(item.Key, StringComparer.OrdinalIgnoreCase) &&
                 group.Any(explicitKeys.Contains))) continue;
             if (item.Value is bool) { if ((bool)item.Value) result.Add(item.Key); }
             else
@@ -222,5 +338,27 @@ internal static class LegacyServerConfig
         }
         return result.ToArray();
     }
-    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nmaxVinylLayers = 1024\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\ndisconnectedKickTimeout = \"30s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoUpdCheck = false\n\n[logging]\n# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.\nlogsDir = ''\nnoLogging = false\nlogLevel = \"Log\"\ncsDiagnostics = false\ncsDiagnosticsMaxShotsPerSecond = 60\n";
+    internal static SortedDictionary<string,object> CurrentSettings()
+    {
+        var result = new SortedDictionary<string,object>(Parse(DefaultText), StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in configuredValues) result[pair.Key] = pair.Value;
+        foreach (string argument in effective ?? new string[0])
+        {
+            int colon = argument.IndexOf(':'); string key = colon < 0 ? argument : argument.Substring(0,colon);
+            if (key.Equals("-master",StringComparison.OrdinalIgnoreCase)) key = "-masterServer";
+            if (!result.ContainsKey(key)) continue;
+            if (colon < 0) { if (result[key] is bool) result[key] = true; }
+            else
+            {
+                string value = LegacyCommandLine.StripQuotes(argument.Substring(colon+1));
+                long integer; double real; bool boolean;
+                if (result[key] is long && long.TryParse(value,NumberStyles.Integer,CultureInfo.InvariantCulture,out integer)) result[key] = integer;
+                else if (result[key] is double && double.TryParse(value,NumberStyles.Float,CultureInfo.InvariantCulture,out real)) result[key] = real;
+                else if (result[key] is bool && bool.TryParse(value,out boolean)) result[key] = boolean;
+                else result[key] = value;
+            }
+        }
+        return result;
+    }
+    internal const string DefaultText = "# BigCityLegacy server configuration. CLI arguments override these values. \n# Keys match launch options without the leading '-'.\n\n[server]\nport = 7800\nmaxConn = 16\nMode = \"None\"\nlang = \"en\"\nmaxCars = 100\nmaxCarsByPlayer = 15\nmaxVinylLayers = 1024\nCarSpawnTimeout = 1000\nmaxNikLength = 20\nidleKickTimeout = \"120s\"\ndisconnectedKickTimeout = \"30s\"\nnoChatEvents = false\nnoKillChat = false\nnoCsDamageCooldown = false\nuseVanillaRespawn = false\nrequireFingerprint = false\n\n[plugins]\nnoPluginsPolicyAndAlerts = false\n\n[mirror]\nmasterServer = true\nmasterPort = 35000\nmasterDebug = false\n\n[files]\n# Relative paths resolve from the game directory. Empty values use defaults.\nserversList = ''\neventsDir = ''\nrespawnPoints = ''\nbanList = ''\npluginsPolicy = ''\nalerts = ''\n\n[console]\nnoServerConsole = false\nnoServerCli = false\nverboseServerConsole = false\nnoUpdCheck = false\n\n[logging]\n# Empty logsDir uses BigCityLegacy/logs; relative paths resolve from the game directory.\nlogsDir = ''\nnoLogging = false\nchatLogging = false\nlogLevel = \"Log\"\ncsDiagnostics = false\ncsDiagnosticsMaxShotsPerSecond = 60\n";
 }

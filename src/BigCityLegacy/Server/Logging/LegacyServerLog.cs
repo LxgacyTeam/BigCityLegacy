@@ -63,6 +63,14 @@ internal static class LegacyServerLog
                 }
                 catch (Exception ex) { ReportFailure(ex.GetType().Name + ": " + ex.Message); }
             }
+            if (!startupFailed && args.Any(a => a.Equals("-chatLogging", StringComparison.OrdinalIgnoreCase)))
+            {
+                string directory = Value(args, "-logsDir");
+                if (string.IsNullOrWhiteSpace(directory)) directory = Path.Combine(LegacyHelpers.ModDataPath, "logs");
+                else if (!Path.IsPathRooted(directory)) directory = Path.Combine(BepInEx.Paths.GameRootPath, directory);
+                int port; if (!int.TryParse(Value(args, "-port"), out port) || port < 1 || port > 65535) port = 7800;
+                LegacyChatLog.Initialize(directory, port);
+            }
             configured = true;
             while (pending.Count != 0)
             {
@@ -151,6 +159,7 @@ internal static class LegacyServerLog
     }
     internal static void Shutdown()
     {
+        LegacyChatLog.Shutdown();
         Unsubscribe();
         lock (sync)
         {

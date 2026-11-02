@@ -95,7 +95,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
                        ", \"yaw\": " + FormatJsonFloat(cameraRot.eulerAngles.y) +
                        " }";
 
-        using (new LegacyUIGuiScope(-20000))
+        using (LegacyClientUI.Scope(-20000, false))
         {
             pointWindow.Draw(content => DrawPointToolContent(content, cameraPos, cameraRot, playerPos));
         }
@@ -115,6 +115,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             new Rect(10f, 10f, 490f, 237f),
             new LegacyUIWindowOptions
             {
+                BackdropBlur = false,
                 Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = false,
@@ -152,6 +153,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
         GUI.Label(new Rect(x + 125f, y + 57f, 300f, 50f), "<b>F9</b> - copy | <b>X</b> - remove last | <b>Z</b> - save", hotkeysHint);
 
         Rect TeleportButton = new Rect(rectMainX, rectLine2Y, rectButtonWidth, rectHeight);
+
         DrawTeleportButton(TeleportButton);
 
         if (LegacyUI.DangerButton(new Rect(rectMainX + 365f, rectLine2Y, rectButtonWidth, rectHeight), "Clear All"))
@@ -214,9 +216,9 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
         if (ShowTeleportWindow)
         {
-            if (!LegacyHelpers.isDebugBuild)
+            if (NetManager.isOnlineClient && !LegacyHelpers.isDebugBuild)
             {
-                if (NetManager.isOnlineClient) { ShowTeleportWindow = !ShowTeleportWindow; }
+                ShowTeleportWindow = !ShowTeleportWindow;
             }
             DrawTeleportContent(new Rect(x, y + 180f, 460f, 80f), cameraPos, rectHeight);
         }
@@ -224,10 +226,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
     private void DrawTeleportButton(Rect TeleportButton)
     {
-        if (!LegacyHelpers.isDebugBuild)
-        {
-            if (!NetManager.isOnlineClient) { return; }
-        }
+        if (NetManager.isOnlineClient && !LegacyHelpers.isDebugBuild) { return; }
 
         string teleportButtonLabel = ShowTeleportWindow ? "▲ Close" : "▼ Teleport";
 

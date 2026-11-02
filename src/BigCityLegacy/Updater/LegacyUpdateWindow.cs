@@ -45,6 +45,8 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
             GetStartRect(),
             new LegacyUIWindowOptions
             {
+                BackdropBlur = true,
+                BlurTintAlpha = 0.75f,
                 Draggable = true,
                 ClampToScreen = true,
                 ShowCloseButton = true,
@@ -52,23 +54,23 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
                 DragAlpha = 0.68f,
                 HeaderHeight = 38f,
                 ScreenPadding = 8f,
-                BackgroundAlpha = 0.9f,
                 InputBlockMode = LegacyUIInputBlockMode.Window
             });
 
         window.Visible = false;
-        window.Closed += () => enabled = false;
+
         enabled = false;
     }
 
     private void OnGUI()
     {
-        if (window == null || !window.Visible || update == null)
+        if (window == null || !window.IsRendered || update == null)
         {
+            enabled = false;
             return;
         }
 
-        using (new LegacyUIGuiScope(-22000))
+        using (LegacyClientUI.Scope(-22000))
         {
             window.Draw(DrawContent);
         }
@@ -92,6 +94,9 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
         if (!string.IsNullOrEmpty(LegacyInstallerUpdater.Status))
             LegacyUI.Status(new Rect(x, y + 52f, w, 38f), LegacyInstallerUpdater.Status +
                 (LegacyInstallerUpdater.Busy ? " " + (LegacyInstallerUpdater.Progress * 100f).ToString("0") + "%" : ""));
+
+        if (LegacyInstallerUpdater.Busy)
+            LegacyUI.ProgressBar(new Rect(x, content.yMax - 48f, w, 10f), LegacyInstallerUpdater.Progress);
 
         float btnY = content.yMax - 30f;
         float gap = 8f;
@@ -120,13 +125,12 @@ internal sealed class LegacyUpdateWindow : MonoBehaviour
         {
             window.Visible = false;
         }
-        enabled = false;
     }
 
     private static Rect GetStartRect()
     {
         const float width = 460f;
-        const float height = 215f;
+        const float height = 245f;
         if (Screen.width <= 0 || Screen.height <= 0)
         {
             return new Rect(180f, 120f, width, height);

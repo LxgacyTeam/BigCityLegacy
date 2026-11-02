@@ -61,7 +61,7 @@ internal static class LegacyServerAdminService
 
         string ip = GetConnectionAddress(connect.conn);
         LegacyBanList.BanEntry entry;
-        if (!LegacyBanList.IsBanned(guid, ip, out entry))
+        if (!LegacyBanList.IsBanned(guid, ip, LegacyConnectionStamp.Get(connect), out entry))
         {
             return false;
         }
@@ -74,7 +74,8 @@ internal static class LegacyServerAdminService
             ", Type=" + entry.Type.ToString() + ")."
         );
 
-        Disconnect(connect);
+        LegacyPluginNetwork.Moderation(connect, "banRejected", entry, nickname: nickname);
+        Disconnect(connect, true);
         return true;
     }
 
@@ -169,7 +170,7 @@ internal static class LegacyServerAdminService
         return true;
     }
 
-    internal static bool KickPlayer(int playerId, out string error)
+    internal static bool KickPlayer(int playerId, out string error, string reason = null)
     {
         error = null;
         PlayerSession session;
@@ -179,12 +180,23 @@ internal static class LegacyServerAdminService
             return false;
         }
 
+        LegacyPluginNetwork.Moderation(session.Connect, "kicked", reason: reason);
         ChatEventsPatches.SendAdminDisconnect(session.Connect, "was kicked from server");
         Disconnect(session.Connect, true);
         return true;
     }
 
-    internal static bool BanAndKickPlayer(int playerId, int banType, long? until, out LegacyBanList.BanEntry ban, out string error)
+    internal static void KickForLockedVehicle(NetInputControl input)
+    {
+        if (!input || !input.netConnect) return;
+        NetConnect connect = input.netConnect;
+        const string reason = "Suspicion of cheat usage";
+        LegacyPluginNetwork.Moderation(connect, "kicked", reason: reason);
+        ChatEventsPatches.SendAdminDisconnect(connect, "was kicked from server");
+        Disconnect(connect, true);
+    }
+
+    internal static bool BanAndKickPlayer(int playerId, int banType, long? until, out LegacyBanList.BanEntry ban, out string error, string reason = null)
     {
         ban = null;
         error = null;
@@ -196,7 +208,7 @@ internal static class LegacyServerAdminService
             return false;
         }
 
-        if (!LegacyBanList.AddBan(player, banType, until, out ban, out error))
+        if (!LegacyBanList.AddBan(player, banType, until, out ban, out error, reason))
         {
             return false;
         }
@@ -204,6 +216,7 @@ internal static class LegacyServerAdminService
         NetInputControl input;
         if (TryGetInput(playerId, out input) && input.netConnect)
         {
+            LegacyPluginNetwork.Moderation(input.netConnect, "banned", ban);
             ChatEventsPatches.SendAdminDisconnect(input.netConnect, until.HasValue ?
                 "was banned for " + LegacyAdminTime.Remaining(until) : "was permanently banned");
             Disconnect(input.netConnect, true);
@@ -226,7 +239,8 @@ internal static class LegacyServerAdminService
         ServerPlayerSnapshot player;
         if (!TryGetPlayer(playerId, out player)) { error = "PlayerID was not found."; return false; }
         if (!LegacyBanList.SetProp(player, prop, enabled, until, out error)) return false;
-        LegacyPlayerProperties.Refresh();
+        LegacyPlayerProperties.Refresh(true);
+        LegacyAdminNotifications.PropertyChanged(playerId, prop, enabled, until);
         NetInputControl input;
         if (enabled && prop != "invisible" && TryGetInput(playerId, out input))
         {
@@ -283,6 +297,7 @@ internal static class LegacyServerAdminService
         PlayerControl player = input.input.currentPlayer;
         if (!player.isAlive) { error = "The player is already dead."; return false; }
         player.SetLive(0f, false, WhoKill.Init(player, Weapone.Type.Unknow));
+        LegacyAdminNotifications.Player(playerId, "You were killed by an administrator.", "Вы были убиты администратором.");
         return true;
     }
 
@@ -596,6 +611,9 @@ internal static class LegacyServerAdminService
                input.gameObject.activeInHierarchy;
     }
 
+    internal static ServerPlayerSnapshot SnapshotForInput(NetInputControl input)
+    { var session = FindPlayerForInput(input); return session == null ? null : CreateSnapshot(session); }
+
     internal static string GetNicknameForInput(NetInputControl input)
     {
         PlayerSession session = FindPlayerForInput(input);
@@ -730,7 +748,7 @@ internal static class LegacyServerAdminService
         }
         try
         {
-            if (connect.conn != null)
+            if (connect.conn != null && !LegacyPluginNetwork.DelayDisconnect(connect))
             {
                 connect.conn.Disconnect();
             }
@@ -788,7 +806,7 @@ internal static class LegacyServerAdminService
                 continue;
             }
 
-            UpdateSession(session, connect, guid, connect.nikName, session.RuntimePlatform);
+            UpdateSession(session, connect, guid, connect.netInput ? connect.netInput.nikName : connect.nikName, session.RuntimePlatform);
         }
 
         List<string> disconnected = new List<string>();
@@ -855,6 +873,9 @@ internal static class LegacyServerAdminService
         {
             return null;
         }
+
+        PlayerSession authenticated = FindPlayerForConnection(input.connect2player, input.pirvateConnectID);
+        if (authenticated != null) return authenticated;
 
         object directConnect = GetMemberValue(input, "connect", "netConnect", "ownerConnect");
         NetConnect asConnect = directConnect as NetConnect;
@@ -1010,6 +1031,7 @@ internal static class LegacyServerAdminService
             Nickname = session.Nickname ?? string.Empty,
             Guid = session.Guid ?? string.Empty,
             Ip = session.Ip ?? string.Empty,
+            Fingerprint = LegacyConnectionStamp.Get(session.Connect),
             ConnectedSeconds = Math.Max(0f, Time.realtimeSinceStartup - session.ConnectedAt),
             ActiveCars = activeCars,
             TotalCarsSpawned = session.TotalCarsSpawned,
@@ -1389,6 +1411,7 @@ internal static class LegacyServerAdminService
         internal string Nickname;
         internal string Guid;
         internal string Ip;
+        internal string Fingerprint;
         internal float ConnectedSeconds;
         internal int ActiveCars;
         internal int TotalCarsSpawned;

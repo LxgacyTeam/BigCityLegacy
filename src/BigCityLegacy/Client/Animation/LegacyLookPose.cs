@@ -1,71 +1,122 @@
+using System.Collections.Generic;
+using RootMotion.FinalIK;
 using UnityEngine;
 
 internal static class LegacyLookPose
 {
-    internal static Vector2 Target(Vector3 direction, bool seated, bool busy, bool tracking = false, float previousYaw = 0)
+    internal static bool ValidRotation(Quaternion value)
     {
-        if (!Finite(direction.x) || !Finite(direction.y) || !Finite(direction.z) || direction.sqrMagnitude < 0.0001f) return Vector2.zero;
-        float yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-        float pitch = -Mathf.Atan2(direction.y, Mathf.Sqrt(direction.x * direction.x + direction.z * direction.z)) * Mathf.Rad2Deg;
-        if (tracking && Mathf.Abs(yaw) > 150 && Mathf.Abs(previousYaw) > 1) yaw = Mathf.Sign(previousYaw) * Mathf.Abs(yaw);
-        float fade = tracking ? 1 : 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(100, 165, Mathf.Abs(yaw)));
-        float maxYaw = tracking ? (seated ? 40 : 120) : busy ? 45 : seated ? 18 : 65;
-        pitch *= Mathf.Lerp(1, 0.55f, Mathf.Clamp01(Mathf.Abs(yaw) / 120));
-        return new Vector2(Mathf.Clamp(yaw, -maxYaw, maxYaw) * fade,
-            Mathf.Clamp(pitch, seated ? -7 : -14, seated ? 7 : 14) * fade);
+        float norm = Quaternion.Dot(value, value);
+        return !float.IsNaN(norm) && !float.IsInfinity(norm) && norm > 0.9f && norm < 1.1f;
     }
 
-    internal static Vector2 Smooth(Vector2 current, Vector2 target, ref Vector2 velocity, float dt, bool seated)
+    internal static Vector2 Target(Vector3 direction, bool seated, bool busy, float previousYaw)
     {
-        if (!Finite(dt) || dt <= 0) return current;
-        dt = Mathf.Min(dt, 0.1f);
-        float xVelocity = velocity.x, yVelocity = velocity.y;
-        float x = Mathf.SmoothDamp(current.x, target.x, ref xVelocity, seated ? 0.42f : 0.22f, seated ? 55 : 135, dt);
-        float y = Mathf.SmoothDamp(current.y, target.y, ref yVelocity, seated ? 0.55f : 0.35f, seated ? 20 : 35, dt);
-        velocity = new Vector2(xVelocity, yVelocity);
-        return new Vector2(x, y);
+        float horizontal = Mathf.Sqrt(direction.x * direction.x + direction.z * direction.z);
+        float yaw = horizontal < 0.001f ? previousYaw : Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+        if (Mathf.Abs(yaw) > 165 && Mathf.Abs(previousYaw) > 1) yaw = Mathf.Sign(previousYaw) * Mathf.Abs(yaw);
+        float limit = busy ? 70 : seated ? 105 : 120;
+        return new Vector2(Mathf.Clamp(yaw, -limit, limit),
+            Mathf.Clamp(-Mathf.Atan2(direction.y, horizontal) * Mathf.Rad2Deg, seated ? -35 : -40, seated ? 30 : 35));
     }
 
-    internal static bool ValidRotation(Quaternion q)
+    internal static Quaternion SmoothWorld(Quaternion current, Quaternion target, float dt, bool seated, bool ragdolled)
     {
-        float norm = q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w;
-        return Finite(norm) && norm > 0.9f && norm < 1.1f;
+        if (float.IsNaN(dt) || float.IsInfinity(dt) || dt <= 0 || !ValidRotation(target)) return current;
+        dt = Mathf.Min(dt, 0.05f);
+        float response = ragdolled ? 0.3f : seated ? 0.24f : 0.18f;
+        Quaternion filtered = Quaternion.Slerp(current, target, 1 - Mathf.Exp(-dt / response));
+        return Quaternion.RotateTowards(current, filtered, (ragdolled ? 70 : seated ? 110 : 160) * dt);
     }
-    private static bool Finite(float value) { return !float.IsNaN(value) && !float.IsInfinity(value); }
 }
 
-internal sealed class LegacyLookBone
+internal sealed class LegacyLookRig
 {
-    internal Transform Bone;
-    private Quaternion before, written;
-    private bool applied;
+    private sealed class BonePose
+    {
+        internal Transform Bone;
+        internal Quaternion Before, Written;
+        internal bool Applied;
+        internal void Restore()
+        {
+            if (Applied && Bone && Quaternion.Angle(Bone.localRotation, Written) < 0.02f) Bone.localRotation = Before;
+            Applied = false;
+        }
+    }
+
+    private readonly IKSolverLookAt solver = new IKSolverLookAt();
+    private BonePose[] bones;
+    private Transform root, head, anchor;
+    private Quaternion anchorToRoot;
+    private Quaternion gaze;
+    private float bodyWeight, poseWeight;
+    private bool stored;
+
+    internal Transform Head => head;
+    internal bool Ready => head && solver.initiated;
+    internal Quaternion Reference => anchor ? anchor.rotation * anchorToRoot : root.rotation;
+
+    internal bool Bind(PlayerControl player)
+    {
+        Clear();
+        root = player.tr_view ? player.tr_view : player.transform;
+        var animator = player.animator;
+        head = player.head ? player.head.headTr : null;
+        if (!head && animator.isHuman && animator.avatar && animator.avatar.isValid)
+            head = animator.GetBoneTransform(HumanBodyBones.Head);
+        if (!head) return false;
+        var spine = new List<Transform>();
+        Transform nativeSpine = player.head ? player.head.SpineTr : null;
+        Transform nativeChest = player.anims ? player.anims.Chest : null;
+        for (Transform bone = head.parent; bone && bone != root && bone != player.transform; bone = bone.parent)
+        {
+            string name = bone.name.ToLowerInvariant();
+            if (bone == nativeSpine || bone == nativeChest || name.Contains("spine") || name.Contains("chest")) spine.Add(bone);
+        }
+        spine.Reverse();
+        anchor = spine.Count > 0 ? spine[0].parent : head.parent;
+        anchorToRoot = anchor ? Quaternion.Inverse(anchor.rotation) * root.rotation : Quaternion.identity;
+        if (!solver.SetChain(spine.ToArray(), head, new Transform[0], root) || !solver.initiated) return false;
+        if (player.head && player.head.headTr == head && LegacyLookPose.ValidRotation(player.head.baseHeadRot))
+            solver.head.axis = player.head.baseHeadRot * Vector3.forward;
+        solver.headWeight = 1;
+        solver.eyesWeight = 0;
+        solver.clampWeight = 0;
+        solver.clampWeightHead = 0;
+        solver.clampSmoothing = 2;
+        bones = new BonePose[spine.Count + 1];
+        for (int i = 0; i < spine.Count; i++) bones[i] = new BonePose { Bone = spine[i] };
+        bones[bones.Length - 1] = new BonePose { Bone = head };
+        return true;
+    }
+
+    internal void Apply(Quaternion direction, float body, float weight)
+    {
+        if (!Ready) return;
+        gaze = direction; bodyWeight = body; poseWeight = weight; stored = true;
+        Reapply();
+    }
 
     internal void Restore()
     {
-        if (applied && Bone)
-        {
-            Quaternion current = Bone.localRotation;
-            float same = Mathf.Abs(current.x-written.x)+Mathf.Abs(current.y-written.y)+Mathf.Abs(current.z-written.z)+Mathf.Abs(current.w-written.w);
-            float opposite = Mathf.Abs(current.x+written.x)+Mathf.Abs(current.y+written.y)+Mathf.Abs(current.z+written.z)+Mathf.Abs(current.w+written.w);
-            if (Mathf.Min(same, opposite) < 0.0001f) Bone.localRotation = before;
-        }
-        applied = false;
+        if (bones == null) return;
+        for (int i = bones.Length - 1; i >= 0; i--) bones[i].Restore();
     }
 
-    internal void Apply(Transform root, float yaw)
+    internal void Reapply()
     {
-        if (!Bone) return;
-        Restore(); before = Bone.localRotation;
-        Bone.rotation = Quaternion.AngleAxis(yaw, root.up) * Bone.rotation;
-        written = Bone.localRotation; applied = true;
+        if (!stored || !Ready) return;
+        Restore();
+        foreach (BonePose pose in bones) pose.Before = pose.Bone.localRotation;
+        solver.bodyWeight = bodyWeight;
+        solver.IKPositionWeight = poseWeight;
+        solver.IKPosition = head.position + gaze * Vector3.forward * 10;
+        solver.Update();
+        foreach (BonePose pose in bones) { pose.Written = pose.Bone.localRotation; pose.Applied = true; }
     }
 
-    internal void Aim(Transform root, Vector2 angles, Quaternion boneToGaze, float weight)
+    internal void Clear()
     {
-        if (!Bone) return;
-        Restore(); before = Bone.localRotation;
-        Quaternion target = root.rotation * Quaternion.Euler(angles.y, angles.x, 0) * Quaternion.Inverse(boneToGaze);
-        Bone.rotation = Quaternion.Slerp(Bone.rotation, target, weight);
-        written = Bone.localRotation; applied = true;
+        Restore(); stored = false; bones = null; head = anchor = root = null;
     }
 }

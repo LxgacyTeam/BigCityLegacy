@@ -12,6 +12,57 @@ internal static class LegacyMigrationEvents
     {
         CheckMLPluginExist();
         MoveConfigAfterUpdate();
+        RemoveObsoleteEventFiles();
+    }
+
+    private static void RemoveObsoleteEventFiles()
+    {
+        // Add obsolete default event filenames here, including the .json extension.
+        // Checked in events itself and in each supported category; names are exact.
+        string[] obsoleteFiles =
+        {
+            "airport_01.json",
+            "BIG_CITY_RACE.json",
+            "BIG_CITY_RACE_2.json",
+            "BIG_CITY_RACE_3.json",
+            "city_race_22.json",
+            "city_race_23.json",
+            "city_race_24.json",
+            "city_sprint_01.json",
+            "DESERT_RACE.json",
+            "desert_race_2.json",
+            "SUPER_RACE.json",
+            "VERY_LONG_BIG_CITY.json",
+            "Survival_01.json"
+        };
+
+        string eventsPath = Path.Combine(LegacyHelpers.ModDataPath, "events");
+        foreach (string fileName in obsoleteFiles)
+        {
+            // This list contains filenames only, never paths or wildcard patterns.
+            if (string.IsNullOrWhiteSpace(fileName) || fileName.IndexOfAny(new[] { '/', '\\', '*', '?' }) >= 0 ||
+                Path.GetFileName(fileName) != fileName || !fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning("[BigCityLegacy] Invalid obsolete event filename: " + fileName);
+                continue;
+            }
+            foreach (string category in new[] { "", "Race", "CS", "CS_Sur" })
+            {
+                string directory = Path.Combine(eventsPath, category);
+                string path = Path.Combine(directory, fileName);
+                try
+                {
+                    // Do not follow directory links into another event collection.
+                    if (!Directory.Exists(eventsPath) || !Directory.Exists(directory) ||
+                        (File.GetAttributes(eventsPath) & FileAttributes.ReparsePoint) != 0 ||
+                        (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0 || !File.Exists(path)) continue;
+                    File.Delete(path);
+                    Debug.Log("[BigCityLegacy] Removed obsolete event: " + path);
+                }
+                catch (IOException ex) { Debug.LogWarning("[BigCityLegacy] Could not remove obsolete event " + path + ": " + ex.Message); }
+                catch (UnauthorizedAccessException ex) { Debug.LogWarning("[BigCityLegacy] Could not remove obsolete event " + path + ": " + ex.Message); }
+            }
+        }
     }
 
     private static void MoveConfigAfterUpdate()
