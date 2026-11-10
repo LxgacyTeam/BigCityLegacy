@@ -88,16 +88,6 @@ internal static class NetConnectAndControlPatches
         if (LegacyPlayerProperties.Has(__instance, "nocars")) return false;
         if (!LegacyCarSpawnTimeout.CanSpawn(__instance)) return false;
 
-        Net_BaseEvent curEvent = __instance.curEvent;
-        if (curEvent is Net_CS && curEvent.state != Net_BaseEvent.CurState.Lobbi && curEvent.state != Net_BaseEvent.CurState.Complite)
-        {
-            Debug.LogWarning(
-                "[Server] Car spawn rejected for '" + LegacyServerAdminService.GetNicknameForInput(__instance) +
-                "': active CS/CS_Sur round, state=" + curEvent.state.ToString()
-            );
-            return false;
-        }
-
         int currentCars;
         int playerCars;
 
@@ -175,7 +165,7 @@ internal static class NetConnectAndControlPatches
     internal static bool IsServerPlayerCreateReady(out string reason)
     {
         reason = string.Empty;
-        bool spawnsReady = RaceAndWorldPatches.TryEnsureNetSpawns();
+        bool spawnsReady = WorldSpawnPatches.TryEnsureNetSpawns();
         bool groundReady = GroundLoader.me == null || GroundLoader.isAllLoaded;
         bool mapReady = MapProLoader.me == null || MapProLoader.canControlsLoad();
         if (!spawnsReady || !groundReady || !mapReady)

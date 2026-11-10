@@ -38,6 +38,8 @@ public sealed class BigCityLegacyPlugin : BaseUnityPlugin
             return;
         }
         LegacyCompatibility.DetectFromRuntime();
+        LegacyClientUI.ConfigureDiagnostics(Config, Logger);
+        LegacyRaceCarRules.Configure(Config);
 
         Harmony = new Harmony(PluginGuid);
         try

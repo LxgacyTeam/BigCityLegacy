@@ -47,7 +47,11 @@ internal static class LegacyPatchManager
         //PatchClass(typeof(ServerCarPresentationPatches)); NEEDS TO REWORK
         PatchClass(typeof(ServerNetworkBufferPatches));
         PatchClass(typeof(ServerReliableSendPatches));
-        PatchClass(typeof(RaceAndWorldPatches));
+        PatchClass(typeof(RacePatches));
+        PatchClass(typeof(OnlineRacePatches));
+        PatchClass(typeof(RaceNitroPatches));
+        PatchClass(typeof(CsWorldPatches));
+        PatchClass(typeof(WorldSpawnPatches));
         PatchClass(typeof(InputPatches));
         PatchClass(typeof(VinylPortCameraPatches));
         PatchClass(typeof(ChatEventsPatches));

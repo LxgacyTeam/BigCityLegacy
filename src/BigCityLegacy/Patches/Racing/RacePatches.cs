@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 [HarmonyPatch]
-internal static class RaceAndWorldPatches
+internal static class RacePatches
 {
     [HarmonyPatch(typeof(RaceDirectionPoints), "SaveRace")]
     [HarmonyPostfix]
@@ -18,7 +18,7 @@ internal static class RaceAndWorldPatches
             XmlElement root = (XmlElement)doc.FirstChild;
             if (root.GetCanNull("modPoints") == null)
             {
-                LegacyEventsConfig.SaveRuntimeRacePointsToXml(__instance, root);
+                LegacyRaceMaps.SaveRuntimeRacePointsToXml(__instance, root);
             }
             __result = doc.OuterXml;
         }
@@ -41,7 +41,7 @@ internal static class RaceAndWorldPatches
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xmlData);
             XmlElement root = (XmlElement)doc.FirstChild;
-            LegacyEventsConfig.LoadRuntimeRacePointsFromXml(__instance, root);
+            LegacyRaceMaps.LoadRuntimeRacePointsFromXml(__instance, root);
         }
         catch (Exception ex)
         {
@@ -77,8 +77,13 @@ internal static class RaceAndWorldPatches
         {
             __instance.NetworklapsCount = points.isSprint ? 1 : __instance.GetRndLapsCount();
         }
-        __instance.NetworkeventDataXml = points.SaveRace();
+        var raceDocument = new XmlDocument();
+        raceDocument.LoadXml(points.SaveRace());
+        raceDocument.DocumentElement.SetAttribute("allowNitroPurchase", LegacyRaceCarRules.AllowNitroPurchase ? "true" : "false");
+        __instance.NetworkeventDataXml = raceDocument.OuterXml;
         __instance.startPoses = points.GetComponent<StartPoses>();
+        var info = points.GetComponent<UI_Event_Item_Info>();
+        __instance.NetworkmapName = info && !string.IsNullOrWhiteSpace(info.txt) ? info.txt : points.name;
         return false;
     }
 
@@ -93,6 +98,11 @@ internal static class RaceAndWorldPatches
         }
         GameObject go = new GameObject();
         __instance.racePoints = go.AddComponent<RaceDirectionPoints>();
+        var runtime = go.AddComponent<LegacyOnlineRacePoints>();
+        runtime.Owner = __instance;
+        var raceDocument = new XmlDocument();
+        raceDocument.LoadXml(__instance.eventDataXml);
+        runtime.AllowNitroPurchase = raceDocument.DocumentElement.GetAttribute("allowNitroPurchase") != "false";
         __instance.racePoints.LoadXml(__instance.eventDataXml);
         go.name = " Used RacePoints, for NetRace# " + __instance.index;
         __instance.racePoints.Init(__instance.lapsCount);
@@ -115,8 +125,7 @@ internal static class RaceAndWorldPatches
         __instance.raceUI.SetPos(__instance.players.Count, __instance.players.Count);
         RaceSettings.me.PlayStart(delegate { }, delegate(InputControl input)
         {
-            __instance.state = Net_BaseEvent.CurState.Race;
-            if (__instance.racePoints)
+            if (__instance.state == Net_BaseEvent.CurState.Race && __instance.racePoints)
             {
                 __instance.racePoints.ActivateFirstPoint();
             }
@@ -124,83 +133,4 @@ internal static class RaceAndWorldPatches
         return false;
     }
 
-    // Net_CS.OnStartServer selects one configured map through GetRandomMap().
-    // Keep that exact transform so arena cleanup never tries to infer a map from
-    // display names, object names or unrelated event instances.
-    [HarmonyPatch(typeof(Net_CS), "GetRandomMap")]
-    [HarmonyPostfix]
-    private static void Net_CS_GetRandomMap_Postfix(Net_CS __instance, ref Transform __result)
-    {
-        LegacyServerDropCleanup.RememberSelectedCsMap(__instance, __result);
-    }
-
-    // In the original Net_CS implementation, Spawn_AfterLobby is where
-    // StateChanget invokes SpawnEvent(). Clear leftover Loot immediately before
-    // that original round-start work runs, for both CS and CS_Sur.
-    [HarmonyPatch(typeof(Net_CS), "StateChanget")]
-    [HarmonyPrefix]
-    private static void Net_CS_StateChanget_Prefix(Net_CS __instance, Net_BaseEvent.CurState was)
-    {
-        LegacyServerDropCleanup.HandleCsStateChanged(__instance, was);
-    }
-
-    [HarmonyPatch(typeof(SpawnPos), "GetSpawnPos")]
-    [HarmonyPrefix]
-    private static bool SpawnPos_GetSpawnPos_Prefix(ref Vector3 __result)
-    {
-        if (TryEnsureNetSpawns())
-        {
-            return true;
-        }
-        __result = GetFallbackSpawnPos();
-        Debug.LogWarning("SpawnPos.GetSpawnPos fallback: " + __result.ToString());
-        return false;
-    }
-
-    internal static bool TryEnsureNetSpawns()
-    {
-        if (HasReadyNetSpawns())
-        {
-            return true;
-        }
-        int count = 0;
-        for (int i = 0; i < SpawnPos.instances.Count; i++)
-        {
-            SpawnPos spawn = SpawnPos.instances[i];
-            if (spawn != null && spawn.type == SpawnPos.Type.NetZone && spawn.transform.childCount > 0)
-            {
-                count++;
-            }
-        }
-        if (count <= 0)
-        {
-            return false;
-        }
-        SpawnPos.InitSpawnZoneName();
-        return HasReadyNetSpawns();
-    }
-
-    internal static bool HasReadyNetSpawns()
-    {
-        return SpawnPos.spawnPoses != null && SpawnPos.spawnPoses.Length != 0;
-    }
-
-    internal static Vector3 GetFallbackSpawnPos()
-    {
-        for (int i = 0; i < SpawnPos.instances.Count; i++)
-        {
-            if (SpawnPos.instances[i].type == SpawnPos.Type.NetPos)
-            {
-                return SpawnPos.instances[i].transform.position;
-            }
-        }
-        for (int i = 0; i < SpawnPos.instances.Count; i++)
-        {
-            if (SpawnPos.instances[i].type == SpawnPos.Type.Only_Player1)
-            {
-                return SpawnPos.instances[i].transform.position;
-            }
-        }
-        return Vector3.zero;
-    }
 }

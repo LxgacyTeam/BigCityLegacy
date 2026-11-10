@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -209,7 +209,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
             UseVisualPoints = LegacyUI.Toggle(new Rect(rectUseVisualX, rectLine1Y + 4f, 135f, rectHeight), UseVisualPoints, "Use visual points");
             if (_visPointsIsToggled)
             {
-                LegacyEventsConfig.ClearDebugRaceCheckpoints();
+                LegacyRaceMaps.ClearDebugRaceCheckpoints();
                 _visPointsIsToggled = false;
             }
         }
@@ -320,7 +320,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
 
 		if (UseVisualPoints)
 		{
-            if (!LegacyEventsConfig.RemoveDebugRaceCheckpoint(pointPos))
+            if (!LegacyRaceMaps.RemoveDebugRaceCheckpoint(pointPos))
             {
                 return false;
             }
@@ -482,7 +482,7 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
         {
             if (box.isYes)
             {
-                LegacyEventsConfig.ClearDebugRaceCheckpoints();
+                LegacyRaceMaps.ClearDebugRaceCheckpoints();
                 string file = getPosOutFilePath;
                 File.Delete(file);
                 if (GameUI.me)
@@ -704,11 +704,11 @@ public class LegacyPointTool : MonoBehaviour, OnGuiGlobal.IOnGuiNeed
                 PosParser.TryParsePosFromJson(jsonCopyText, out pos, out yaw);
                 if (isInteractive)
                 {
-                    LegacyEventsConfig.SpawnDebugRaceCheckpoint(pos, true, yaw.GetValueOrDefault());
+                    LegacyRaceMaps.SpawnDebugRaceCheckpoint(pos, true, yaw.GetValueOrDefault());
                 }
                 else
                 {
-                    LegacyEventsConfig.SpawnDebugRaceCheckpoint(pos, false, yaw.GetValueOrDefault());
+                    LegacyRaceMaps.SpawnDebugRaceCheckpoint(pos, false, yaw.GetValueOrDefault());
                 }
             }
 

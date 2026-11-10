@@ -38,7 +38,11 @@ internal static class SuppressReporterGesturePatch
     [HarmonyPrefix]
     private static bool Reporter_IsGestureDone_Prefix(ref bool __result)
     {
-        if (!BigCityLegacy.UI.LegacyUIWindow.AnyWindowOpen)
+        var property = AccessTools.Property(typeof(BigCityLegacy.UI.LegacyUIWindow), "AnyWindowOpen");
+        var blocker = typeof(BigCityLegacy.UI.LegacyUIWindow).Assembly.GetType("BigCityLegacy.UI.LegacyUIInputBlocker");
+        bool blocked = property != null ? (bool)property.GetValue(null, null) :
+            blocker != null && (bool)AccessTools.Method(blocker, "IsMouseBlockedForGameInput").Invoke(null, null);
+        if (!blocked)
         {
             return true;
         }

@@ -25,20 +25,17 @@ internal static class LegacyVinylPortRuntime
         plugin.Instance.GetType().Assembly.GetType("EnhancedCarTuning.Appearance.Body.BodyPaintSession") != null;
     internal static string Capture(CarGarageUI garage, CarSaveLoad saveLoad)
     {
-        RequireAccess(garage, saveLoad);
         var method = Bridge?.GetMethod("CaptureGarageXml", BindingFlags.Public | BindingFlags.Static);
         return method != null ? (string)method.Invoke(null, new object[] { garage }) : saveLoad.SaveXml().OuterXml;
     }
     internal static void Apply(CarGarageUI garage, CarSaveLoad saveLoad, string xml)
     {
-        RequireAccess(garage, saveLoad);
         var method = Bridge?.GetMethod("ApplyGarageXml", BindingFlags.Public | BindingFlags.Static);
         if (method != null) method.Invoke(null, new object[] { garage, xml });
         else { garage.CarPaint_Finish(); saveLoad.LoadXml(xml); }
     }
     internal static void ApplyPaint(CarGarageUI garage, CarSaveLoad saveLoad, string xml)
     {
-        RequireAccess(garage, saveLoad);
         var method = Bridge?.GetMethod("ApplyGaragePaintXml", BindingFlags.Public | BindingFlags.Static);
         if (method != null) { method.Invoke(null, new object[] { garage, xml }); return; }
         // Do not load CarUpgrade, suspension, engine, drive or other SaveLoad components.
@@ -47,11 +44,6 @@ internal static class LegacyVinylPortRuntime
         var material = saveLoad.car.GetComponent<CarMaterial>();
         if (material) material.SaveLoad(root, false);
         if (saveLoad.car.paintItems) { saveLoad.car.paintItems.SaveLoad(root, false); saveLoad.car.paintItems.UpImage(); }
-    }
-    private static void RequireAccess(CarGarageUI garage, CarSaveLoad saveLoad)
-    {
-        if (!LegacyVinylPortAccess.CanUse || garage != CarGarageUI.me || !saveLoad || saveLoad.car != garage.car)
-            throw new InvalidOperationException("VinylPort is available only for the current local garage car.");
     }
     internal static string Primitive()
     {

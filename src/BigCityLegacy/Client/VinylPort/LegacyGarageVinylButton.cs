@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -11,7 +11,6 @@ public class LegacyGarageVinylButton : MonoBehaviour
     private CarGarageUI lastUi;
     private CarGarageUI pendingUi;
     private int pendingFrames;
-    private GameObject button;
 
     public static void Ensure()
     {
@@ -25,7 +24,6 @@ public class LegacyGarageVinylButton : MonoBehaviour
 
     private void Update()
     {
-        if (button) button.SetActive(LegacyVinylPortAccess.CanUse);
         CarGarageUI ui = CarGarageUI.me;
         if (!ui)
         {
@@ -46,7 +44,7 @@ public class LegacyGarageVinylButton : MonoBehaviour
         pendingUi = null;
         try
         {
-            button = Create(ui);
+            Create(ui);
         }
         catch (Exception ex)
         {
@@ -54,18 +52,17 @@ public class LegacyGarageVinylButton : MonoBehaviour
         }
     }
 
-    private static GameObject Create(CarGarageUI ui)
+    private static void Create(CarGarageUI ui)
     {
-        if (!ui || !ui.root) return null;
+        if (!ui || !ui.root) return;
         Transform main = ui.root.Find("Main");
-        if (!main) return null;
-        var existing = main.Find(ButtonName);
-        if (existing) return existing.gameObject;
+        if (!main) return;
+        if (main.Find(ButtonName)) return;
 
         Transform fix = main.Find("FixCar");
         Transform wheels = main.Find("Wheels");
         Transform anchor = (fix && fix.gameObject.activeSelf) ? fix : wheels;
-        if (!anchor) return null;
+        if (!anchor) return;
         Transform template = fix ? fix : wheels;
 
         GameObject clone = UnityEngine.Object.Instantiate(template.gameObject, main, false);
@@ -83,7 +80,7 @@ public class LegacyGarageVinylButton : MonoBehaviour
             cloneRect.anchoredPosition = templateRect.anchoredPosition;
         }
         clone.transform.SetSiblingIndex(anchor.GetSiblingIndex() + 1);
-        clone.SetActive(LegacyVinylPortAccess.CanUse);
+        clone.SetActive(true);
 
         if (!main.GetComponent<LayoutGroup>() && anchorRect && cloneRect)
         {
@@ -160,6 +157,5 @@ public class LegacyGarageVinylButton : MonoBehaviour
             menuButton.isSkipSaves = true;
             menuButton.InitParent();
         }
-        return clone;
     }
 }

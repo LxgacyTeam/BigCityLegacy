@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
@@ -105,7 +105,7 @@ public class LegacyVinylPort : MonoBehaviour
     private void Update()
     {
         if (warning != null && !warning.IsRendered) warningDisplayPack = null;
-        if (!LegacyVinylPortAccess.CanUse)
+        if (win.Visible && CarGarageUI.me == null)
         {
             Close();
             return;
@@ -137,7 +137,6 @@ public class LegacyVinylPort : MonoBehaviour
 
     public void Open()
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         curCar = CurrentGarageCar();
         RefreshPacks(true);
         win.Visible = true;
@@ -155,15 +154,20 @@ public class LegacyVinylPort : MonoBehaviour
 
     private string CurrentGarageCar()
     {
-        if (LegacyVinylPortAccess.CanUse)
+        if (CarGarageUI.me && CarGarageUI.me.car)
             return CarGarageUI.me.car.prefabName;
+
+        foreach (CarPaintItems p in Resources.FindObjectsOfTypeAll<CarPaintItems>())
+        {
+            if (p != null && p.gameObject.activeInHierarchy && p.car != null)
+                return p.car.prefabName;
+        }
 
         return "";
     }
 
     private void OnGUI()
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         if (win == null || (!win.IsRendered && !warning.IsRendered))
             return;
 
@@ -315,7 +319,6 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void ApplyPack(string path)
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         try
         {
             if (FindGarageSaveLoad() == null) throw new InvalidOperationException(
@@ -339,7 +342,6 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void DrawWarning(Rect content)
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         var display = pendingPack ?? warningDisplayPack;
         if (display == null) { CancelPending(); return; }
         var ui = new LegacyUILayout(content, 8f);
@@ -374,7 +376,6 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void ApplyValidatedPack(LegacyVinylPack pack, string path, bool allowFallback)
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         var garage = CarGarageUI.me;
         var saveLoad = FindGarageSaveLoad();
         string original = null, previous = null;
@@ -442,7 +443,7 @@ public class LegacyVinylPort : MonoBehaviour
         {
             case "MissingVersion": return LegacyLocalizer.Text("Pack version is missing", "В паке не указана версия");
             case "Version": return LegacyLocalizer.Text("Invalid pack version", "Некорректная версия пака");
-            case "UnsupportedVersion": return LegacyLocalizer.Text("Unsupported pack version (supported: 1–5)", "Версия пака не поддерживается (доступны 1–5)");
+            case "UnsupportedVersion": return LegacyLocalizer.Text("Unsupported pack version (supported: 1–4)", "Версия пака не поддерживается (доступны 1–4)");
             case "Car": return LegacyLocalizer.Text("Pack or save is for another car", "Пак или сохранение от другой машины");
             case "Text": return LegacyLocalizer.Text("Invalid text, font, style or symmetry fields", "Некорректные поля текста, шрифта, стиля или симметрии");
             case "Parts": return LegacyLocalizer.Text("Invalid body part colors", "Некорректные цвета деталей кузова");
@@ -457,7 +458,7 @@ public class LegacyVinylPort : MonoBehaviour
     private CarSaveLoad FindGarageSaveLoad()
     {
         var garage = CarGarageUI.me;
-        return LegacyVinylPortAccess.CanUse && string.Equals(garage.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase)
+        return garage && garage.car && string.Equals(garage.car.prefabName, curCar, StringComparison.OrdinalIgnoreCase)
             ? garage.car.GetComponent<CarSaveLoad>() : null;
     }
 
@@ -493,7 +494,6 @@ public class LegacyVinylPort : MonoBehaviour
 
     private void Export()
     {
-        if (!LegacyVinylPortAccess.CanUse) { Close(); return; }
         try
         {
             string xml = CaptureCurrentGarageXml();
