@@ -8,7 +8,8 @@ using UnityEngine;
 
 internal static class LegacyEventFiles
 {
-    private static readonly string[] categories = { "Race", "CS", "CS_Sur" };
+    internal const string ParkourCategory = "Parkour";
+    private static readonly string[] categories = { ParkourCategory, "Race", "CS", "CS_Sur" };
     internal static string DirectoryPath
     {
         get
@@ -38,7 +39,7 @@ internal static class LegacyEventFiles
                 // Match the aliases used by BuildRuntimeEventLists.
                 string mode = NormalizeMode(item.mode);
                 string expectedCategory = CategoryForMode(mode);
-                if (expectedCategory != category)
+                if (expectedCategory != category && !(expectedCategory == ParkourCategory && category == "Race"))
                     throw new FormatException("Event mode " + item.mode + " belongs in " + expectedCategory + "/.");
                 if (!identities.Add(mode + ":" + item.name))
                     throw new FormatException("Duplicate event identity: " + mode + "/" + item.name);
@@ -57,8 +58,8 @@ internal static class LegacyEventFiles
     private static string CategoryForMode(string mode)
     {
         mode = NormalizeMode(mode);
-        if (string.Equals(mode, "Race", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(mode, "RaceParcur", StringComparison.OrdinalIgnoreCase)) return "Race";
+        if (string.Equals(mode, "RaceParcur", StringComparison.OrdinalIgnoreCase)) return ParkourCategory;
+        if (string.Equals(mode, "Race", StringComparison.OrdinalIgnoreCase)) return "Race";
         if (string.Equals(mode, "CS", StringComparison.OrdinalIgnoreCase)) return "CS";
         if (string.Equals(mode, "CS_Sur", StringComparison.OrdinalIgnoreCase)) return "CS_Sur";
         throw new FormatException("Unknown event mode: " + mode);

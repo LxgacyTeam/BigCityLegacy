@@ -240,6 +240,8 @@ public class LegacyEventsConfig
         public float dropClearRadius;
 
         public LegacyEventsConfig.PointDef[] points;
+
+        public LegacyEventsConfig.RaceObjectDef[] objects;
     }
 
     [Serializable]
@@ -263,5 +265,16 @@ public class LegacyEventsConfig
     public class PointDef : LegacyEventsConfig.PosRot
     {
         public float radius = LegacyRaceCheckpointTrigger.DefaultRadius;
+    }
+
+    [Serializable]
+    public class RaceObjectDef : LegacyEventsConfig.PosRot
+    {
+        public string guid;
+        public float pitch;
+        public float roll;
+        public float scaleX = 1f;
+        public float scaleY = 1f;
+        public float scaleZ = 1f;
     }
 }

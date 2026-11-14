@@ -19,6 +19,11 @@ internal static class LegacyRaceMaps
         }
         GameObject gameObject = new GameObject(LegacyEventMapHelpers.GetSafeName(def, savePostfix, index));
         gameObject.SetActive(false);
+        if (!LegacyParkourObjects.TryAttach(gameObject, def))
+        {
+            UnityEngine.Object.Destroy(gameObject);
+            return null;
+        }
         RaceDirectionPoints raceDirectionPoints = gameObject.AddComponent<RaceDirectionPoints>();
         raceDirectionPoints.isSprint = def.isSprint;
 

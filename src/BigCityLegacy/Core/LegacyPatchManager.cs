@@ -50,6 +50,7 @@ internal static class LegacyPatchManager
         PatchClass(typeof(RacePatches));
         PatchClass(typeof(OnlineRacePatches));
         PatchClass(typeof(RaceNitroPatches));
+        PatchClass(typeof(ParkourPatches));
         PatchClass(typeof(CsWorldPatches));
         PatchClass(typeof(WorldSpawnPatches));
         PatchClass(typeof(InputPatches));

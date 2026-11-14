@@ -82,6 +82,7 @@ internal static class RacePatches
         raceDocument.DocumentElement.SetAttribute("allowNitroPurchase", LegacyRaceCarRules.AllowNitroPurchase ? "true" : "false");
         __instance.NetworkeventDataXml = raceDocument.OuterXml;
         __instance.startPoses = points.GetComponent<StartPoses>();
+        LegacyParkourObjects.SpawnOnServer(__instance, points);
         var info = points.GetComponent<UI_Event_Item_Info>();
         __instance.NetworkmapName = info && !string.IsNullOrWhiteSpace(info.txt) ? info.txt : points.name;
         return false;
