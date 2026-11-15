@@ -28,6 +28,18 @@
       ]
     },
     {
+      "name": "FusionSky",
+      "version": "0.7.1",
+      "githubRepo": "https://github.com/LxgacyTeam/FusionSky",
+      "githubDl": "https://github.com/LxgacyTeam/FusionSky/releases/download/0.7.1/FusionSky-0.7.1-windows.zip",
+      "codebergRepo": "https://codeberg.org/LxgacyTeam/FusionSky",
+      "codebergDl": "https://codeberg.org/LxgacyTeam/FusionSky/releases/download/0.7.1/FusionSky-0.7.1-windows.zip",
+      "size": 127624,
+      "keyFiles": [
+        "FusionSky/FusionSky.dll"
+      ]
+    },
+    {
       "name": "RadioReplacer (by Mr_Dodep)",
       "version": "3.0.0",
       "githubRepo": "https://github.com/LxgacyTeam/community-plugins/tree/main/plugins/RadioReplacer",
