@@ -100,13 +100,16 @@ internal static class LegacyPatchManager
 
     private static void PatchClass(Type patchClass)
     {
+        LegacyBootstrapTrace.Mark("patch.begin", patchClass.Name);
         try
         {
             _harmony.CreateClassProcessor(patchClass).Patch();
+            LegacyBootstrapTrace.Mark("patch.end", patchClass.Name);
             _log.LogDebug("Patched " + patchClass.Name);
         }
         catch (Exception ex)
         {
+            LegacyBootstrapTrace.Failure("patch.failed " + patchClass.Name, ex);
             _log.LogError("Failed to patch " + patchClass.Name + ": " + ex);
         }
     }
@@ -216,6 +219,7 @@ internal static class LegacyPatchManager
             return;
         }
 
+        LegacyBootstrapTrace.Mark("patch.begin", label);
         HarmonyMethod harmonyMethod = new HarmonyMethod(patch);
         if (prefix)
         {
@@ -225,6 +229,7 @@ internal static class LegacyPatchManager
         {
             _harmony.Patch(target, postfix: harmonyMethod);
         }
+        LegacyBootstrapTrace.Mark("patch.end", label);
         _log.LogDebug("Patched " + label);
     }
 
@@ -265,6 +270,7 @@ internal static class LegacyPatchManager
 
     private static void LogSkipped(string label, string reason)
     {
+        LegacyBootstrapTrace.Mark("patch.skipped", label + ": " + reason);
         if (_log != null)
         {
             _log.LogDebug("Skipped optional patch " + label + ": " + reason);

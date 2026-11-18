@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>BigCityLegacy.BootstrapProbe</AssemblyName>
+    <DefineConstants>$(DefineConstants);BCL_BOOTSTRAP_DIAGNOSTICS</DefineConstants>
+    <GameDir Condition="'$(GameDir)' == ''">..\..\..\prod_game</GameDir>
+    <CoreDir>$(GameDir)\BepInEx\core</CoreDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/BigCityLegacy/Core/LegacyBootstrapTrace.cs" />
+    <Reference Include="BepInEx" HintPath="$(CoreDir)\BepInEx.dll" Private="false" />
+    <Reference Include="Mono.Cecil" HintPath="$(CoreDir)\Mono.Cecil.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="ValidateBepInEx" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(CoreDir)\BepInEx.dll') Or !Exists('$(CoreDir)\Mono.Cecil.dll')"
+           Text="Set GameDir to the game folder with BepInEx 5 installed." />
+  </Target>
+</Project>

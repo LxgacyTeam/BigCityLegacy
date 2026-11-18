@@ -1,7 +1,5 @@
 # 插件启用状态 API
 
-BigCityLegacy 1.4.2 的客户端 API 面向 MadOut2 9.4，位于 `BigCityLegacy.Api`。引用 `BigCityLegacy.dll`，并声明对 `com.bigcitylegacy.baseplugin` 1.4.2 或更高版本的 BepInEx 依赖。此 API 管理已加载插件的逻辑状态，不负责加载或卸载 DLL。
-
 ## 接口与显式支持
 
 插件主类必须同时声明 `[LegacyPluginActivation]` 并实现 `ILegacyPluginActivation`。必需成员为 `bool IsEnabled { get; }`、`void Enable()`、`void Disable()`。该属性不继承。`[LegacyPluginActivation(false)]`、未声明属性或未实现接口均表示不支持；BCL 不读取状态，也不调用相关方法。
@@ -83,4 +81,5 @@ hardlist 中已安装且版本合适、但关闭的插件会触发启用建议�
 
 上报内容来自客户端，不能证明客户端未被修改。基本插件列表格式与旧服务器兼容，online protocol 保持为 94。
 
-[对话框与重启](LegacyDialogs_ZH.md) · [服务器](../user-docs/server_ZH.md) · [开发文档](README.md)
+[开发者文档](README.md)。
+

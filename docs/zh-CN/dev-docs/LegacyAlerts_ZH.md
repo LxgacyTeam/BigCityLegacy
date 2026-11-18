@@ -1,6 +1,6 @@
 # BigCityLegacy.Api.LegacyAlerts
 
-BigCityLegacy 1.4.2 客户端 API，用于在 MadOut2 9.4 中显示 LegacyUIFramework 对话框和提示。添加对 `BigCityLegacy.dll` 的引用，并声明对 `com.bigcitylegacy.baseplugin` 1.4.2 或更高版本的 BepInEx 依赖。类型位于 `BigCityLegacy.Api` 命名空间。
+BigCityLegacy 客户端 API，用于在 MadOut2 中显示 LegacyUIFramework 对话框和提示。
 
 ## 公开签名
 
@@ -73,4 +73,4 @@ public sealed class NotificationExample : BaseUnityPlugin
 
 本地调用不发送网络消息，也不读取 Alerts.toml。服务器模板、变量、`alert` 命令及 welcome 参见[服务器文档](../user-docs/server_ZH.md)。Welcome 的 `updatedAt` 和“不再显示”仅适用于服务器 welcome，不属于公开本地 API 调用。
 
-源文件：[LegacyAlerts.cs](../../../src/BigCityLegacy/API/LegacyAlerts.cs)。[开发者文档](README.md)。
+[开发者文档](README.md)。

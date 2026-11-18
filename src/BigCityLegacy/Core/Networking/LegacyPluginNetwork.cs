@@ -44,7 +44,15 @@ internal static class LegacyPluginNetwork
                 records.Add(new LegacyPluginRecord { Guid = info.Metadata.GUID, Name = info.Metadata.Name, Version = info.Metadata.Version.ToString(),SupportsActivation=status.SupportsActivation,IsEnabled=status.IsEnabled,RequiresRestart=status.RequiresRestart });
             }
             records.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Guid, b.Guid));
-            xml = LegacyPluginManifest.Attach(LegacyConnectionStamp.Attach(xml), records, VersionInfo.ModVersionName); return true;
+            // The vanilla game sends an empty string before the first character save.
+            string profileXml = xml;
+            if (profileXml == string.Empty)
+            {
+                bool female = PlayerSaveLoad.GetLastSavedSelectSex() == PlayerSkins.Sex.FeMale;
+                profileXml = female ? "<root SexType=\"1\"><skins /></root>" : "<root SexType=\"0\"><skins /></root>";
+            }
+            xml = LegacyPluginManifest.Attach(LegacyConnectionStamp.Attach(profileXml), records, VersionInfo.ModVersionName);
+            return true;
         }
         catch (Exception ex)
         {

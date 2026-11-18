@@ -40,3 +40,8 @@ LegacyLocalizer.RegisterReplacement(
 替换会应用于所有已加载的 `LocalizationManager.Lang` 实例。已加载的 `Localize` 组件会自动更新。
 
 BigCityLegacy 的默认替换内容在插件启动期间由 `LegacyLocalizer.RegisterDefaultReplacements()` 注册。
+
+---
+
+[开发者文档](README.md)。
+

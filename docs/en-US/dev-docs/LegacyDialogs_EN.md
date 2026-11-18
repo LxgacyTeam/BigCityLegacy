@@ -1,7 +1,5 @@
 # BigCityLegacy.Api.LegacyDialogs and LegacyGame
 
-Client helpers in BigCityLegacy 1.4.2 for MadOut2 9.4. Reference `BigCityLegacy.dll`, use `BigCityLegacy.Api`, and declare a BepInEx dependency on `com.bigcitylegacy.baseplugin` version 1.4.2 or later.
-
 ## A dialog with a result
 
 `Task<bool> LegacyDialogs.ShowAsync(LegacyDialogOptions options)` queues a dialog and returns `true` after Yes, or `false` after No, the close button or UI shutdown. The result completes after the closing animation. `void LegacyDialogs.Show(LegacyDialogOptions options, Action<bool> completed)` provides a callback on Unity's main thread.
@@ -60,4 +58,5 @@ The helper is for standalone clients, not dedicated servers or Unity Editor. It 
 
 The plugin activation API arranges one quiet restart after the user approves the entire change batch. Ordinary settings menus can call `await LegacyGame.RestartAsync()` directly.
 
-[Plugin activation](LegacyPluginActivation_EN.md) · [Developer documentation](README.md)
+---
+[Developer documentation](README.md).

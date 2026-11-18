@@ -1,7 +1,5 @@
 # API активации плагинов
 
-Клиентский API BigCityLegacy 1.4.2 для MadOut2 9.4 находится в `BigCityLegacy.Api`. Добавьте ссылку на `BigCityLegacy.dll` и BepInEx-зависимость от `com.bigcitylegacy.baseplugin` версии 1.4.2 или выше. API управляет логическим состоянием уже загруженного BepInEx-плагина; загрузку и выгрузку DLL он не выполняет.
-
 ## Контракт и явная поддержка
 
 Поддержка определяется на основном классе плагина одновременно атрибутом `[LegacyPluginActivation]` и интерфейсом `ILegacyPluginActivation`. Обязательны `bool IsEnabled { get; }`, `void Enable()` и `void Disable()`. Атрибут не наследуется. `[LegacyPluginActivation(false)]`, отсутствие атрибута или интерфейса означают отсутствие поддержки: BCL не читает состояние и не вызывает методы.
@@ -83,4 +81,6 @@ if (status.Installed && status.SupportsActivation && !status.IsEnabled)
 
 Отчёт является данными клиента и не доказывает отсутствие модификаций. Базовый формат списка остаётся совместимым с прежними серверами, версия online protocol остаётся 94.
 
-[Диалоги и перезапуск](LegacyDialogs_RU.md) · [Сервер](../user-docs/server_RU.md) · [Разработчикам](README.md)
+---
+
+[Документация разработчика](README.md).

@@ -42,7 +42,7 @@
 ## Для разработчиков
 
 - [Документация разработчика и API](ru-RU/dev-docs/README.md)
-- [Сборка BCL](ru-RU/dev-docs/Building_RU.md)
+- [Сборка](ru-RU/dev-docs/Building_RU.md)
 
 ## Условия и положения
 

@@ -624,3 +624,4 @@ private static void Target_Ctor_Postfix(TargetType __instance)
 `Safe*` methods catch errors and write `LogDebug` through `LogSkipped(...)`. This means a missing target is considered an acceptable scenario.
 
 ---
+[Developer documentation](README.md).

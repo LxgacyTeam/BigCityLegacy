@@ -1,7 +1,5 @@
 # Plugin activation API
 
-The BigCityLegacy 1.4.2 client API for MadOut2 9.4 lives in `BigCityLegacy.Api`. Reference `BigCityLegacy.dll` and declare a BepInEx dependency on `com.bigcitylegacy.baseplugin` version 1.4.2 or later. It manages the logical state of an already loaded BepInEx plugin; it does not load or unload DLLs.
-
 ## Contract and explicit support
 
 The plugin's main class must declare both `[LegacyPluginActivation]` and `ILegacyPluginActivation`. Required members are `bool IsEnabled { get; }`, `void Enable()` and `void Disable()`. The attribute is not inherited. `[LegacyPluginActivation(false)]`, a missing attribute or a missing interface means unsupported: BCL neither reads the state nor invokes the methods.
@@ -83,4 +81,5 @@ Every incompatibility must be fixable by a state change. A mixed failure, such a
 
 The report is client-provided metadata, not proof against modified clients. The base plugin list remains compatible with older servers; online protocol remains 94.
 
-[Dialogs and restart](LegacyDialogs_EN.md) · [Server](../user-docs/server_EN.md) · [Developer documentation](README.md)
+---
+[Developer documentation](README.md)

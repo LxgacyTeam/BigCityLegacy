@@ -24,6 +24,14 @@
     <NoWarn>1701;1702;0618;0649</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(BootstrapDiagnostics)' == 'true'">
+    <DefineConstants>$(DefineConstants);BCL_BOOTSTRAP_DIAGNOSTICS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="tools\BootstrapProbe\**" />
+  </ItemGroup>
+
   <Target Name="GenerateVersionInfo" BeforeTargets="BeforeCompile;CoreCompile">
 	<PropertyGroup>
 		<_CleanVersion>$(VersionPrefix)</_CleanVersion>

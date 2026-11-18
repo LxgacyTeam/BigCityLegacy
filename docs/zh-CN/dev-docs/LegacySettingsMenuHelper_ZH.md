@@ -234,3 +234,5 @@ LegacySettingsMenuHelper.RegisterSlider(
 对于较大的可选功能，最好从独立模块或插件中注册项目。
 
 ---
+[开发者文档](README.md)。
+

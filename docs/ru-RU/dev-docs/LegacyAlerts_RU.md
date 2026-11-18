@@ -1,6 +1,6 @@
 # BigCityLegacy.Api.LegacyAlerts
 
-Клиентский API BigCityLegacy 1.4.2 для диалогов и уведомлений на LegacyUIFramework в MadOut2 9.4. Добавьте ссылку на `BigCityLegacy.dll` и зависимость BepInEx от `com.bigcitylegacy.baseplugin` версии 1.4.2 или выше. Классы находятся в пространстве имён `BigCityLegacy.Api`.
+Клиентский API для диалогов и уведомлений на LegacyUIFramework
 
 ## Публичные сигнатуры
 
@@ -73,4 +73,4 @@ public sealed class NotificationExample : BaseUnityPlugin
 
 Локальный вызов не отправляет сообщение по сети и не читает Alerts.toml. Серверные шаблоны, переменные, команда `alert` и welcome описаны в [документации сервера](../user-docs/server_RU.md). Настройки welcome `updatedAt` и «Не показывать больше» относятся к серверному welcome, а не к публичным методам локального API.
 
-Исходник: [LegacyAlerts.cs](../../../src/BigCityLegacy/API/LegacyAlerts.cs). [Документация разработчика](README.md).
+[Документация разработчика](README.md).

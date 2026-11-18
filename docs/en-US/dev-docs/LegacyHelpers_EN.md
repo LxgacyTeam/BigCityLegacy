@@ -778,5 +778,4 @@ LegacyServerShutdown.Tick();
 Use it for stop and other internal BCL shutdown requests. `Request` may be called from the console thread; call `Initialize` and `Tick` on Unity's main thread.
 
 ---
-
 [Developer documentation](README.md).

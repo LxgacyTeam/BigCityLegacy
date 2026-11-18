@@ -21,5 +21,3 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 > [!WARNING]
 > 通过命令行选项传入 `GameDir` 属性时，**必须使用绝对路径**。使用 `..\` 或其他相对路径可能导致构建错误，因为该属性也会影响位于嵌套目录中的依赖项目 LegacyUIFramework。
-
-[LegacyHelpers](LegacyHelpers_ZH.md) · [LegacyAlerts](LegacyAlerts_ZH.md)

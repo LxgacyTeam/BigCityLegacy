@@ -232,4 +232,6 @@ LegacySettingsMenuHelper.RegisterSlider(
 The helper also does not create UI from scratch. It clones existing menu items, so the appearance automatically matches the original game menu. If the selected group has no suitable template, the item is skipped with a warning in the log.
 
 For large optional features, it is better to register items from a separate module/plugin.
+
 ---
+[Developer documentation](README.md).
