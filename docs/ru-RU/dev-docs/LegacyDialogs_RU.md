@@ -1,7 +1,5 @@
 # BigCityLegacy.Api.LegacyDialogs и LegacyGame
 
-Клиентские хелперы BigCityLegacy 1.4.2 для MadOut2 9.4. Нужны ссылка на `BigCityLegacy.dll`, пространство имён `BigCityLegacy.Api` и BepInEx-зависимость от `com.bigcitylegacy.baseplugin` версии 1.4.2 или выше.
-
 ## Диалог с результатом
 
 `Task<bool> LegacyDialogs.ShowAsync(LegacyDialogOptions options)` ставит диалог в очередь и возвращает `true` после Yes, `false` после No, закрытия крестиком или отключения UI. Результат выдаётся после завершения анимации закрытия. `void LegacyDialogs.Show(LegacyDialogOptions options, Action<bool> completed)` — вариант с callback в главном потоке Unity.
@@ -60,4 +58,4 @@ bool restarting = LegacyGame.IsRestarting;
 
 API активации плагинов сам вызывает один тихий перезапуск после согласия пользователя на всю группу изменений. Для обычного меню настройки можно непосредственно вызвать `await LegacyGame.RestartAsync()`.
 
-[Активация плагинов](LegacyPluginActivation_RU.md) · [Разработчикам](README.md)
+[Документация разработчика](README.md).

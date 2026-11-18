@@ -42,7 +42,7 @@ Earlier versions (`4.9 - 9.2`) can run in Compatibility Mode, which provides off
 ## For developers
 
 - [Developer and API documentation](en-US/dev-docs/README.md)
-- [Building BCL](en-US/dev-docs/Building_EN.md)
+- [Building](en-US/dev-docs/Building_EN.md)
 
 ## Terms and conditions
 

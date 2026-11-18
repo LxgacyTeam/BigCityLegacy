@@ -21,5 +21,3 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 > [!WARNING]
 > При передаче атрибута `GameDir` через CLI флаг, **требуется указывать абсолютный путь**. Использование `..\` или прочих относительных путей может привести к ошибке, т.к атрибут влияет и на зависимый проект LegacyUIFramework, находящийся в одной из вложенных директорий.
-
-[LegacyHelpers](LegacyHelpers_RU.md) · [LegacyAlerts](LegacyAlerts_RU.md)

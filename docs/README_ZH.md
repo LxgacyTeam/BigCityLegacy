@@ -42,7 +42,7 @@
 ## 开发者
 
 - [开发与 API 文档](zh-CN/dev-docs/README.md)
-- [构建 BCL](zh-CN/dev-docs/Building_ZH.md)
+- [构建](zh-CN/dev-docs/Building_ZH.md)
 
 ## 条款与条件
 

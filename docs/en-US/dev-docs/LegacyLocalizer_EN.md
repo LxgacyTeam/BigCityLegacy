@@ -41,3 +41,6 @@ LegacyLocalizer.RegisterReplacement(
 The replacement is applied to all loaded `LocalizationManager.Lang` instances. Already loaded `Localize` components are updated automatically.
 
 Default BigCityLegacy replacements are registered by `LegacyLocalizer.RegisterDefaultReplacements()` during plugin startup.
+
+---
+[Developer documentation](README.md).

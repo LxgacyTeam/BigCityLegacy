@@ -21,5 +21,3 @@ dotnet build -c Release -p:GameDir="path\to\game\dir" -p:CopyToPlugins=true
 
 > [!WARNING]
 > When passing the `GameDir` property through a CLI flag, you **must use an absolute path**. Using `..\` or other relative paths can cause build errors, because this property also affects the dependent LegacyUIFramework project located in one of the nested directories.
-
-[LegacyHelpers](LegacyHelpers_EN.md) · [LegacyAlerts](LegacyAlerts_EN.md)

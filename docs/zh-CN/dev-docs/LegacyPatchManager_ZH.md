@@ -624,3 +624,5 @@ private static void Target_Ctor_Postfix(TargetType __instance)
 `Safe*` 方法捕获错误，并通过 `LogSkipped(...)` 写入 `LogDebug`。这意味着目标缺失被视为可以接受的情况。
 
 ---
+[开发者文档](README.md)。
+

@@ -1,7 +1,5 @@
 # BigCityLegacy.Api.LegacyDialogs 与 LegacyGame
 
-面向 MadOut2 9.4 的 BigCityLegacy 1.4.2 客户端辅助 API。引用 `BigCityLegacy.dll`，使用 `BigCityLegacy.Api`，并声明对 `com.bigcitylegacy.baseplugin` 1.4.2 或更高版本的 BepInEx 依赖。
-
 ## 返回结果的对话框
 
 `Task<bool> LegacyDialogs.ShowAsync(LegacyDialogOptions options)` 将对话框加入队列。点击 Yes 后返回 `true`；点击 No、关闭按钮或 UI 停用后返回 `false`。结果在关闭动画结束后完成。`void LegacyDialogs.Show(LegacyDialogOptions options, Action<bool> completed)` 提供在 Unity 主线程执行的回调版本。
@@ -60,4 +58,5 @@ bool restarting = LegacyGame.IsRestarting;
 
 插件启用 API 在用户同意整批更改后统一执行一次无额外提示的重启。普通设置菜单可直接调用 `await LegacyGame.RestartAsync()`。
 
-[插件启用 API](LegacyPluginActivation_ZH.md) · [开发文档](README.md)
+[开发者文档](README.md)。
+

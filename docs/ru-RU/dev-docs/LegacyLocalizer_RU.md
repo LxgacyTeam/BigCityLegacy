@@ -41,3 +41,5 @@ LegacyLocalizer.RegisterReplacement(
 Замена применяется ко всем загруженным экземплярам `LocalizationManager.Lang`. Уже загруженные компоненты `Localize` обновляются автоматически.
 
 Стандартные замены BigCityLegacy регистрируются методом `LegacyLocalizer.RegisterDefaultReplacements()` во время запуска плагина.
+
+[Документация разработчика](README.md).

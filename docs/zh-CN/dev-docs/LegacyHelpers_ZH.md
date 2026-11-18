@@ -779,4 +779,4 @@ LegacyServerShutdown.Tick();
 
 ---
 
-[开发者文档](README.md).
+[开发者文档](README.md)。
