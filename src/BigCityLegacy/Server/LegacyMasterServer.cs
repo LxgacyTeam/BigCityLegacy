@@ -380,6 +380,11 @@ public class LegacyMasterServer : MonoBehaviour
             this.receiver = null;
         }
         this.receiver = new RequestUDP_Receiver(this.masterPort);
+        if (this.receiver.net == null || !this.receiver.net.IsRunning)
+        {
+            throw new InvalidOperationException("Cannot bind Mirror to UDP port " + this.masterPort +
+                ". Check whether it is already in use, including by the game server lobby query port.");
+        }
         this.receiver.AddCallBack("/match/list/", new Func<RequestUDP.FullRequestData, Task<string>>(this.HandleListRequest));
         this.receiver.AddCallBack("/match/try_connect_to_game_server/", new Func<RequestUDP.FullRequestData, Task<string>>(this.HandleTryConnectRequest));
         LegacyMasterServer.DebugLog("RequestUDP_Receiver started. Registered paths: /match/list/, /match/try_connect_to_game_server/");

@@ -37,9 +37,11 @@ internal static class LegacyPatchManager
         PatchClass(typeof(SocialLinkRewardPatches));
         PatchClass(typeof(NetConnectAndControlPatches));
         PatchClass(typeof(NetUIPatches));
+        PatchClass(typeof(RadialMenuPatches));
         PatchClass(typeof(ServerConfigPatches));
         PatchClass(typeof(NetworkPatches));
         PatchClass(typeof(CarXmlNetworkPatches));
+        PatchClass(typeof(GazelVehiclePatches));
         PatchClass(typeof(ServerHeadlessOptimizationPatches));
         PatchClass(typeof(ServerPerformancePatches));
         PatchClass(typeof(ServerCarSleepPatches));
@@ -50,6 +52,8 @@ internal static class LegacyPatchManager
         PatchClass(typeof(RacePatches));
         PatchClass(typeof(OnlineRacePatches));
         PatchClass(typeof(RaceNitroPatches));
+        PatchClass(typeof(CombatRacePatches));
+        PatchClass(typeof(CombatRaceAiPatches));
         PatchClass(typeof(ParkourPatches));
         PatchClass(typeof(CsWorldPatches));
         PatchClass(typeof(WorldSpawnPatches));
